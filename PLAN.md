@@ -243,7 +243,7 @@ second-brain/
 
 ---
 
-### Phase 4：AI 能力集成（Day 6-8）
+### Phase 4：AI 能力集成（Day 6-8）✅ DONE
 
 **目标**：接入 Claude API，实现摘要和 RAG 问答
 

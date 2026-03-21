@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Plus, Trash2, ExternalLink, Bookmark } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Bookmark, Sparkles, Loader2 } from "lucide-react";
 
 export default function BookmarksPage() {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [summarizing, setSummarizing] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: bookmarks = [], isLoading } = trpc.bookmarks.list.useQuery();
@@ -144,6 +145,32 @@ export default function BookmarksPage() {
                   <p className="text-xs text-gray-500 mt-1 line-clamp-2">{bm.summary}</p>
                 )}
               </div>
+              {!bm.summary && (
+                <button
+                  onClick={async () => {
+                    setSummarizing(bm.id);
+                    try {
+                      await fetch("/api/summarize", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ bookmarkId: bm.id }),
+                      });
+                      utils.bookmarks.list.invalidate();
+                    } finally {
+                      setSummarizing(null);
+                    }
+                  }}
+                  disabled={summarizing === bm.id}
+                  className="p-1 text-gray-400 hover:text-purple-500 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-100"
+                  title="AI 生成摘要"
+                >
+                  {summarizing === bm.id ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={16} />
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => deleteBookmark.mutate({ id: bm.id })}
                 className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
