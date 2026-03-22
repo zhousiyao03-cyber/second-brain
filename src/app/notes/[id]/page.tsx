@@ -158,7 +158,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
 
       {/* Collapsible metadata */}
       {showMeta && (
-        <div className="mb-4 px-1 py-3 bg-gray-50 rounded-lg space-y-3 animate-in slide-in-from-top-2 duration-200">
+        <div className="mb-4 px-1 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3 animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center gap-3 px-3">
             <span className="text-xs text-gray-500 w-12 shrink-0">类型</span>
             <div className="flex gap-1.5">
@@ -222,7 +222,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
           onKeyDown={handleTitleKeyDown}
           placeholder="无标题"
           rows={1}
-          className="w-full text-4xl font-bold text-gray-900 border-none outline-none bg-transparent placeholder-gray-300 resize-none leading-tight"
+          className="w-full text-4xl font-bold text-gray-900 dark:text-gray-100 border-none outline-none bg-transparent placeholder-gray-300 dark:placeholder-gray-600 resize-none leading-tight"
           style={{ overflow: "hidden" }}
           onInput={(e) => {
             const target = e.target as HTMLTextAreaElement;

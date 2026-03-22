@@ -104,7 +104,7 @@ export function SearchDialog() {
 
       {/* Dialog */}
       <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg">
-        <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Search input */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
             <Search size={18} className="text-gray-400 flex-shrink-0" />
@@ -113,7 +113,7 @@ export function SearchDialog() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="搜索笔记、收藏、待办..."
-              className="flex-1 text-sm outline-none placeholder:text-gray-400"
+              className="flex-1 text-sm outline-none placeholder:text-gray-400 bg-transparent dark:text-gray-100"
               autoFocus
             />
             <button
@@ -140,10 +140,10 @@ export function SearchDialog() {
                   <button
                     key={`${item.type}-${item.id}`}
                     onClick={() => navigate(item.href)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
                   >
                     <item.icon size={16} className="text-gray-400 flex-shrink-0" />
-                    <span className="text-sm text-gray-900 truncate flex-1">
+                    <span className="text-sm text-gray-900 dark:text-gray-100 truncate flex-1">
                       <HighlightText text={item.title} query={query} />
                     </span>
                     <span className="text-xs text-gray-400">

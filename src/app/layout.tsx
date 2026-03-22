@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Providers } from "@/components/providers";
 import { SearchDialog } from "@/components/search-dialog";
+import { ToastProvider } from "@/components/ui/toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,11 +33,13 @@ export default function RootLayout({
     >
       <body className="h-full">
         <Providers>
-          <div className="flex h-full">
-            <Sidebar />
-            <main className="flex-1 overflow-auto p-6 dark:bg-gray-950 dark:text-gray-100">{children}</main>
-            <SearchDialog />
-          </div>
+          <ToastProvider>
+            <div className="flex h-full">
+              <Sidebar />
+              <main className="flex-1 overflow-auto p-6 dark:bg-gray-950 dark:text-gray-100">{children}</main>
+              <SearchDialog />
+            </div>
+          </ToastProvider>
         </Providers>
       </body>
     </html>

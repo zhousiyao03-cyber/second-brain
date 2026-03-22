@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Trash2, FileText } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 
 export default function NotesPage() {
   const router = useRouter();
@@ -19,8 +20,12 @@ export default function NotesPage() {
       router.push(`/notes/${data.id}`);
     },
   });
+  const { toast } = useToast();
   const deleteNote = trpc.notes.delete.useMutation({
-    onSuccess: () => utils.notes.list.invalidate(),
+    onSuccess: () => {
+      utils.notes.list.invalidate();
+      toast("已删除笔记", "success");
+    },
   });
 
   const filtered = notes.filter((note) => {
@@ -52,7 +57,7 @@ export default function NotesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">笔记</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">笔记</h1>
         <button
           onClick={handleCreate}
           disabled={createNote.isPending}
@@ -71,13 +76,13 @@ export default function NotesPage() {
             placeholder="搜索笔记..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">全部类型</option>
           <option value="note">笔记</option>
@@ -101,19 +106,24 @@ export default function NotesPage() {
               <div
                 key={note.id}
                 onClick={() => router.push(`/notes/${note.id}`)}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors group"
+                className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors group"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-gray-900 truncate">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                       {note.title}
                     </h3>
                     {note.type && note.type !== "note" && (
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                      <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded">
                         {typeLabels[note.type] ?? note.type}
                       </span>
                     )}
                   </div>
+                  {note.plainText && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                      {note.plainText.slice(0, 80)}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs text-gray-400">
                       {formatDate(note.updatedAt)}
@@ -121,7 +131,7 @@ export default function NotesPage() {
                     {tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-1.5 py-0.5 text-xs bg-blue-50 text-blue-600 rounded"
+                        className="px-1.5 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded"
                       >
                         {tag}
                       </span>

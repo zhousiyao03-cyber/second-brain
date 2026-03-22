@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 import {
   Plus,
   Trash2,
@@ -21,6 +22,7 @@ export default function BookmarksPage() {
   const [summarizing, setSummarizing] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<"all" | "url" | "text">("all");
+  const { toast } = useToast();
 
   const utils = trpc.useUtils();
   const { data: bookmarks = [], isLoading } = trpc.bookmarks.list.useQuery();
@@ -33,7 +35,10 @@ export default function BookmarksPage() {
     },
   });
   const deleteBookmark = trpc.bookmarks.delete.useMutation({
-    onSuccess: () => utils.bookmarks.list.invalidate(),
+    onSuccess: () => {
+      utils.bookmarks.list.invalidate();
+      toast("已删除收藏", "success");
+    },
   });
   const refetchBookmark = trpc.bookmarks.refetch.useMutation({
     onSuccess: () => utils.bookmarks.list.invalidate(),
@@ -69,7 +74,7 @@ export default function BookmarksPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">收藏</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">收藏</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -80,21 +85,21 @@ export default function BookmarksPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+        <form onSubmit={handleCreate} className="mb-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
           <div className="space-y-3">
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="标题"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="URL（可选）"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="flex gap-2">
               <button
@@ -107,7 +112,7 @@ export default function BookmarksPage() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-100"
+                className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-100"
               >
                 取消
               </button>
@@ -125,13 +130,13 @@ export default function BookmarksPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索收藏..."
-            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <select
           value={sourceFilter}
           onChange={(e) => setSourceFilter(e.target.value as "all" | "url" | "text")}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="按来源筛选"
         >
           <option value="all">全部</option>
@@ -152,12 +157,12 @@ export default function BookmarksPage() {
           {filteredBookmarks.map((bm) => (
             <div
               key={bm.id}
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg group"
+              className="flex items-center gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg group"
             >
               <Bookmark size={16} className="text-gray-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-gray-900 truncate text-sm">
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
                     {bm.title ?? bm.url ?? "无标题"}
                   </h3>
                   {bm.url && (
@@ -205,7 +210,7 @@ export default function BookmarksPage() {
                     {(JSON.parse(bm.tags) as string[]).map((tag) => (
                       <span
                         key={tag}
-                        className="px-1.5 py-0.5 text-xs bg-blue-50 text-blue-600 rounded"
+                        className="px-1.5 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded"
                       >
                         {tag}
                       </span>
@@ -234,12 +239,19 @@ export default function BookmarksPage() {
                   onClick={async () => {
                     setSummarizing(bm.id);
                     try {
-                      await fetch("/api/summarize", {
+                      const res = await fetch("/api/summarize", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ bookmarkId: bm.id }),
                       });
                       utils.bookmarks.list.invalidate();
+                      if (res.ok) {
+                        toast("摘要生成成功", "success");
+                      } else {
+                        toast("摘要生成失败", "error");
+                      }
+                    } catch {
+                      toast("摘要生成失败", "error");
                     } finally {
                       setSummarizing(null);
                     }

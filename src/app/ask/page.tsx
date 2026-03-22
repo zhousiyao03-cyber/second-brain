@@ -63,7 +63,7 @@ export default function AskPage() {
 
   return (
     <div className="flex flex-col h-full max-w-3xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Ask AI</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Ask AI</h1>
 
       <div className="flex-1 overflow-auto space-y-4 mb-4">
         {messages.length === 0 && (
@@ -88,7 +88,7 @@ export default function AskPage() {
               <div
                 className={cn(
                   "flex gap-3 p-4 rounded-lg",
-                  message.role === "user" ? "bg-blue-50" : "bg-gray-50"
+                  message.role === "user" ? "bg-blue-50 dark:bg-blue-900/20" : "bg-gray-50 dark:bg-gray-800"
                 )}
               >
                 <div className="flex-shrink-0 mt-0.5">
@@ -112,7 +112,7 @@ export default function AskPage() {
                           ? `/notes/${source.id}`
                           : "/bookmarks"
                       }
-                      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                     >
                       {source.type === "note" ? (
                         <FileText size={12} />
@@ -129,7 +129,7 @@ export default function AskPage() {
         })}
 
         {isLoading && messages[messages.length - 1]?.role === "user" && (
-          <div className="flex gap-3 p-4 rounded-lg bg-gray-50">
+          <div className="flex gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
             <Bot size={18} className="text-gray-600 flex-shrink-0 mt-0.5" />
             <Loader2 size={16} className="animate-spin text-gray-400" />
           </div>
@@ -144,7 +144,7 @@ export default function AskPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="flex items-end gap-2 border-t border-gray-200 pt-4"
+        className="flex items-end gap-2 border-t border-gray-200 dark:border-gray-700 pt-4"
       >
         <textarea
           value={input}
@@ -152,7 +152,7 @@ export default function AskPage() {
           onKeyDown={handleKeyDown}
           placeholder="输入你的问题...（Shift+Enter 换行）"
           rows={2}
-          className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           disabled={isLoading}
         />
         <button

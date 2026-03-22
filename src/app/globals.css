@@ -192,3 +192,45 @@ body {
 .notion-editor ::selection {
   background: #accef7;
 }
+
+/* ========== Dark Mode Editor Overrides ========== */
+
+.dark .notion-editor {
+  color: #e0ddd8;
+}
+
+.dark .notion-editor blockquote {
+  border-left-color: #9b9a97;
+  color: #e0ddd8;
+}
+
+.dark .notion-editor pre {
+  background: #1e1e1e;
+}
+
+.dark .notion-editor code {
+  background: #2d2d2d;
+  color: #f97583;
+}
+
+.dark .notion-editor hr {
+  border-top-color: #3a3a3a;
+}
+
+.dark .notion-editor mark {
+  background-color: #5c4b1f;
+  color: #e0ddd8;
+}
+
+.dark .notion-editor a {
+  color: #93c5fd;
+  text-decoration-color: #4b5563;
+}
+
+.dark .notion-editor a:hover {
+  text-decoration-color: #93c5fd;
+}
+
+.dark .notion-editor ::selection {
+  background: #1d4ed8;
+}

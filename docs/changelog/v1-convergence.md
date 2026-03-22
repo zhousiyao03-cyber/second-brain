@@ -78,3 +78,29 @@
 
 **已知遗留**：
 - 无
+
+---
+
+### Pass 5：UX/UI 打磨 + 暗色模式（2026-03-22）
+
+**变更内容**：
+- 新增 `src/components/ui/toast.tsx`：轻量 toast 组件（success/error/info），ToastProvider 上下文，3 秒自动消失
+- `src/app/layout.tsx`：集成 ToastProvider
+- `src/app/globals.css`：新增 `.dark .notion-editor` 样式覆盖（text/blockquote/code/pre/link/mark/selection）
+- 暗色模式 `dark:` 类名添加到以下页面：
+  - `src/app/page.tsx`（Dashboard）— 标题、统计卡片、列表区块，bookmark 卡片改为 Link 可点击跳转
+  - `src/app/notes/page.tsx` — 标题、搜索/筛选、列表卡片、标签、**新增 plainText 内容预览（前 80 字）**
+  - `src/app/notes/[id]/page.tsx` — 编辑器标题、metadata 面板
+  - `src/app/bookmarks/page.tsx` — 标题、表单、搜索/筛选、列表卡片、标签
+  - `src/app/ask/page.tsx` — 标题、消息气泡、输入框、引用来源
+  - `src/components/search-dialog.tsx` — 对话框背景、输入框、结果列表
+- Toast 集成到关键操作：Notes 删除、Bookmark 删除、AI 摘要成功/失败
+
+**验证结果**：
+- pnpm build：✅
+- pnpm lint：✅
+- 暗色模式需手动验证
+
+**已知遗留**：
+- Tiptap bubble-toolbar 和 slash-command 组件未添加暗色模式（使用频率低，V1 可接受）
+- 冻结模块（todos、explore）未添加暗色模式（按计划不改）
