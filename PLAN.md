@@ -10,13 +10,13 @@
 
 | 层 | 选型 |
 |---|------|
-| 框架 | Next.js 15 (App Router) + React 19 |
+| 框架 | Next.js 16 (App Router) + React 19 |
 | UI | Tailwind CSS v4 + shadcn/ui |
 | 编辑器 | Tiptap (ProseMirror) |
 | API | tRPC v11 |
 | 数据库 | SQLite (better-sqlite3) + Drizzle ORM |
 | 向量搜索 | orama（纯 JS 全文+向量搜索引擎，零依赖） |
-| AI | Claude API + Vercel AI SDK (@ai-sdk/anthropic) |
+| AI | 本地 OpenAI-compatible 模型服务（如 Ollama / LM Studio）+ Vercel AI SDK（可选 OpenAI fallback） |
 
 ---
 
@@ -86,7 +86,7 @@ second-brain/
 ├── package.json
 ├── tsconfig.json
 ├── next.config.ts
-└── .env.local                    # ANTHROPIC_API_KEY
+└── .env.local                    # AI_PROVIDER / AI_BASE_URL / AI_MODEL
 ```
 
 ---
@@ -245,10 +245,10 @@ second-brain/
 
 ### Phase 4：AI 能力集成（Day 6-8）✅ DONE
 
-**目标**：接入 Claude API，实现摘要和 RAG 问答
+**目标**：接入 AI provider，实现摘要和 RAG 问答
 
-1. 安装 @ai-sdk/anthropic, ai (Vercel AI SDK)
-2. 收藏箱 AI 摘要：添加收藏后自动调用 Claude 生成摘要+标签
+1. 安装 `@ai-sdk/openai`, `ai`（Vercel AI SDK）
+2. 收藏箱 AI 摘要：添加收藏后自动调用 AI provider 生成摘要+标签
 3. 向量化引擎（orama）
 4. Ask AI 对话页面（流式输出 + RAG 检索 + 引用来源）
 5. 笔记 AI 辅助：选中文本 → 续写/改写/翻译/摘要
@@ -261,13 +261,13 @@ second-brain/
 
 **学习模块**：
 1. 预置学习路径（数据库/API设计/Node.js/DevOps/系统设计/AI Agent）
-2. AI 导师（Claude 动态生成课程+练习题+答疑）
+2. AI 导师（本地/云端 provider 动态生成课程+练习题+答疑）
 3. 学习进度追踪
 4. 实战关联（关联本项目代码）
 
 **AI 探索**：
 1. 基于用户数据分析兴趣
-2. Claude Tool Use 调用搜索 API
+2. AI provider tool calling 调用搜索 API
 3. 推荐列表 + 一键收藏
 
 **AI 工作流**：

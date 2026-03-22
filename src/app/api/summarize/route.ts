@@ -1,13 +1,22 @@
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod/v4";
 import { db } from "@/server/db";
 import { bookmarks } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { getAIErrorMessage, getTaskModel } from "@/server/ai/openai";
 
 const summarizeInputSchema = z.object({
   bookmarkId: z.string(),
 });
+
+const summaryOutputSchema = z.object({
+  summary: z.string().min(1),
+  tags: z.array(z.string().min(1)).min(2).max(3),
+});
+
+function normalizeTags(tags: string[]) {
+  return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))].slice(0, 3);
+}
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -33,34 +42,36 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { text } = await generateText({
-      model: anthropic("claude-sonnet-4-20250514"),
+    const { output } = await generateText({
+      model: getTaskModel(),
+      output: Output.object({
+        schema: summaryOutputSchema,
+        name: "bookmark_summary",
+        description: "A concise Chinese bookmark summary with 2-3 short tags.",
+      }),
       prompt: `请对以下内容生成简短的中文摘要（不超过100字），并推荐2-3个标签（JSON数组格式）。
 
 内容：${contentToSummarize}
 
-请以JSON格式回复：
-{"summary": "摘要内容", "tags": ["标签1", "标签2"]}`,
+请输出中文结果：
+1. summary 控制在 100 字以内。
+2. tags 提供 2-3 个简短标签，不要重复。`,
     });
 
-    // Parse AI response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      await db
-        .update(bookmarks)
-        .set({
-          summary: parsed.summary,
-          tags: JSON.stringify(parsed.tags),
-          status: "processed",
-          updatedAt: new Date(),
-        })
-        .where(eq(bookmarks.id, bookmarkId));
+    const tags = normalizeTags(output.tags);
+    const summary = output.summary.trim();
 
-      return Response.json({ success: true, summary: parsed.summary, tags: parsed.tags });
-    }
+    await db
+      .update(bookmarks)
+      .set({
+        summary,
+        tags: JSON.stringify(tags),
+        status: "processed",
+        updatedAt: new Date(),
+      })
+      .where(eq(bookmarks.id, bookmarkId));
 
-    return Response.json({ error: "Failed to parse AI response" }, { status: 500 });
+    return Response.json({ success: true, summary, tags });
   } catch (error) {
     await db
       .update(bookmarks)
@@ -68,7 +79,7 @@ export async function POST(req: Request) {
       .where(eq(bookmarks.id, bookmarkId));
 
     return Response.json(
-      { error: error instanceof Error ? error.message : "AI summarization failed" },
+      { error: getAIErrorMessage(error, "OpenAI summarization failed") },
       { status: 500 }
     );
   }

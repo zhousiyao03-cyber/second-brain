@@ -48,3 +48,6 @@ next-env.d.ts
 # test results
 /test-results/
 /playwright-report/
+
+# handoff (cross-session temp file)
+HANDOFF.md

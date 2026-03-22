@@ -1,7 +1,7 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { z } from "zod/v4";
 import { retrieveContext } from "@/server/ai/rag";
+import { getAIErrorMessage, getChatModel } from "@/server/ai/openai";
 
 export const maxDuration = 30;
 
@@ -66,11 +66,18 @@ export async function POST(req: Request) {
   const skipRag = SKIP_RAG_KEYWORDS.some((kw) => userQuery.includes(kw));
   const context = skipRag ? [] : await retrieveContext(userQuery);
 
-  const result = streamText({
-    model: anthropic("claude-sonnet-4-20250514"),
-    system: buildSystemPrompt(context),
-    messages,
-  });
+  try {
+    const result = streamText({
+      model: getChatModel(),
+      system: buildSystemPrompt(context),
+      messages,
+    });
 
-  return result.toTextStreamResponse();
+    return result.toTextStreamResponse();
+  } catch (error) {
+    return Response.json(
+      { error: getAIErrorMessage(error, "OpenAI chat request failed") },
+      { status: 500 }
+    );
+  }
 }

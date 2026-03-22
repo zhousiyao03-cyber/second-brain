@@ -1,8 +1,21 @@
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { generateText, Output } from "ai";
 import { db } from "@/server/db";
 import { notes, bookmarks, todos } from "@/server/db/schema";
 import { desc } from "drizzle-orm";
+import { z } from "zod/v4";
+import { getAIErrorMessage, getTaskModel } from "@/server/ai/openai";
+
+const exploreOutputSchema = z.object({
+  interests: z.array(z.string().min(1)).min(3).max(5),
+  recommendations: z.array(
+    z.object({
+      title: z.string().min(1),
+      description: z.string().min(1),
+      category: z.string().min(1),
+      reason: z.string().min(1),
+    })
+  ).length(5),
+});
 
 export async function POST() {
   // Gather user's recent data to understand interests
@@ -31,8 +44,13 @@ export async function POST() {
   };
 
   try {
-    const { text } = await generateText({
-      model: anthropic("claude-sonnet-4-20250514"),
+    const { output } = await generateText({
+      model: getTaskModel(),
+      output: Output.object({
+        schema: exploreOutputSchema,
+        name: "interest_recommendations",
+        description: "Interest analysis with five personalized learning recommendations in Chinese.",
+      }),
       prompt: `你是一个知识推荐助手。基于用户的笔记、收藏和待办，分析他们的兴趣方向并推荐5条相关的学习资源或话题。
 
 用户最近的笔记：
@@ -44,34 +62,17 @@ ${context.bookmarks || "暂无"}
 用户的待办：
 ${context.todos || "暂无"}
 
-请以 JSON 格式回复：
-{
-  "interests": ["兴趣1", "兴趣2", "兴趣3"],
-  "recommendations": [
-    {
-      "title": "推荐标题",
-      "description": "简要描述（30字以内）",
-      "category": "分类",
-      "reason": "推荐理由（20字以内）"
-    }
-  ]
-}
-
 要求：
 1. 推荐要基于用户实际数据推断的兴趣
 2. 推荐内容要有学习价值
-3. 如果用户数据不足，基于技术学习推荐通用资源`,
+3. 如果用户数据不足，基于技术学习推荐通用资源
+4. 返回中文结果，recommendations 固定 5 条`,
     });
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return Response.json({ error: "Failed to parse" }, { status: 500 });
-    }
-
-    return Response.json(JSON.parse(jsonMatch[0]));
+    return Response.json(output);
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "AI exploration failed" },
+      { error: getAIErrorMessage(error, "OpenAI exploration failed") },
       { status: 500 }
     );
   }

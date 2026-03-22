@@ -137,7 +137,7 @@ export default function AskPage() {
 
         {error && (
           <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">
-            出错了：{error.message}。请检查 ANTHROPIC_API_KEY 是否已配置。
+            出错了：{error.message}。请检查本地模型服务是否启动，或 AI provider 配置是否正确。
           </div>
         )}
       </div>
