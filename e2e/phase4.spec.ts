@@ -63,10 +63,20 @@ test.describe("Phase 4: AI 摘要 API", () => {
 
   test("chat API endpoint 存在", async ({ request }) => {
     const response = await request.post("/api/chat", {
-      data: { messages: [{ role: "user", content: "hi" }] },
+      data: {
+        messages: [
+          {
+            id: "ui-msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "hi" }],
+          },
+        ],
+      },
     });
-    // Will fail with auth error (no API key in CI) but endpoint exists (not 404)
+    // Frontend sends AI SDK UI messages. The route should return a non-empty body
+    // instead of silently accepting the request and streaming nothing.
     expect(response.status()).not.toBe(404);
+    expect((await response.text()).trim().length).toBeGreaterThan(0);
   });
 
   test("summarize API endpoint 存在", async ({ request }) => {

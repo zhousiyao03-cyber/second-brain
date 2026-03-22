@@ -1,4 +1,10 @@
-import { streamText } from "ai";
+import {
+  convertToModelMessages,
+  modelMessageSchema,
+  streamText,
+  type ModelMessage,
+  type UIMessage,
+} from "ai";
 import { z } from "zod/v4";
 import { retrieveContext } from "@/server/ai/rag";
 import { getAIErrorMessage, getChatModel } from "@/server/ai/openai";
@@ -8,6 +14,14 @@ export const maxDuration = 30;
 const chatInputSchema = z.object({
   messages: z.array(z.unknown()),
 });
+
+const uiMessageSchema = z
+  .object({
+    id: z.string().optional(),
+    role: z.enum(["system", "user", "assistant"]),
+    parts: z.array(z.object({ type: z.string() }).passthrough()),
+  })
+  .passthrough();
 
 const SKIP_RAG_KEYWORDS = ["不用搜索", "直接回答", "不需要搜索", "不要搜索"];
 
@@ -41,32 +55,57 @@ ${knowledgeBlock}
 3. 隐藏标记必须是回复的最后一行，前面有一个空行。`;
 }
 
+async function normalizeMessages(messages: unknown[]): Promise<ModelMessage[]> {
+  const uiMessages = z.array(uiMessageSchema).safeParse(messages);
+  if (uiMessages.success) {
+    return convertToModelMessages(
+      uiMessages.data as Array<Omit<UIMessage, "id">>
+    );
+  }
+
+  const modelMessages = z.array(modelMessageSchema).safeParse(messages);
+  if (modelMessages.success) {
+    return modelMessages.data;
+  }
+
+  throw new Error(
+    "Invalid chat message format. Expected AI SDK UI messages or model messages."
+  );
+}
+
+function getUserMessageText(message: ModelMessage | undefined) {
+  if (!message || message.role !== "user") {
+    return "";
+  }
+
+  if (typeof message.content === "string") {
+    return message.content;
+  }
+
+  return message.content
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("");
+}
+
 export async function POST(req: Request) {
   const body = await req.json();
   const parsed = chatInputSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: "Invalid input" }, { status: 400 });
   }
-  // Use original body for streamText (preserves proper types), zod only validates structure
-  const messages = body.messages;
-
-  // Get the latest user message for RAG retrieval
-  const lastUserMessage = [...messages]
-    .reverse()
-    .find((m: { role: string }) => m.role === "user");
-  const userQuery =
-    lastUserMessage?.content ??
-    lastUserMessage?.parts
-      ?.filter((p: { type: string; text?: string }) => p.type === "text" && p.text)
-      .map((p: { text?: string }) => p.text ?? "")
-      .join("") ??
-    "";
-
-  // Check if user wants to skip RAG
-  const skipRag = SKIP_RAG_KEYWORDS.some((kw) => userQuery.includes(kw));
-  const context = skipRag ? [] : await retrieveContext(userQuery);
 
   try {
+    const messages = await normalizeMessages(parsed.data.messages);
+
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === "user");
+    const userQuery = getUserMessageText(lastUserMessage);
+
+    const skipRag = SKIP_RAG_KEYWORDS.some((kw) => userQuery.includes(kw));
+    const context = skipRag ? [] : await retrieveContext(userQuery);
+
     const result = streamText({
       model: getChatModel(),
       system: buildSystemPrompt(context),
@@ -75,9 +114,18 @@ export async function POST(req: Request) {
 
     return result.toTextStreamResponse();
   } catch (error) {
+    const isInvalidInput =
+      error instanceof Error &&
+      error.message.includes("Invalid chat message format");
+
     return Response.json(
-      { error: getAIErrorMessage(error, "OpenAI chat request failed") },
-      { status: 500 }
+      {
+        error: getAIErrorMessage(
+          error,
+          isInvalidInput ? "Invalid input" : "AI chat request failed"
+        ),
+      },
+      { status: isInvalidInput ? 400 : 500 }
     );
   }
 }
