@@ -1,14 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { Plus, Trash2, ExternalLink, Bookmark, Sparkles, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  ExternalLink,
+  Bookmark,
+  Sparkles,
+  Loader2,
+  Search,
+  RefreshCw,
+} from "lucide-react";
 
 export default function BookmarksPage() {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [summarizing, setSummarizing] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "url" | "text">("all");
 
   const utils = trpc.useUtils();
   const { data: bookmarks = [], isLoading } = trpc.bookmarks.list.useQuery();
@@ -21,6 +32,9 @@ export default function BookmarksPage() {
     },
   });
   const deleteBookmark = trpc.bookmarks.delete.useMutation({
+    onSuccess: () => utils.bookmarks.list.invalidate(),
+  });
+  const refetchBookmark = trpc.bookmarks.refetch.useMutation({
     onSuccess: () => utils.bookmarks.list.invalidate(),
   });
 
@@ -43,6 +57,23 @@ export default function BookmarksPage() {
       minute: "2-digit",
     });
   };
+
+  const filteredBookmarks = useMemo(() => {
+    return bookmarks.filter((bm) => {
+      // Source filter
+      if (sourceFilter !== "all" && bm.source !== sourceFilter) return false;
+      // Search filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const searchable = [bm.title, bm.url, bm.summary, bm.content]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!searchable.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [bookmarks, searchQuery, sourceFilter]);
 
   return (
     <div>
@@ -80,7 +111,7 @@ export default function BookmarksPage() {
                 disabled={(!url.trim() && !title.trim()) || createBookmark.isPending}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
               >
-                保存
+                {createBookmark.isPending ? "保存中..." : "保存"}
               </button>
               <button
                 type="button"
@@ -94,16 +125,40 @@ export default function BookmarksPage() {
         </form>
       )}
 
+      {/* Search and filter bar */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜索收藏..."
+            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <select
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value as "all" | "url" | "text")}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="按来源筛选"
+        >
+          <option value="all">全部</option>
+          <option value="url">URL</option>
+          <option value="text">文本</option>
+        </select>
+      </div>
+
       {isLoading ? (
         <p className="text-gray-500 text-sm">加载中...</p>
-      ) : bookmarks.length === 0 ? (
+      ) : filteredBookmarks.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Bookmark size={48} className="mx-auto mb-3 opacity-50" />
-          <p>还没有收藏，点击添加开始吧</p>
+          <p>{bookmarks.length === 0 ? "还没有收藏，点击添加开始吧" : "没有匹配的收藏"}</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {bookmarks.map((bm) => (
+          {filteredBookmarks.map((bm) => (
             <div
               key={bm.id}
               className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg group"
@@ -135,17 +190,55 @@ export default function BookmarksPage() {
                       {bm.source}
                     </span>
                   )}
-                  {bm.status && bm.status !== "processed" && (
-                    <span className="px-1.5 py-0.5 text-xs bg-yellow-100 text-yellow-600 rounded">
-                      {bm.status}
+                  {bm.status === "pending" && (
+                    <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">
+                      抓取中
+                    </span>
+                  )}
+                  {bm.status === "failed" && (
+                    <span className="px-1.5 py-0.5 text-xs bg-orange-100 text-orange-600 rounded">
+                      抓取失败
                     </span>
                   )}
                 </div>
+                {bm.content && !bm.summary && (
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    {bm.content.slice(0, 100)}...
+                  </p>
+                )}
                 {bm.summary && (
                   <p className="text-xs text-gray-500 mt-1 line-clamp-2">{bm.summary}</p>
                 )}
+                {bm.tags && (
+                  <div className="flex gap-1 mt-1">
+                    {(JSON.parse(bm.tags) as string[]).map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-1.5 py-0.5 text-xs bg-blue-50 text-blue-600 rounded"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              {!bm.summary && (
+              {/* Refetch button for failed bookmarks */}
+              {bm.status === "failed" && bm.url && (
+                <button
+                  onClick={() => refetchBookmark.mutate({ id: bm.id })}
+                  disabled={refetchBookmark.isPending}
+                  className="p-1 text-orange-400 hover:text-orange-600 transition-all"
+                  title="重新抓取"
+                >
+                  {refetchBookmark.isPending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={16} />
+                  )}
+                </button>
+              )}
+              {/* Summarize button */}
+              {!bm.summary && bm.status === "processed" && (
                 <button
                   onClick={async () => {
                     setSummarizing(bm.id);
