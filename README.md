@@ -19,7 +19,7 @@
 - Tailwind CSS v4
 - tRPC v11 + Zod v4
 - Drizzle ORM + SQLite (better-sqlite3)
-- Vercel AI SDK v6 + 本地 OpenAI-compatible 模型服务（默认）/ OpenAI API（可选）
+- Vercel AI SDK v6 + OpenClaw / Codex OAuth（默认 `gpt-5.4`）/ OpenAI API / 本地 OpenAI-compatible 模型服务
 - @mozilla/readability + linkedom
 - Playwright (E2E)
 
@@ -31,10 +31,37 @@ pnpm db:push       # 初始化数据库
 pnpm dev            # 启动开发服务器 http://localhost:3000
 ```
 
-需要配置环境变量。默认推荐本地模型服务：
+需要配置环境变量。默认推荐直接复用你已经登录好的 OpenClaw / Codex OAuth：
 
 ```bash
 # .env.local
+AI_PROVIDER=codex
+
+# 下面这些通常可以不写，默认会读取 OpenClaw 的标准位置
+# CODEX_AUTH_STORE_PATH=/Users/yourname/.openclaw/agents/main/agent/auth-profiles.json
+# CODEX_AUTH_PROFILE_ID=openai-codex:default
+# CODEX_MODEL=gpt-5.4
+# CODEX_CHAT_MODEL=gpt-5.4
+# CODEX_TASK_MODEL=gpt-5.4
+```
+
+这条路线不会使用 `OPENAI_API_KEY`。运行时会直接读取 `~/.openclaw/openclaw.json` 和 `~/.openclaw/agents/main/agent/auth-profiles.json`，按 OpenClaw 当前默认的 `openai-codex/gpt-5.4` 配置去请求 `chatgpt.com/backend-api`。为了让 Next.js 服务端运行更稳定，仓库内部固定走 SSE transport，而不是 OpenClaw 里的 `auto` WebSocket/SSE 策略。
+
+如果你之后想切回标准 OpenAI API，也可以：
+
+```bash
+AI_PROVIDER=openai
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-5.4
+
+# 可选：按场景拆分模型
+# OPENAI_CHAT_MODEL=gpt-5.4
+# OPENAI_TASK_MODEL=gpt-5.4
+```
+
+如果你之后想切回本地 OpenAI-compatible 服务，也可以：
+
+```bash
 AI_PROVIDER=local
 AI_BASE_URL=http://127.0.0.1:11434/v1
 AI_MODEL=qwen2.5:14b
@@ -49,21 +76,13 @@ AI_MODEL=qwen2.5:14b
 - Ollama: `AI_BASE_URL=http://127.0.0.1:11434/v1`
 - LM Studio: `AI_BASE_URL=http://127.0.0.1:1234/v1`
 
-推荐先拉一个经过当前项目实测的模型：
+如果走本地模式，推荐先拉一个经过当前项目实测的模型：
 
 ```bash
 ollama pull qwen2.5:14b
 ```
 
-如果你之后还想切回云端 OpenAI，也可以：
-
-```bash
-AI_PROVIDER=openai
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL=gpt-5.4
-```
-
-AI 路由统一通过 `src/server/ai/openai.ts` 读取这些环境变量。默认会优先走本地服务；只有明确设置 `AI_PROVIDER=openai` 时才会走 OpenAI API。
+AI 路由统一通过 `src/server/ai/provider.ts` 读取这些环境变量。现在支持三种模式：`codex`、`openai`、`local`。如果你没有显式设置 `AI_PROVIDER`，运行时会优先尝试复用本机已有的 OpenClaw Codex 登录态。
 
 ## 常用命令
 

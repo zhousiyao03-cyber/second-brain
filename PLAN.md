@@ -16,7 +16,7 @@
 | API | tRPC v11 |
 | 数据库 | SQLite (better-sqlite3) + Drizzle ORM |
 | 向量搜索 | orama（纯 JS 全文+向量搜索引擎，零依赖） |
-| AI | 本地 OpenAI-compatible 模型服务（如 Ollama / LM Studio）+ Vercel AI SDK（可选 OpenAI fallback） |
+| AI | OpenClaw / Codex OAuth（默认 `gpt-5.4`）+ Vercel AI SDK（可选 OpenAI API 或本地 OpenAI-compatible 服务，如 Ollama / LM Studio） |
 
 ---
 
@@ -86,7 +86,7 @@ second-brain/
 ├── package.json
 ├── tsconfig.json
 ├── next.config.ts
-└── .env.local                    # AI_PROVIDER / AI_BASE_URL / AI_MODEL
+└── .env.local                    # AI_PROVIDER / CODEX_* / OPENAI_* / AI_*
 ```
 
 ---

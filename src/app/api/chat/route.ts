@@ -1,7 +1,6 @@
 import {
   convertToModelMessages,
   modelMessageSchema,
-  streamText,
   type ModelMessage,
   type UIMessage,
 } from "ai";
@@ -12,11 +11,16 @@ import {
   stripAssistantSourceMetadata,
 } from "@/lib/ask-ai";
 import { retrieveContext } from "@/server/ai/rag";
-import { getAIErrorMessage, getChatModel } from "@/server/ai/openai";
+import {
+  getAIErrorMessage,
+  getChatAssistantIdentity,
+  streamChatResponse,
+} from "@/server/ai/provider";
 
 export const maxDuration = 30;
 
 const chatInputSchema = z.object({
+  id: z.string().optional(),
   messages: z.array(z.unknown()),
   sourceScope: z.enum(ASK_AI_SOURCE_SCOPES).optional(),
 });
@@ -35,12 +39,14 @@ function buildSystemPrompt(
   context: Awaited<ReturnType<typeof retrieveContext>>,
   sourceScope: AskAiSourceScope
 ): string {
+  const identityLine = getChatAssistantIdentity();
+
   if (context.length === 0) {
     if (sourceScope === "direct") {
-      return "你是 Second Brain 的 AI 助手。当前请求选择了直接回答模式，不要引用知识库，直接用中文回答用户的问题，简洁准确。";
+      return `${identityLine} 当前请求选择了直接回答模式，不要引用知识库，直接用中文回答用户的问题，简洁准确。`;
     }
 
-    return "你是 Second Brain 的 AI 助手。用户的知识库中没有找到相关内容，请直接用中文回答用户的问题，简洁准确。";
+    return `${identityLine} 用户的知识库中没有找到相关内容，请直接用中文回答用户的问题，简洁准确。`;
   }
 
   const scopeHint =
@@ -57,7 +63,7 @@ function buildSystemPrompt(
     )
     .join("\n\n");
 
-  return `你是 Second Brain 的 AI 助手，帮助用户管理和理解他们的知识库。用中文回答问题，简洁准确。
+  return `${identityLine} 你帮助用户管理和理解他们的知识库。用中文回答问题，简洁准确。
 
 ${scopeHint}
 
@@ -160,13 +166,12 @@ export async function POST(req: Request) {
       ? []
       : await retrieveContext(userQuery, { scope: sourceScope });
 
-    const result = streamText({
-      model: getChatModel(),
-      system: buildSystemPrompt(context, sourceScope),
+    return await streamChatResponse({
       messages,
+      sessionId: parsed.data.id,
+      signal: req.signal,
+      system: buildSystemPrompt(context, sourceScope),
     });
-
-    return result.toTextStreamResponse();
   } catch (error) {
     const isInvalidInput =
       error instanceof Error &&

@@ -1,9 +1,8 @@
-import { generateText, Output } from "ai";
 import { db } from "@/server/db";
 import { notes, bookmarks, todos } from "@/server/db/schema";
 import { desc } from "drizzle-orm";
 import { z } from "zod/v4";
-import { getAIErrorMessage, getTaskModel } from "@/server/ai/openai";
+import { generateStructuredData, getAIErrorMessage } from "@/server/ai/provider";
 
 const exploreOutputSchema = z.object({
   interests: z.array(z.string().min(1)).min(3).max(5),
@@ -44,13 +43,11 @@ export async function POST() {
   };
 
   try {
-    const { output } = await generateText({
-      model: getTaskModel(),
-      output: Output.object({
-        schema: exploreOutputSchema,
-        name: "interest_recommendations",
-        description: "Interest analysis with five personalized learning recommendations in Chinese.",
-      }),
+    const output = await generateStructuredData({
+      schema: exploreOutputSchema,
+      name: "interest_recommendations",
+      description:
+        "Interest analysis with five personalized learning recommendations in Chinese.",
       prompt: `你是一个知识推荐助手。基于用户的笔记、收藏和待办，分析他们的兴趣方向并推荐5条相关的学习资源或话题。
 
 用户最近的笔记：
@@ -72,7 +69,7 @@ ${context.todos || "暂无"}
     return Response.json(output);
   } catch (error) {
     return Response.json(
-      { error: getAIErrorMessage(error, "OpenAI exploration failed") },
+      { error: getAIErrorMessage(error, "AI exploration failed") },
       { status: 500 }
     );
   }

@@ -1,9 +1,8 @@
-import { generateText, Output } from "ai";
 import { db } from "@/server/db";
 import { learningPaths, learningLessons } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
-import { getAIErrorMessage, getTaskModel } from "@/server/ai/openai";
+import { generateStructuredData, getAIErrorMessage } from "@/server/ai/provider";
 
 const generateLessonInputSchema = z.object({
   pathId: z.string(),
@@ -46,13 +45,11 @@ export async function POST(req: Request) {
   const existingTitles = existingLessons.map((l) => l.title).join("、");
 
   try {
-    const { output } = await generateText({
-      model: getTaskModel(),
-      output: Output.object({
-        schema: lessonOutputSchema,
-        name: "learning_lesson",
-        description: "A Chinese programming lesson with markdown content and quiz answers.",
-      }),
+    const output = await generateStructuredData({
+      schema: lessonOutputSchema,
+      name: "learning_lesson",
+      description:
+        "A Chinese programming lesson with markdown content and quiz answers.",
       prompt: `你是一位编程导师。请为学习路径"${path.title}"生成下一节课程。
 
 学习路径描述：${path.description}
@@ -79,7 +76,7 @@ export async function POST(req: Request) {
     return Response.json({ success: true, lessonId, title: output.title.trim() });
   } catch (error) {
     return Response.json(
-      { error: getAIErrorMessage(error, "OpenAI lesson generation failed") },
+      { error: getAIErrorMessage(error, "AI lesson generation failed") },
       { status: 500 }
     );
   }

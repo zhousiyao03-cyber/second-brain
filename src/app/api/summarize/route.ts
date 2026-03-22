@@ -1,9 +1,8 @@
-import { generateText, Output } from "ai";
 import { z } from "zod/v4";
 import { db } from "@/server/db";
 import { bookmarks } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { getAIErrorMessage, getTaskModel } from "@/server/ai/openai";
+import { generateStructuredData, getAIErrorMessage } from "@/server/ai/provider";
 
 const summarizeInputSchema = z.object({
   bookmarkId: z.string(),
@@ -42,13 +41,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { output } = await generateText({
-      model: getTaskModel(),
-      output: Output.object({
-        schema: summaryOutputSchema,
-        name: "bookmark_summary",
-        description: "A concise Chinese bookmark summary with 2-3 short tags.",
-      }),
+    const output = await generateStructuredData({
+      schema: summaryOutputSchema,
+      name: "bookmark_summary",
+      description: "A concise Chinese bookmark summary with 2-3 short tags.",
       prompt: `请对以下内容生成简短的中文摘要（不超过100字），并推荐2-3个标签（JSON数组格式）。
 
 内容：${contentToSummarize}
@@ -79,7 +75,7 @@ export async function POST(req: Request) {
       .where(eq(bookmarks.id, bookmarkId));
 
     return Response.json(
-      { error: getAIErrorMessage(error, "OpenAI summarization failed") },
+      { error: getAIErrorMessage(error, "AI summarization failed") },
       { status: 500 }
     );
   }
