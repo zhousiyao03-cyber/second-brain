@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Phase 6: 首页仪表盘", () => {
   test("仪表盘加载成功", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main h1")).toContainText("Dashboard");
+    await expect(page.locator("main h1")).toContainText("首页");
   });
 
   test("显示统计卡片", async ({ page }) => {

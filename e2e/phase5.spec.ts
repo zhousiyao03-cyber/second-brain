@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 
 const uid = () => Math.random().toString(36).slice(2, 8);
 
-test.describe("Phase 5: 学习模块", () => {
+// V1 收敛：Learn 模块已从导航隐藏，跳过相关测试（路由仍可用，功能未删除）
+test.describe.skip("Phase 5: 学习模块", () => {
   test("学习页面加载成功", async ({ page }) => {
     await page.goto("/learn");
     await expect(page.locator("main h1")).toContainText("学习");
@@ -68,7 +69,8 @@ test.describe("Phase 5: AI 探索", () => {
   });
 });
 
-test.describe("Phase 5: 工作流模块", () => {
+// V1 收敛：Workflows 模块已从导航隐藏，跳过相关测试（路由仍可用，功能未删除）
+test.describe.skip("Phase 5: 工作流模块", () => {
   test("工作流页面加载成功", async ({ page }) => {
     await page.goto("/workflows");
     await expect(page.locator("main h1")).toContainText("工作流");

@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Phase 1: 项目骨架 + 基础布局", () => {
-  test("首页加载成功，显示 Dashboard", async ({ page }) => {
+  test("首页加载成功，显示首页标题", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main h1")).toContainText("Dashboard");
+    await expect(page.locator("main h1")).toContainText("首页");
   });
 
   test("侧边栏包含所有导航项", async ({ page }) => {
@@ -11,14 +11,12 @@ test.describe("Phase 1: 项目骨架 + 基础布局", () => {
     const sidebar = page.locator("aside");
 
     await expect(sidebar.getByText("Second Brain")).toBeVisible();
-    await expect(sidebar.getByText("Dashboard")).toBeVisible();
+    await expect(sidebar.getByText("首页")).toBeVisible();
     await expect(sidebar.getByText("笔记")).toBeVisible();
     await expect(sidebar.getByText("收藏")).toBeVisible();
     await expect(sidebar.getByText("Todo")).toBeVisible();
-    await expect(sidebar.getByText("学习")).toBeVisible();
     await expect(sidebar.getByText("AI 探索")).toBeVisible();
     await expect(sidebar.getByText("Ask AI")).toBeVisible();
-    await expect(sidebar.getByText("工作流")).toBeVisible();
   });
 
   test.describe("侧边栏导航跳转", () => {
@@ -26,10 +24,8 @@ test.describe("Phase 1: 项目骨架 + 基础布局", () => {
       { label: "笔记", path: "/notes", heading: "笔记" },
       { label: "收藏", path: "/bookmarks", heading: "收藏" },
       { label: "Todo", path: "/todos", heading: "Todo" },
-      { label: "学习", path: "/learn", heading: "学习" },
       { label: "AI 探索", path: "/explore", heading: "AI 探索" },
       { label: "Ask AI", path: "/ask", heading: "Ask AI" },
-      { label: "工作流", path: "/workflows", heading: "工作流" },
     ];
 
     for (const route of routes) {

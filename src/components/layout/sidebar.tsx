@@ -8,24 +8,20 @@ import {
   FileText,
   Bookmark,
   CheckSquare,
-  GraduationCap,
   Compass,
   MessageCircle,
-  Workflow,
   Moon,
   Sun,
 } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "首页", icon: LayoutDashboard },
   { href: "/notes", label: "笔记", icon: FileText },
   { href: "/bookmarks", label: "收藏", icon: Bookmark },
   { href: "/todos", label: "Todo", icon: CheckSquare },
-  { href: "/learn", label: "学习", icon: GraduationCap },
   { href: "/explore", label: "AI 探索", icon: Compass },
   { href: "/ask", label: "Ask AI", icon: MessageCircle },
-  { href: "/workflows", label: "工作流", icon: Workflow },
 ];
 
 export function Sidebar() {
