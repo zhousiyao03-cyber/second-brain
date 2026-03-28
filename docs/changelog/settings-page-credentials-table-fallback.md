@@ -1,0 +1,24 @@
+# 2026-03-28 Settings Page Credentials Table Fallback
+
+- date: 2026-03-28
+- task / goal: 修复线上 `/settings` 因缺失 `user_credentials` 表而导致的服务端报错。
+- key changes:
+  - 新增 `src/server/db/metadata.ts`，提供 `hasTable()` 用于探测运行时数据库表是否存在。
+  - `src/app/(app)/settings/page.tsx` 在渲染前先检查 `user_credentials` 是否存在。
+  - 当 `user_credentials` 缺失时，页面不再 join 该表，账号信息仍可读取，密码区改为提示文案而不是触发 500。
+  - `src/app/(app)/settings/actions.ts` 同步加入缺表保护：
+    - 修改账号信息时仅更新 `users`，不再强制更新缺失的凭证表。
+    - 修改密码时若缺少凭证表，直接重定向回 `/settings?passwordError=unavailable`。
+- files touched:
+  - `src/server/db/index.ts`
+  - `src/server/db/metadata.ts`
+  - `src/app/(app)/settings/page.tsx`
+  - `src/app/(app)/settings/actions.ts`
+  - `docs/changelog/settings-page-credentials-table-fallback.md`
+- verification commands and results:
+  - `pnpm lint` -> 通过。
+  - `pnpm build` -> 通过。
+  - 无头浏览器真实登录本地 TEST 账号后访问 `/settings` -> 页面成功显示 `账号设置`，未出现服务端错误。
+  - `pnpm exec tsx --version` -> 失败，当前环境没有 `tsx`，因此没有额外补一个“临时缺表库”的脚本级自动验证。
+- remaining risks or follow-up items:
+  - 这次代码已经让线上缺表场景不会直接炸页，但根因仍然很可能是生产库 schema 未同步；建议仍尽快在生产库补齐最新 auth 表，尤其是 `user_credentials`。

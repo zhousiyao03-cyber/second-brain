@@ -6,6 +6,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { hashPassword, normalizeEmail, verifyPassword } from "@/server/auth/password";
 import { db } from "@/server/db";
+import { hasTable } from "@/server/db/metadata";
 import { userCredentials, users } from "@/server/db/schema";
 
 const profileSchema = z.object({
@@ -31,6 +32,7 @@ async function requireSessionUser() {
 
 export async function updateAccountProfile(formData: FormData) {
   const userId = await requireSessionUser();
+  const credentialsTableAvailable = await hasTable("user_credentials");
   const parsed = profileSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -59,19 +61,27 @@ export async function updateAccountProfile(formData: FormData) {
     })
     .where(eq(users.id, userId));
 
-  await db
-    .update(userCredentials)
-    .set({
-      email,
-      updatedAt: new Date(),
-    })
-    .where(eq(userCredentials.userId, userId));
+  if (credentialsTableAvailable) {
+    await db
+      .update(userCredentials)
+      .set({
+        email,
+        updatedAt: new Date(),
+      })
+      .where(eq(userCredentials.userId, userId));
+  }
 
   redirect("/settings?profileStatus=updated");
 }
 
 export async function updateAccountPassword(formData: FormData) {
   const userId = await requireSessionUser();
+  const credentialsTableAvailable = await hasTable("user_credentials");
+
+  if (!credentialsTableAvailable) {
+    redirect("/settings?passwordError=unavailable");
+  }
+
   const parsed = passwordSchema.safeParse({
     currentPassword: formData.get("currentPassword"),
     newPassword: formData.get("newPassword"),

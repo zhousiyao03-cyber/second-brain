@@ -14,6 +14,7 @@ test.describe("Phase 4: Ask AI 页面", () => {
     await expect(page.getByRole("button", { name: "总结最近笔记" })).toBeVisible();
     await expect(page.getByRole("button", { name: /全部来源/ }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /只看笔记/ }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /只看收藏/ })).toHaveCount(0);
   });
 
   test("输入框和发送按钮存在", async ({ page }) => {

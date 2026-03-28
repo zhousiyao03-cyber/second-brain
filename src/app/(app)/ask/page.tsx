@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { TextStreamChatTransport } from "ai";
 import {
-  ArrowUpRight,
   Bookmark,
   Bot,
   FileText,
@@ -54,6 +53,9 @@ const QUICK_PROMPTS: Array<{
 ];
 
 const transport = new TextStreamChatTransport({ api: "/api/chat" });
+const VISIBLE_SCOPE_OPTIONS = ASK_AI_SCOPE_OPTIONS.filter(
+  (option) => option.value !== "bookmarks"
+);
 
 function getMessageText(parts: Array<{ type: string; text?: string }> = []) {
   return parts
@@ -214,16 +216,32 @@ function QuickPromptCard({
   );
 }
 
-function ActionButton({
+function SourcePill({
+  source,
+}: {
+  source: AskAiSource;
+}) {
+  const isNote = source.type === "note";
+
+  return (
+    <Link
+      href={isNote ? `/notes/${source.id}` : "/bookmarks"}
+      className="inline-flex min-w-0 items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 transition-colors hover:border-stone-300 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300 dark:hover:border-stone-700 dark:hover:bg-stone-900"
+    >
+      {isNote ? <FileText size={14} /> : <Bookmark size={14} />}
+      <span className="max-w-[11rem] truncate">{source.title}</span>
+    </Link>
+  );
+}
+
+function IconActionButton({
   icon: Icon,
   label,
-  description,
   onClick,
   disabled,
 }: {
   icon: typeof Save;
   label: string;
-  description: string;
   onClick: () => void;
   disabled?: boolean;
 }) {
@@ -232,17 +250,11 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center justify-between rounded-[24px] border border-stone-200 bg-white px-4 py-3 text-left transition-colors hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:bg-stone-950 dark:hover:bg-stone-900"
+      title={label}
+      aria-label={label}
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-400 dark:hover:border-stone-700 dark:hover:bg-stone-900 dark:hover:text-stone-100"
     >
-      <div>
-        <div className="text-sm font-medium text-stone-900 dark:text-stone-100">
-          {label}
-        </div>
-        <div className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">
-          {description}
-        </div>
-      </div>
-      <Icon size={16} className="text-stone-400" />
+      <Icon size={16} />
     </button>
   );
 }
@@ -371,7 +383,10 @@ export default function AskPage() {
       <div className="mx-auto flex h-full w-full max-w-5xl flex-1 flex-col">
         <div
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto pb-6"
+          className={cn(
+            "flex-1 overflow-y-auto",
+            messages.length > 0 ? "pb-36" : "pb-6"
+          )}
         >
           {messages.length === 0 ? (
             <section className="flex flex-col items-center px-4 pb-8 pt-10 text-center">
@@ -422,100 +437,48 @@ export default function AskPage() {
                       </div>
 
                       {isLatestAssistant && (
-                        <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-                          <section className="rounded-[30px] border border-stone-200 bg-white/90 p-5 shadow-[0_16px_45px_-32px_rgba(15,23,42,0.55)] dark:border-stone-800 dark:bg-stone-950/90">
-                            <div className="text-[11px] uppercase tracking-[0.22em] text-stone-400 dark:text-stone-500">
-                              引用来源
-                            </div>
-
+                        <div className="mt-6 flex flex-wrap items-start justify-between gap-4 rounded-[24px] border border-stone-200/80 bg-white/70 px-4 py-3 shadow-[0_12px_38px_-30px_rgba(15,23,42,0.45)] backdrop-blur dark:border-stone-800 dark:bg-stone-950/70">
+                          <div className="min-w-0 flex-1">
                             {sources.length === 0 ? (
-                              <div className="mt-4 rounded-[24px] bg-stone-50 px-4 py-4 text-sm leading-6 text-stone-500 dark:bg-stone-900 dark:text-stone-400">
+                              <div className="text-sm text-stone-500 dark:text-stone-400">
                                 {scope === "direct"
-                                  ? "当前是直接回答模式，这一轮不会展示知识库来源。"
+                                  ? "当前是直接回答模式，不展示来源。"
                                   : "这一轮回答没有附带可展示的来源。"}
                               </div>
                             ) : (
-                              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                {sources.map((source) => (
-                                  <Link
+                              <div className="flex flex-wrap gap-2">
+                                {sources.slice(0, 3).map((source) => (
+                                  <SourcePill
                                     key={`${source.type}-${source.id}`}
-                                    href={
-                                      source.type === "note"
-                                        ? `/notes/${source.id}`
-                                        : "/bookmarks"
-                                    }
-                                    className="group rounded-[24px] border border-stone-200 px-4 py-4 transition-colors hover:border-stone-300 hover:bg-stone-50 dark:border-stone-800 dark:hover:border-stone-700 dark:hover:bg-stone-900"
-                                  >
-                                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-stone-400 dark:text-stone-500">
-                                      {source.type === "note" ? (
-                                        <FileText size={12} />
-                                      ) : (
-                                        <Bookmark size={12} />
-                                      )}
-                                      {source.type === "note" ? "笔记" : "收藏"}
-                                    </div>
-                                    <div className="mt-3 text-sm font-medium leading-6 text-stone-900 dark:text-stone-100">
-                                      {source.title}
-                                    </div>
-                                    <div className="mt-3 inline-flex items-center gap-1 text-xs text-stone-500 transition-colors group-hover:text-stone-900 dark:group-hover:text-stone-100">
-                                      打开来源
-                                      <ArrowUpRight size={12} />
-                                    </div>
-                                  </Link>
+                                    source={source}
+                                  />
                                 ))}
+                                {sources.length > 3 ? (
+                                  <div className="inline-flex items-center rounded-full bg-stone-100 px-3 py-2 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">
+                                    +{sources.length - 3} 个来源
+                                  </div>
+                                ) : null}
                               </div>
                             )}
-                          </section>
+                          </div>
 
-                          <section className="rounded-[30px] border border-stone-200 bg-white/90 p-5 shadow-[0_16px_45px_-32px_rgba(15,23,42,0.55)] dark:border-stone-800 dark:bg-stone-950/90">
-                            <div className="text-[11px] uppercase tracking-[0.22em] text-stone-400 dark:text-stone-500">
-                              继续工作
-                            </div>
-
-                            <div className="mt-4 space-y-3">
-                              <ActionButton
-                                icon={Save}
-                                label="保存为笔记"
-                                description="把当前问答沉淀成一条 `summary` 笔记，继续编辑。"
-                                onClick={handleSaveAnswer}
-                                disabled={
-                                  !latestAnswer.cleanText.trim() ||
-                                  createNote.isPending
-                                }
-                              />
-
-                              <ActionButton
-                                icon={RefreshCcw}
-                                label="按当前范围重答"
-                                description={`继续使用“${currentScope.label}”重新组织回答。`}
-                                onClick={() => handleRegenerateWithScope(scope)}
-                                disabled={!lastUserMessage || isLoading}
-                              />
-                            </div>
-
-                            <div className="mt-6">
-                              <div className="text-xs font-medium uppercase tracking-[0.18em] text-stone-400 dark:text-stone-500">
-                                切换思路
-                              </div>
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {ASK_AI_SCOPE_OPTIONS.filter(
-                                  (option) => option.value !== scope
-                                ).map((option) => (
-                                  <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() =>
-                                      handleRegenerateWithScope(option.value)
-                                    }
-                                    disabled={!lastUserMessage || isLoading}
-                                    className="rounded-full bg-stone-100 px-3.5 py-2 text-sm text-stone-700 transition-colors hover:bg-stone-200 disabled:opacity-50 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
-                                  >
-                                    {option.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </section>
+                          <div className="flex items-center gap-2">
+                            <IconActionButton
+                              icon={Save}
+                              label="保存为笔记"
+                              onClick={handleSaveAnswer}
+                              disabled={
+                                !latestAnswer.cleanText.trim() ||
+                                createNote.isPending
+                              }
+                            />
+                            <IconActionButton
+                              icon={RefreshCcw}
+                              label={`重新回答（${currentScope.label}）`}
+                              onClick={() => handleRegenerateWithScope(scope)}
+                              disabled={!lastUserMessage || isLoading}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -542,7 +505,9 @@ export default function AskPage() {
         <div
           className={cn(
             "z-10",
-            messages.length > 0 ? "sticky bottom-0 pb-2 pt-6" : "mt-10 pb-8 pt-2"
+            messages.length > 0
+              ? "sticky bottom-0 bg-gradient-to-t from-stone-50 via-stone-50/98 to-transparent pb-3 pt-4 backdrop-blur dark:from-stone-950 dark:via-stone-950/98"
+              : "mt-10 pb-8 pt-2"
           )}
         >
           <div className="mx-auto w-full max-w-4xl">
@@ -556,7 +521,7 @@ export default function AskPage() {
               )}
             >
               <div className="flex flex-wrap gap-2">
-                {ASK_AI_SCOPE_OPTIONS.map((option) => (
+                {VISIBLE_SCOPE_OPTIONS.map((option) => (
                   <ScopeChip
                     key={option.value}
                     active={scope === option.value}
@@ -633,6 +598,12 @@ export default function AskPage() {
                 </div>
               </div>
             </form>
+
+            {messages.length > 0 ? (
+              <div className="mt-2 text-center text-xs text-stone-400 dark:text-stone-500">
+                AI 可能会犯错，请核对关键信息。
+              </div>
+            ) : null}
 
             {messages.length === 0 && (
               <div className="mt-4 grid gap-3 md:grid-cols-3">
