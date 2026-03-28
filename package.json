@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.47",
+    "@libsql/client": "^0.17.2",
     "@ai-sdk/react": "^3.0.136",
     "@mariozechner/pi-ai": "0.61.1",
     "@mozilla/readability": "^0.6.0",
