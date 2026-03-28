@@ -479,12 +479,12 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
           </div>
         )}
 
-        <div className="mb-6 px-1">
+        <div className="mt-8 mb-6 px-1">
           <textarea
             value={title}
             onChange={(event) => handleTitleChange(event.target.value)}
             onKeyDown={handleTitleKeyDown}
-            placeholder="无标题"
+            placeholder="新页面"
             rows={1}
             className="w-full resize-none border-none bg-transparent text-[3.15rem] font-semibold leading-[1.04] text-stone-900 outline-none placeholder:text-stone-300 dark:text-stone-100 dark:placeholder:text-stone-600 md:text-[3.5rem]"
             style={{ overflow: "hidden" }}

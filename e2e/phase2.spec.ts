@@ -13,7 +13,7 @@ test.describe("Phase 2: 笔记本模块", () => {
     await page.goto("/notes");
     await expect(page.locator("main h1")).toContainText("笔记");
     await expect(page.getByText("新建笔记")).toBeVisible();
-    await expect(page.getByText("新建日记")).toBeVisible();
+    await expect(page.getByText("打开今日日报")).toBeVisible();
   });
 
   test("创建新笔记并跳转到编辑页", async ({ page }) => {
@@ -22,31 +22,36 @@ test.describe("Phase 2: 笔记本模块", () => {
 
     // Should navigate to /notes/[id]
     await expect(page).toHaveURL(/\/notes\/.+/);
-    const titleInput = page.locator("textarea[placeholder='无标题']");
+    const titleInput = page.locator("textarea[placeholder='新页面']");
     await expect(titleInput).toBeVisible();
-    await expect(titleInput).toHaveValue("无标题笔记");
+    await expect(titleInput).toHaveValue("");
   });
 
-  test("创建新日记会带入当天标题和默认模版", async ({ page }) => {
+  test("打开今日日报会带入当天标题和日报模板", async ({ page }) => {
     const todayTitle = formatJournalTitle();
 
     await page.goto("/notes");
-    await page.getByText("新建日记").click();
+    await page.getByText("打开今日日报").click();
 
     await expect(page).toHaveURL(/\/notes\/.+/);
-    await expect(page.locator("textarea[placeholder='无标题']")).toHaveValue(
+    await expect(page.locator("textarea[placeholder='新页面']")).toHaveValue(
       todayTitle
     );
-    await expect(page.locator(".ProseMirror")).toContainText("今日日记");
-    await expect(page.locator(".ProseMirror")).toContainText("Todo List");
+    await expect(page.locator(".ProseMirror")).toContainText("今天的 todo");
+    await expect(page.locator(".ProseMirror")).toContainText("今日的复盘");
+    await expect(page.locator(".ProseMirror")).toContainText("明日计划");
     await expect(
       page.locator(".ProseMirror ul[data-type='taskList'] li")
-    ).toHaveCount(3);
+    ).toHaveCount(2);
+    await expect(
+      page.locator(".ProseMirror ul[data-type='taskList'] li p").first()
+    ).toHaveText("");
+    await expect(page.locator(".ProseMirror p").last()).toHaveText("");
 
     await page.getByTestId("note-editor-back").click();
     await expect(page).toHaveURL("/notes");
     await expect(page.getByText(todayTitle).first()).toBeVisible();
-    await expect(page.getByText("日记").first()).toBeVisible();
+    await expect(page.getByText("日报").first()).toBeVisible();
   });
 
   test("编辑笔记标题", async ({ page }) => {
@@ -55,7 +60,7 @@ test.describe("Phase 2: 笔记本模块", () => {
     await page.getByText("新建笔记").click();
     await expect(page).toHaveURL(/\/notes\/.+/);
 
-    const titleInput = page.locator("textarea[placeholder='无标题']");
+    const titleInput = page.locator("textarea[placeholder='新页面']");
     await titleInput.fill(name);
     await expect(page.getByText("已保存")).toBeVisible({ timeout: 5000 });
 
@@ -338,17 +343,17 @@ test.describe("Phase 2: 笔记本模块", () => {
     await page.getByText("新建笔记").click();
     await expect(page).toHaveURL(/\/notes\/.+/);
 
-    await page.locator("textarea[placeholder='无标题']").fill(name);
+    await page.locator("textarea[placeholder='新页面']").fill(name);
     await expect(page.getByText("已保存")).toBeVisible({ timeout: 5000 });
     await expect(page.getByTestId("page-properties")).toBeVisible();
 
-    await page.getByRole("button", { name: "日记" }).click();
+    await page.getByRole("button", { name: "日报" }).click();
     await expect(page.getByText("已保存")).toBeVisible({ timeout: 5000 });
 
     await page.getByTestId("note-editor-back").click();
     const noteCard = page.getByTestId("note-card").filter({ hasText: name }).first();
     await expect(noteCard).toBeVisible();
-    await expect(noteCard.getByTestId("note-type-badge")).toContainText("日记");
+    await expect(noteCard.getByTestId("note-type-badge")).toContainText("日报");
   });
 
   test("添加和删除标签", async ({ page }) => {
@@ -358,7 +363,7 @@ test.describe("Phase 2: 笔记本模块", () => {
     await page.getByText("新建笔记").click();
     await expect(page).toHaveURL(/\/notes\/.+/);
 
-    await page.locator("textarea[placeholder='无标题']").fill(name);
+    await page.locator("textarea[placeholder='新页面']").fill(name);
     await expect(page.getByText("已保存")).toBeVisible({ timeout: 5000 });
 
     const tagInput = page.getByTestId("note-tag-input");
@@ -407,7 +412,7 @@ test.describe("Phase 2: 笔记本模块", () => {
     await page.getByText("新建笔记").click();
     await expect(page).toHaveURL(/\/notes\/.+/);
 
-    const titleInput = page.locator("textarea[placeholder='无标题']");
+    const titleInput = page.locator("textarea[placeholder='新页面']");
     await titleInput.fill(name);
     await expect(page.getByText("已保存")).toBeVisible({ timeout: 5000 });
 
@@ -436,13 +441,13 @@ test.describe("Phase 2: 笔记本模块", () => {
     // Create two notes
     await page.goto("/notes");
     await page.getByText("新建笔记").click();
-    const t1 = page.locator("textarea[placeholder='无标题']");
+    const t1 = page.locator("textarea[placeholder='新页面']");
     await t1.fill(apple);
     await expect(page.getByText("已保存")).toBeVisible({ timeout: 5000 });
     await page.getByTestId("note-editor-back").click();
 
     await page.getByText("新建笔记").click();
-    const t2 = page.locator("textarea[placeholder='无标题']");
+    const t2 = page.locator("textarea[placeholder='新页面']");
     await t2.fill(banana);
     await expect(page.getByText("已保存")).toBeVisible({ timeout: 5000 });
     await page.getByTestId("note-editor-back").click();
@@ -458,7 +463,7 @@ test.describe("Phase 2: 笔记本模块", () => {
     await page.getByText("新建笔记").click();
     await expect(page).toHaveURL(/\/notes\/.+/);
 
-    const titleInput = page.locator("textarea[placeholder='无标题']");
+    const titleInput = page.locator("textarea[placeholder='新页面']");
     await titleInput.fill(`save-${uid()}`);
 
     // Auto-save triggers after 1.5s

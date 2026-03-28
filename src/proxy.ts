@@ -13,6 +13,9 @@ export default auth((req) => {
   const isPublicPath =
     pathname === "/login" ||
     pathname === "/register" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname.startsWith("/icon") ||
+    pathname.startsWith("/apple-icon") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");

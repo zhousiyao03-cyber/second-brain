@@ -1,0 +1,24 @@
+# 2026-03-28 Today Journal Entry Flow
+
+- date: 2026-03-28
+- task / goal: 把日报从“手动新建一篇”改成“首页和笔记页一键打开今日日报”，并自动继承最近一篇日报里的未完成明日计划。
+- key changes:
+  - 新增 `notes.openTodayJournal` 服务端能力：如果今日日报已存在则直接返回，否则自动创建当天日报。
+  - 自动创建今日日报时，会从最近一篇日报的 `明日计划` 提取未完成项，填入今天这篇的 `今天的 todo`。
+  - 日报模板扩展为三个模块：`今天的 todo`、`今日的复盘`、`明日计划`。
+  - 首页和 `/notes` 页新增/改造为“打开今日日报”入口，不再让日报主路径依赖手动新建。
+- files touched:
+  - `src/lib/note-templates.ts`
+  - `src/server/routers/notes.ts`
+  - `src/app/(app)/page.tsx`
+  - `src/app/(app)/notes/page.tsx`
+  - `e2e/phase2.spec.ts`
+  - `README.md`
+  - `docs/changelog/today-journal-entry-flow.md`
+- verification commands and results:
+  - `sqlite3 data/second-brain.db ...` -> passed，写入了一篇 2026-03-27 的种子日报，包含 `明日计划` 的已完成/未完成混合任务。
+  - `node --input-type=module <<'EOF' ... EOF` -> passed，从首页和 `/notes` 两个入口打开今日日报时命中了同一篇 `2026年3月28日`，并把 `明天先做 A / 明天再做 B` 带入今天的 todo，未带入已完成项。
+  - `sqlite3 data/second-brain.db "select count(*) ..."` -> passed，今日日报只创建了 1 篇。
+  - `pnpm lint` -> passed
+- remaining risks or follow-up items:
+  - 当前“今日日报是否已存在”仍以 `type=journal + 标题=当天日期` 判定；如果后续允许用户主动改日报标题，这条判定需要升级。

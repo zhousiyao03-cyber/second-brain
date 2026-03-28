@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Plus, Search, Trash2, FileText, CalendarDays } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
-import { createJournalTemplate } from "@/lib/note-templates";
 import { NOTE_TYPE_LABELS } from "@/lib/note-appearance";
 
 function parseTags(tags: string | null | undefined) {
@@ -35,6 +34,12 @@ export default function NotesPage() {
       router.push(`/notes/${data.id}`);
     },
   });
+  const openTodayJournal = trpc.notes.openTodayJournal.useMutation({
+    onSuccess: (data) => {
+      utils.notes.list.invalidate();
+      router.push(`/notes/${data.id}`);
+    },
+  });
   const { toast } = useToast();
   const deleteNote = trpc.notes.delete.useMutation({
     onSuccess: () => {
@@ -53,11 +58,11 @@ export default function NotesPage() {
   });
 
   const handleCreate = () => {
-    createNote.mutate({ title: "无标题笔记" });
+    createNote.mutate({ title: "" });
   };
 
-  const handleCreateJournal = () => {
-    createNote.mutate(createJournalTemplate());
+  const handleOpenTodayJournal = () => {
+    openTodayJournal.mutate();
   };
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
@@ -73,12 +78,12 @@ export default function NotesPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">笔记</h1>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleCreateJournal}
-            disabled={createNote.isPending}
+            onClick={handleOpenTodayJournal}
+            disabled={openTodayJournal.isPending}
             className="flex items-center gap-2 px-4 py-2 border border-amber-200 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
           >
             <CalendarDays size={16} />
-            新建日记
+            {openTodayJournal.isPending ? "正在打开日报..." : "打开今日日报"}
           </button>
           <button
             onClick={handleCreate}
@@ -109,7 +114,7 @@ export default function NotesPage() {
         >
           <option value="all">全部类型</option>
           <option value="note">笔记</option>
-          <option value="journal">日记</option>
+          <option value="journal">日报</option>
           <option value="summary">总结</option>
         </select>
       </div>
@@ -148,7 +153,7 @@ export default function NotesPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="truncate font-medium text-stone-900 dark:text-stone-100">
-                        {note.title}
+                        {note.title || "新页面"}
                       </h3>
                       {note.type && note.type !== "note" && (
                         <span

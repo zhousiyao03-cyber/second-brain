@@ -296,10 +296,6 @@ export default function AskPage() {
     : "";
   const latestAnswer = parseAssistantResponse(lastAssistantRawText);
   const currentScope = ASK_AI_SCOPE_OPTIONS.find((option) => option.value === scope)!;
-  const sessionLabel =
-    messages.length === 0
-      ? "Greeting"
-      : truncateText(lastQuestion || "新会话", 24);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -373,48 +369,6 @@ export default function AskPage() {
   return (
     <div className="flex min-h-full flex-col font-sans text-stone-900 dark:text-stone-100">
       <div className="mx-auto flex h-full w-full max-w-5xl flex-1 flex-col">
-        <header className="flex items-center justify-between gap-4 pb-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-sm dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200">
-              <Bot size={18} />
-            </div>
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-                <h1 className="font-medium text-stone-900 dark:text-stone-100">
-                  Ask AI
-                </h1>
-                <span>/</span>
-                <span className="truncate">{sessionLabel}</span>
-              </div>
-              <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                让问题、来源和沉淀动作都回到一个更安静的画布里。
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="hidden rounded-full bg-stone-100 px-3 py-1 text-sm text-stone-600 sm:block dark:bg-stone-900 dark:text-stone-300">
-              {currentScope.label}
-            </div>
-
-            {messages.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  clearError();
-                  setMessages([]);
-                }}
-                disabled={isLoading}
-                className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300 dark:hover:bg-stone-900"
-              >
-                <Trash2 size={14} />
-                清空对话
-              </button>
-            )}
-          </div>
-        </header>
-
         <div
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto pb-6"
@@ -430,7 +384,6 @@ export default function AskPage() {
               </h2>
               <p className="mt-4 max-w-2xl text-base leading-8 text-stone-500 dark:text-stone-400">
                 先决定从哪里找，再让回答、来源和沉淀动作自然接起来。
-                当前模式是“{currentScope.label}”。
               </p>
             </section>
           ) : (
@@ -588,7 +541,7 @@ export default function AskPage() {
 
         <div
           className={cn(
-            "z-10 bg-gradient-to-t from-white via-white/96 to-transparent dark:from-stone-950 dark:via-stone-950/96",
+            "z-10",
             messages.length > 0 ? "sticky bottom-0 pb-2 pt-6" : "mt-10 pb-8 pt-2"
           )}
         >
@@ -627,8 +580,8 @@ export default function AskPage() {
                     isComposingRef.current = false;
                   }}
                   placeholder="使用 AI 处理各种任务..."
-                  rows={messages.length === 0 ? 4 : 3}
-                  className="min-h-[108px] w-full resize-none border-none bg-transparent text-[18px] leading-8 text-stone-900 outline-none placeholder:text-stone-400 dark:text-stone-100 dark:placeholder:text-stone-500"
+                  rows={2}
+                  className="min-h-[56px] w-full resize-none border-none bg-transparent text-[18px] leading-7 text-stone-900 outline-none placeholder:text-stone-400 dark:text-stone-100 dark:placeholder:text-stone-500"
                   disabled={isLoading}
                 />
               </div>
@@ -643,6 +596,21 @@ export default function AskPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {messages.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearError();
+                        setMessages([]);
+                      }}
+                      disabled={isLoading}
+                      className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300 dark:hover:bg-stone-900"
+                    >
+                      <Trash2 size={14} />
+                      清空对话
+                    </button>
+                  )}
+
                   {isLoading && (
                     <button
                       type="button"

@@ -1,0 +1,21 @@
+# 2026-03-28 Dev Test Account
+
+- date: 2026-03-28
+- task / goal: 给本地开发环境提供一个固定的 TEST 账号，避免每次手动注册后才能看页面样式。
+- key changes:
+  - 新增开发环境专用账号确保逻辑，在访问登录页时幂等创建或重置固定 TEST 账号。
+  - 登录页在开发模式下直接展示 TEST 账号邮箱和密码，便于快速登录。
+  - README 补充本地开发默认 TEST 账号说明。
+- files touched:
+  - `src/server/auth/dev-test-account.ts`
+  - `src/app/login/page.tsx`
+  - `README.md`
+  - `docs/changelog/dev-test-account.md`
+- verification commands and results:
+  - `pnpm db:push` -> passed，补齐当前本地 SQLite 缺失的 auth 表后，开发登录页可正常访问。
+  - `pnpm lint` -> passed
+  - `curl -s http://localhost:3000/login | rg -n "开发环境 TEST 账号|test@secondbrain.local|test123456"` -> passed，登录页已展示固定 TEST 账号信息。
+  - `node --input-type=module -e "import { chromium } from '@playwright/test'; ..."` -> passed，使用 `test@secondbrain.local / test123456` 成功登录并到达首页。
+  - `pnpm build` -> passed
+- remaining risks or follow-up items:
+  - TEST 账号密码会在开发环境访问登录页时被重置为固定值，不适合作为长期手工维护账号。

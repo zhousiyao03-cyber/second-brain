@@ -86,7 +86,7 @@ test.describe("Phase 4: Ask AI 页面", () => {
     await page.getByRole("button", { name: /保存为笔记/ }).click();
 
     await page.waitForURL(/\/notes\/.+/);
-    await expect(page.locator("textarea[placeholder='无标题']")).toContainText(
+    await expect(page.locator("textarea[placeholder='新页面']")).toContainText(
       "AI 问答"
     );
   });

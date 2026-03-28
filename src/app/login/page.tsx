@@ -2,6 +2,10 @@ import Link from "next/link";
 import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AppBrand } from "@/components/layout/app-brand";
+import {
+  DEV_TEST_ACCOUNT,
+  ensureDevTestAccount,
+} from "@/server/auth/dev-test-account";
 import { loginWithCredentials } from "./actions";
 
 const errorMessages: Record<string, string> = {
@@ -19,9 +23,12 @@ export default async function LoginPage({
     redirect("/");
   }
 
+  await ensureDevTestAccount();
+
   const params = await searchParams;
   const errorCode = Array.isArray(params.error) ? params.error[0] : params.error;
   const errorMessage = errorCode ? errorMessages[errorCode] : null;
+  const showDevTestAccount = process.env.NODE_ENV === "development";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4 py-10 dark:bg-stone-950">
@@ -37,6 +44,14 @@ export default async function LoginPage({
             登录以访问你的知识库
           </p>
         </div>
+
+        {showDevTestAccount ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/80 dark:bg-amber-950/40 dark:text-amber-100">
+            <div className="font-medium">开发环境 TEST 账号</div>
+            <div className="mt-1">邮箱：{DEV_TEST_ACCOUNT.email}</div>
+            <div>密码：{DEV_TEST_ACCOUNT.password}</div>
+          </div>
+        ) : null}
 
         <form action={loginWithCredentials} className="space-y-4">
           <div className="space-y-2">

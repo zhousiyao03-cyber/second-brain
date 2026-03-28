@@ -21,7 +21,7 @@ export const NOTE_ICON_OPTIONS = [
 
 export const NOTE_TYPE_LABELS = {
   note: "笔记",
-  journal: "日记",
+  journal: "日报",
   summary: "总结",
 } as const;
 

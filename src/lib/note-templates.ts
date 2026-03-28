@@ -6,106 +6,145 @@ export function formatJournalTitle(date = new Date()) {
   }).format(date);
 }
 
-export function createJournalTemplate(date = new Date()) {
+const TODAY_TODO_HEADING = "今天的 todo";
+const REVIEW_HEADING = "今日的复盘";
+const TOMORROW_PLAN_HEADING = "明日计划";
+
+type JournalDocNode = {
+  type?: string;
+  attrs?: Record<string, unknown>;
+  text?: string;
+  content?: JournalDocNode[];
+};
+
+function createEmptyTaskItem() {
+  return {
+    type: "taskItem",
+    attrs: { checked: false },
+    content: [
+      {
+        type: "paragraph",
+      },
+    ],
+  };
+}
+
+function createTaskItem(text: string) {
+  return {
+    type: "taskItem",
+    attrs: { checked: false },
+    content: [
+      {
+        type: "paragraph",
+        content: text ? [{ type: "text", text }] : undefined,
+      },
+    ],
+  };
+}
+
+function getInlineText(node?: JournalDocNode): string {
+  if (!node) return "";
+  if (node.type === "text") return node.text ?? "";
+  return (node.content ?? []).map(getInlineText).join("");
+}
+
+function normalizeTaskItems(items: string[]) {
+  const deduped = new Set<string>();
+
+  for (const item of items) {
+    const value = item.trim();
+    if (value) deduped.add(value);
+  }
+
+  return [...deduped];
+}
+
+export function extractTomorrowPlanItems(content?: string | null) {
+  if (!content) return [];
+
+  let doc: JournalDocNode | null = null;
+  try {
+    doc = JSON.parse(content) as JournalDocNode;
+  } catch {
+    return [];
+  }
+
+  const nodes = doc?.content ?? [];
+  const items: string[] = [];
+
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index];
+    if (node.type !== "heading") continue;
+
+    if (getInlineText(node).trim() !== TOMORROW_PLAN_HEADING) continue;
+
+    const taskList = nodes[index + 1];
+    if (taskList?.type !== "taskList") return [];
+
+    for (const taskItem of taskList.content ?? []) {
+      if (taskItem.type !== "taskItem") continue;
+      if (taskItem.attrs?.checked === true) continue;
+
+      const text = getInlineText(taskItem).trim();
+      if (text) items.push(text);
+    }
+
+    return normalizeTaskItems(items);
+  }
+
+  return [];
+}
+
+export function createJournalTemplate(
+  date = new Date(),
+  carryOverItems: string[] = []
+) {
   const title = formatJournalTitle(date);
+  const normalizedCarryOverItems = normalizeTaskItems(carryOverItems);
   const content = JSON.stringify({
     type: "doc",
     content: [
       {
         type: "heading",
-        attrs: { level: 2 },
-        content: [{ type: "text", text: "今日日记" }],
-      },
-      {
-        type: "paragraph",
-        content: [{ type: "text", text: "今天最值得记录的一件事是：" }],
-      },
-      {
-        type: "heading",
         attrs: { level: 3 },
-        content: [{ type: "text", text: "Todo List" }],
+        content: [{ type: "text", text: TODAY_TODO_HEADING }],
       },
       {
         type: "taskList",
-        content: [
-          {
-            type: "taskItem",
-            attrs: { checked: false },
-            content: [
-              {
-                type: "paragraph",
-                content: [{ type: "text", text: "今天最重要的一件事" }],
-              },
-            ],
-          },
-          {
-            type: "taskItem",
-            attrs: { checked: false },
-            content: [
-              {
-                type: "paragraph",
-                content: [{ type: "text", text: "一个让我开心的小瞬间" }],
-              },
-            ],
-          },
-          {
-            type: "taskItem",
-            attrs: { checked: false },
-            content: [
-              {
-                type: "paragraph",
-                content: [{ type: "text", text: "睡前想完成的收尾" }],
-              },
-            ],
-          },
-        ],
+        content:
+          normalizedCarryOverItems.length > 0
+            ? normalizedCarryOverItems.map(createTaskItem)
+            : [createEmptyTaskItem()],
       },
       {
         type: "heading",
         attrs: { level: 3 },
-        content: [{ type: "text", text: "复盘" }],
+        content: [{ type: "text", text: REVIEW_HEADING }],
       },
       {
-        type: "bulletList",
-        content: [
-          {
-            type: "listItem",
-            content: [
-              {
-                type: "paragraph",
-                content: [{ type: "text", text: "今天学到了什么？" }],
-              },
-            ],
-          },
-          {
-            type: "listItem",
-            content: [
-              {
-                type: "paragraph",
-                content: [{ type: "text", text: "明天想延续什么？" }],
-              },
-            ],
-          },
-        ],
+        type: "paragraph",
+      },
+      {
+        type: "heading",
+        attrs: { level: 3 },
+        content: [{ type: "text", text: TOMORROW_PLAN_HEADING }],
+      },
+      {
+        type: "taskList",
+        content: [createEmptyTaskItem()],
       },
     ],
   });
-  const plainText = [
-    "今日日记",
-    "今天最值得记录的一件事是：",
-    "Todo List",
-    "今天最重要的一件事",
-    "一个让我开心的小瞬间",
-    "睡前想完成的收尾",
-    "复盘",
-    "今天学到了什么？",
-    "明天想延续什么？",
-  ].join("\n");
 
   return {
     title,
     type: "journal" as const,
     content,
-    plainText,
+    plainText: [
+      TODAY_TODO_HEADING,
+      ...normalizedCarryOverItems,
+      REVIEW_HEADING,
+      TOMORROW_PLAN_HEADING,
+    ].join("\n"),
   };
 }

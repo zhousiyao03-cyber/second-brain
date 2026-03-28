@@ -19,7 +19,7 @@ test.describe("V1 核心路径 A：笔记 → 搜索", () => {
     await page.waitForURL(/\/notes\/.+/);
 
     // Set title
-    const titleInput = page.locator("textarea[placeholder='无标题']");
+    const titleInput = page.locator("textarea[placeholder='新页面']");
     await titleInput.fill(noteTitle);
     // Wait for auto-save
     await page.waitForTimeout(2000);
