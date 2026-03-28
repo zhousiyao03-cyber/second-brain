@@ -29,11 +29,12 @@
 ```bash
 nvm use          # 使用 .nvmrc 中固定的 Node 版本（首次可先 nvm install）
 pnpm install
+cp .env.example .env.local
 pnpm db:push       # 初始化数据库
 pnpm dev            # 启动开发服务器 http://localhost:3000
 ```
 
-需要配置环境变量。默认推荐直接复用你已经登录好的 OpenClaw / Codex OAuth：
+需要先基于仓库里的 `.env.example` 生成 `.env.local`，再按需调整环境变量。默认推荐直接复用你已经登录好的 OpenClaw / Codex OAuth：
 
 ```bash
 # .env.local
