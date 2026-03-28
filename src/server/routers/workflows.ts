@@ -30,7 +30,9 @@ export const workflowsRouter = router({
     )
     .mutation(async ({ input }) => {
       const id = crypto.randomUUID();
-      await db.insert(workflows).values({ id, ...input });
+      // TODO(task-5): replace with real userId from session
+      const userId = "local-dev";
+      await db.insert(workflows).values({ id, userId, ...input });
       return { id };
     }),
 
@@ -126,9 +128,11 @@ export const workflowsRouter = router({
       },
     ];
 
+    // TODO(task-5): replace with real userId from session
+    const userId = "local-dev";
     for (const preset of presets) {
       const id = crypto.randomUUID();
-      await db.insert(workflows).values({ id, ...preset });
+      await db.insert(workflows).values({ id, userId, ...preset });
     }
     return { seeded: true, count: presets.length };
   }),

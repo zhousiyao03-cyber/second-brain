@@ -38,7 +38,9 @@ export const notesRouter = router({
     )
     .mutation(async ({ input }) => {
       const id = crypto.randomUUID();
-      await db.insert(notes).values({ id, ...input });
+      // TODO(task-5): replace with real userId from session
+      const userId = "local-dev";
+      await db.insert(notes).values({ id, userId, ...input });
       const [createdNote] = await db.select().from(notes).where(eq(notes.id, id));
       if (createdNote) {
         void syncNoteKnowledgeIndex(createdNote, "note-create").catch(

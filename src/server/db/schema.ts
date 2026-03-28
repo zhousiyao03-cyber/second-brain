@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, blob } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, blob, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { TOKEN_USAGE_PROVIDERS } from "@/lib/token-usage";
 
 // ── Auth.js tables ──────────────────────────────────
@@ -34,6 +34,9 @@ export const accounts = sqliteTable("accounts", {
 
 export const notes = sqliteTable("notes", {
   id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   content: text("content"), // JSON, Tiptap format
   plainText: text("plain_text"), // for search & vectorization
@@ -47,6 +50,9 @@ export const notes = sqliteTable("notes", {
 
 export const bookmarks = sqliteTable("bookmarks", {
   id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   url: text("url"),
   title: text("title"),
   content: text("content"),
@@ -60,6 +66,9 @@ export const bookmarks = sqliteTable("bookmarks", {
 
 export const todos = sqliteTable("todos", {
   id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description"),
   priority: text("priority", { enum: ["low", "medium", "high"] }).default("medium"),
@@ -72,6 +81,9 @@ export const todos = sqliteTable("todos", {
 
 export const chatMessages = sqliteTable("chat_messages", {
   id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   role: text("role", { enum: ["user", "assistant"] }).notNull(),
   content: text("content").notNull(),
   sources: text("sources"), // JSON, referenced doc IDs
@@ -120,6 +132,9 @@ export const knowledgeIndexJobs = sqliteTable("knowledge_index_jobs", {
 
 export const workflows = sqliteTable("workflows", {
   id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
   nodes: text("nodes"), // JSON, workflow node definitions
@@ -131,6 +146,9 @@ export const workflows = sqliteTable("workflows", {
 
 export const learningPaths = sqliteTable("learning_paths", {
   id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description"),
   category: text("category", {
@@ -165,6 +183,9 @@ export const workflowRuns = sqliteTable("workflow_runs", {
 
 export const tokenUsageEntries = sqliteTable("token_usage_entries", {
   id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   provider: text("provider", { enum: TOKEN_USAGE_PROVIDERS }).notNull(),
   model: text("model"),
   totalTokens: integer("total_tokens").notNull(),
@@ -177,3 +198,20 @@ export const tokenUsageEntries = sqliteTable("token_usage_entries", {
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
+
+export const aiUsage = sqliteTable(
+  "ai_usage",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // 'YYYY-MM-DD'
+    count: integer("count").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("ai_usage_user_date_idx").on(table.userId, table.date),
+  ]
+);

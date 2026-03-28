@@ -22,7 +22,9 @@ export const todosRouter = router({
     )
     .mutation(async ({ input }) => {
       const id = crypto.randomUUID();
-      await db.insert(todos).values({ id, ...input });
+      // TODO(task-5): replace with real userId from session
+      const userId = "local-dev";
+      await db.insert(todos).values({ id, userId, ...input });
       return { id };
     }),
 

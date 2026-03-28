@@ -27,10 +27,13 @@ export const bookmarksRouter = router({
     )
     .mutation(async ({ input }) => {
       const id = crypto.randomUUID();
+      // TODO(task-5): replace with real userId from session
+      const userId = "local-dev";
 
       // Insert immediately with pending status
       await db.insert(bookmarks).values({
         id,
+        userId,
         ...input,
         status: input.source === "url" && input.url ? "pending" : "processed",
       });

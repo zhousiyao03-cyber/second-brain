@@ -40,7 +40,9 @@ export const learningRouter = router({
     )
     .mutation(async ({ input }) => {
       const id = crypto.randomUUID();
-      await db.insert(learningPaths).values({ id, ...input });
+      // TODO(task-5): replace with real userId from session
+      const userId = "local-dev";
+      await db.insert(learningPaths).values({ id, userId, ...input });
       return { id };
     }),
 
@@ -77,9 +79,11 @@ export const learningRouter = router({
     const existing = await db.select().from(learningPaths);
     if (existing.length > 0) return { seeded: false, message: "已有学习路径" };
 
+    // TODO(task-5): replace with real userId from session
+    const userId = "local-dev";
     for (const preset of presets) {
       const id = crypto.randomUUID();
-      await db.insert(learningPaths).values({ id, ...preset });
+      await db.insert(learningPaths).values({ id, userId, ...preset });
     }
     return { seeded: true, count: presets.length };
   }),

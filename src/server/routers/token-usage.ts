@@ -94,8 +94,11 @@ export const tokenUsageRouter = router({
         cachedTokens,
       });
 
+      // TODO(task-5): replace with real userId from session
+      const userId = "local-dev";
       await db.insert(tokenUsageEntries).values({
         id,
+        userId,
         provider: input.provider,
         model: input.model?.trim() || null,
         totalTokens,
