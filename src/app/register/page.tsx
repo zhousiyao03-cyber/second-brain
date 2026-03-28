@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { loginWithCredentials } from "./actions";
+import { auth, signIn } from "@/lib/auth";
+import { registerWithCredentials } from "./actions";
 
 const errorMessages: Record<string, string> = {
-  invalid: "请输入正确的邮箱和密码",
-  credentials: "邮箱或密码错误",
+  invalid: "请检查输入项后重试",
+  "password-mismatch": "两次输入的密码不一致",
+  "email-exists": "该邮箱已注册，请直接登录",
 };
 
-export default async function LoginPage({
+export default async function RegisterPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string | string[] }>;
@@ -30,14 +31,29 @@ export default async function LoginPage({
             S
           </div>
           <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-            Second Brain
+            创建 Second Brain 账号
           </h1>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            登录以访问你的知识库
+            先注册，再直接进入你的知识库
           </p>
         </div>
 
-        <form action={loginWithCredentials} className="space-y-4">
+        <form action={registerWithCredentials} className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="name"
+              className="text-sm font-medium text-stone-700 dark:text-stone-200"
+            >
+              昵称
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100 dark:focus:border-stone-500"
+            />
+          </div>
+
           <div className="space-y-2">
             <label
               htmlFor="email"
@@ -71,6 +87,23 @@ export default async function LoginPage({
             />
           </div>
 
+          <div className="space-y-2">
+            <label
+              htmlFor="confirmPassword"
+              className="text-sm font-medium text-stone-700 dark:text-stone-200"
+            >
+              确认密码
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              minLength={8}
+              required
+              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100 dark:focus:border-stone-500"
+            />
+          </div>
+
           {errorMessage ? (
             <p
               aria-live="polite"
@@ -84,17 +117,17 @@ export default async function LoginPage({
             type="submit"
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-800 dark:border-stone-700 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
           >
-            使用邮箱登录
+            创建账号
           </button>
         </form>
 
-        <div className="flex items-center gap-3 text-xs text-stone-400 dark:text-stone-500">
-          <div className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
-          或者
-          <div className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
-        </div>
-
         <div className="space-y-3">
+          <div className="flex items-center gap-3 text-xs text-stone-400 dark:text-stone-500">
+            <div className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+            或者
+            <div className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+          </div>
+
           <form
             action={async () => {
               "use server";
@@ -103,9 +136,9 @@ export default async function LoginPage({
           >
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-800 dark:border-stone-700 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-900"
             >
-              使用 GitHub 登录
+              使用 GitHub 继续
             </button>
           </form>
 
@@ -117,20 +150,20 @@ export default async function LoginPage({
           >
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-900"
             >
-              使用 Google 登录
+              使用 Google 继续
             </button>
           </form>
         </div>
 
         <p className="text-center text-sm text-stone-500 dark:text-stone-400">
-          没有账号？
+          已有账号？
           <Link
-            href="/register"
+            href="/login"
             className="ml-1 font-medium text-stone-900 underline-offset-4 hover:underline dark:text-stone-100"
           >
-            去注册
+            去登录
           </Link>
         </p>
       </div>

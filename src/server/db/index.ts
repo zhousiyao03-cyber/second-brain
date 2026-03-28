@@ -1,9 +1,12 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
+import { getDatabaseUrl } from "./path";
 import * as schema from "./schema";
 
+const databaseUrl = getDatabaseUrl();
+
 const client = createClient({
-  url: process.env.TURSO_DATABASE_URL ?? "file:data/second-brain.db",
+  url: databaseUrl,
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 

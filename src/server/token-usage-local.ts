@@ -7,11 +7,33 @@ import {
   type TokenUsageLocalSourceStatus,
 } from "@/lib/token-usage";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function tryRequireBetterSqlite3(): any {
+type BetterSqlite3Statement<Row> = {
+  all(): Row[];
+};
+
+type BetterSqlite3Database<Row> = {
+  prepare(sql: string): BetterSqlite3Statement<Row>;
+  close(): void;
+};
+
+type BetterSqlite3Constructor<Row> = new (
+  filePath: string,
+  options: {
+    readonly: boolean;
+    fileMustExist: boolean;
+  }
+) => BetterSqlite3Database<Row>;
+
+function tryRequireBetterSqlite3(): BetterSqlite3Constructor<CodexThreadRow> | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require("better-sqlite3");
+    const runtimeRequire = new Function(
+      "specifier",
+      "return require(specifier);"
+    ) as (specifier: string) => unknown;
+    const loadedModule = runtimeRequire("better-sqlite3");
+    return typeof loadedModule === "function"
+      ? (loadedModule as BetterSqlite3Constructor<CodexThreadRow>)
+      : null;
   } catch {
     return null;
   }
@@ -135,8 +157,7 @@ function readCodexWorkspaceEntries() {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let sqlite: any = null;
+  let sqlite: BetterSqlite3Database<CodexThreadRow> | null = null;
 
   try {
     sqlite = new Database(dbPath, { readonly: true, fileMustExist: true });

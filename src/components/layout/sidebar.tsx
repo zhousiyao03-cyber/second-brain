@@ -4,32 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  Activity,
-  Bookmark,
-  CheckSquare,
-  Compass,
-  FileText,
-  LayoutDashboard,
-  LogOut,
-  MessageCircle,
-  Moon,
-  Search,
-  Sun,
-} from "lucide-react";
-import { signOut } from "next-auth/react";
-
-const navItems = [
-  { href: "/", label: "首页", icon: LayoutDashboard },
-  { href: "/notes", label: "笔记", icon: FileText },
-  { href: "/bookmarks", label: "收藏", icon: Bookmark },
-  ...(process.env.NEXT_PUBLIC_ENABLE_TOKEN_USAGE === "true"
-    ? [{ href: "/usage", label: "Token 用量", icon: Activity }]
-    : []),
-  { href: "/todos", label: "Todo", icon: CheckSquare },
-  { href: "/explore", label: "AI 探索", icon: Compass },
-  { href: "/ask", label: "Ask AI", icon: MessageCircle },
-];
+import { LogOut, Moon, Search, Settings, Sun } from "lucide-react";
+import { logout } from "@/app/(app)/actions";
+import { navigationItems } from "./navigation";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -89,7 +66,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1">
-        {navItems.map((item) => {
+        {navigationItems.map((item) => {
           const isActive =
             item.href === "/"
               ? pathname === "/"
@@ -115,6 +92,13 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-4 border-t border-stone-200 px-2 pt-4 dark:border-stone-800">
+        <Link
+          href="/settings"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+        >
+          <Settings className="h-4 w-4" />
+          账号设置
+        </Link>
         <button
           onClick={toggleDark}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
@@ -122,13 +106,15 @@ export function Sidebar() {
           {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           {dark ? "浅色模式" : "深色模式"}
         </button>
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
-        >
-          <LogOut className="h-4 w-4" />
-          登出
-        </button>
+        <form action={logout}>
+          <button
+            type="submit"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+          >
+            <LogOut className="h-4 w-4" />
+            登出
+          </button>
+        </form>
       </div>
     </aside>
   );

@@ -1,6 +1,8 @@
 import { defineConfig } from "drizzle-kit";
+import { getDatabaseUrl, isTursoDatabaseUrl } from "./src/server/db/path";
 
-const isTurso = process.env.TURSO_DATABASE_URL?.startsWith("libsql://");
+const databaseUrl = getDatabaseUrl();
+const isTurso = isTursoDatabaseUrl(databaseUrl);
 
 export default defineConfig({
   schema: "./src/server/db/schema.ts",
@@ -10,13 +12,13 @@ export default defineConfig({
     ? {
         driver: "turso" as never,
         dbCredentials: {
-          url: process.env.TURSO_DATABASE_URL!,
+          url: databaseUrl,
           authToken: process.env.TURSO_AUTH_TOKEN,
         },
       }
     : {
         dbCredentials: {
-          url: process.env.TURSO_DATABASE_URL ?? "file:data/second-brain.db",
+          url: databaseUrl,
         },
       }),
 });

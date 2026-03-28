@@ -32,6 +32,16 @@ export const accounts = sqliteTable("accounts", {
   session_state: text("session_state"),
 });
 
+export const userCredentials = sqliteTable("user_credentials", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
 export const notes = sqliteTable("notes", {
   id: text("id").primaryKey(),
   userId: text("user_id")
