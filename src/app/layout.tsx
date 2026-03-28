@@ -16,6 +16,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Second Brain",
   description: "个人知识管理平台",
+  applicationName: "Second Brain",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Second Brain",
+  },
 };
 
 export default function RootLayout({
