@@ -1,12 +1,21 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import { homedir } from "os";
 import path from "path";
-import Database from "better-sqlite3";
 import {
   calculateTotalTokens,
   type TokenUsageListEntry,
   type TokenUsageLocalSourceStatus,
 } from "@/lib/token-usage";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function tryRequireBetterSqlite3(): any {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require("better-sqlite3");
+  } catch {
+    return null;
+  }
+}
 
 type CodexThreadRow = {
   id: string;
@@ -110,7 +119,24 @@ function readCodexWorkspaceEntries() {
     };
   }
 
-  let sqlite: Database.Database | null = null;
+  const Database = tryRequireBetterSqlite3();
+  if (!Database) {
+    return {
+      entries: [] as TokenUsageListEntry[],
+      source: {
+        provider: "codex",
+        label: "Codex",
+        source: "local-codex",
+        status: "error",
+        location: dbPath,
+        entryCount: 0,
+        detail: "better-sqlite3 不可用（部署环境）。",
+      } satisfies TokenUsageLocalSourceStatus,
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let sqlite: any = null;
 
   try {
     sqlite = new Database(dbPath, { readonly: true, fileMustExist: true });
