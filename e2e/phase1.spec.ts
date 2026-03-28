@@ -48,10 +48,11 @@ test.describe("Phase 1: 项目骨架 + 基础布局", () => {
   test("当前页面侧边栏高亮正确", async ({ page }) => {
     await page.goto("/notes");
     const notesLink = page.locator("aside a[href='/notes']");
-    await expect(notesLink).toHaveClass(/bg-gray-200/);
+    // Active item uses ring-1 styling
+    await expect(notesLink).toHaveClass(/ring-1/);
 
-    // Dashboard link should NOT be highlighted
+    // Dashboard link should NOT be highlighted (no ring)
     const dashboardLink = page.locator("aside a[href='/']");
-    await expect(dashboardLink).not.toHaveClass(/bg-gray-200/);
+    await expect(dashboardLink).not.toHaveClass(/ring-1/);
   });
 });

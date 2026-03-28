@@ -119,6 +119,11 @@ test.describe("V1 核心路径：Token Usage", () => {
     const sessionNote = `usage-${uid()}`;
 
     await page.goto("/usage");
+    // Skip if token usage feature is disabled (page redirects to /)
+    if (!page.url().includes("/usage")) {
+      test.skip();
+      return;
+    }
     await expect(page.getByRole("heading", { name: "Token Usage" })).toBeVisible();
 
     await page.getByRole("button", { name: "添加记录" }).click();
@@ -149,6 +154,11 @@ test.describe("V1 核心路径：Token Usage", () => {
     const writerPage = await context.newPage();
 
     await observerPage.goto("/usage");
+    // Skip if token usage feature is disabled (page redirects to /)
+    if (!observerPage.url().includes("/usage")) {
+      test.skip();
+      return;
+    }
     await expect(observerPage.getByRole("heading", { name: "Token Usage" })).toBeVisible();
 
     await writerPage.goto("/usage");

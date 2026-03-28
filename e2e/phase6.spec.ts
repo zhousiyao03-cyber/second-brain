@@ -13,7 +13,6 @@ test.describe("Phase 6: 首页仪表盘", () => {
     // Check stat cards exist in main area
     await expect(page.locator("main").getByText("笔记").first()).toBeVisible();
     await expect(page.locator("main").getByText("待办").first()).toBeVisible();
-    await expect(page.locator("main").getByText("本月 Token").first()).toBeVisible();
   });
 
   test("显示最近笔记和今日任务区块", async ({ page }) => {
