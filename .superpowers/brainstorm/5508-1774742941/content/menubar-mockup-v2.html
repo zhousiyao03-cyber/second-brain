@@ -1,0 +1,200 @@
+<h2>Menubar App — Display Design</h2>
+<p class="subtitle">Menubar compact view + click-to-expand dropdown</p>
+
+<div class="section">
+  <h3>Menubar Compact View</h3>
+  <p style="margin-bottom: 12px; color: #78716c; font-size: 14px;">Always visible in macOS menu bar, similar to Rize's layout</p>
+
+  <div class="mockup">
+    <div class="mockup-header">Menubar — Tracking State</div>
+    <div class="mockup-body" style="padding: 16px 24px; background: #1c1c1e; display: flex; justify-content: center;">
+      <div style="display: inline-flex; align-items: center; gap: 10px; background: #2c2c2e; padding: 4px 14px; border-radius: 6px; font-family: -apple-system, sans-serif;">
+        <span style="font-size: 13px; color: #34d399; font-weight: 600;">Tracking</span>
+        <span style="color: #4b5563;">|</span>
+        <span style="font-size: 13px; color: #e5e7eb; font-weight: 500;">4h 12m</span>
+        <span style="font-size: 11px; color: #9ca3af;">WORK HOURS</span>
+        <span style="color: #4b5563;">|</span>
+        <span style="font-size: 13px; color: #e5e7eb; font-weight: 500;">52%</span>
+        <span style="font-size: 11px; color: #9ca3af;">OF DAY</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 12px;"></div>
+
+  <div class="mockup">
+    <div class="mockup-header">Menubar — Paused State</div>
+    <div class="mockup-body" style="padding: 16px 24px; background: #1c1c1e; display: flex; justify-content: center;">
+      <div style="display: inline-flex; align-items: center; gap: 10px; background: #2c2c2e; padding: 4px 14px; border-radius: 6px; font-family: -apple-system, sans-serif;">
+        <span style="font-size: 13px; color: #9ca3af; font-weight: 600;">Paused</span>
+        <span style="color: #4b5563;">|</span>
+        <span style="font-size: 13px; color: #6b7280; font-weight: 500;">4h 12m</span>
+        <span style="font-size: 11px; color: #4b5563;">WORK HOURS</span>
+        <span style="color: #4b5563;">|</span>
+        <span style="font-size: 13px; color: #6b7280; font-weight: 500;">52%</span>
+        <span style="font-size: 11px; color: #4b5563;">OF DAY</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Click to Expand — Dropdown Panel</h3>
+
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">A: Minimal</div>
+      <div class="mockup-body" style="padding: 0; background: #1c1c1e; max-width: 280px; margin: 0 auto;">
+        <div style="padding: 20px; font-family: -apple-system, sans-serif;">
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #9ca3af;">Today's Focus</div>
+            <div style="font-size: 36px; font-weight: 700; color: #f5f5f4; margin-top: 4px;">4h 12m</div>
+            <div style="font-size: 13px; color: #6b7280; margin-top: 2px;">of 8h goal</div>
+          </div>
+
+          <div style="background: #374151; border-radius: 8px; height: 8px; margin-bottom: 16px; overflow: hidden;">
+            <div style="background: linear-gradient(90deg, #34d399, #10b981); width: 52%; height: 100%; border-radius: 8px;"></div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: 600; color: #f5f5f4;">52%</div>
+              <div style="font-size: 11px; color: #6b7280;">Progress</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: 600; color: #f5f5f4;">3h 48m</div>
+              <div style="font-size: 11px; color: #6b7280;">Remaining</div>
+            </div>
+          </div>
+
+          <div style="background: #2c2c2e; border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 6px;">Now</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 28px; height: 28px; background: #3b82f6; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px;">&#128187;</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500; color: #f5f5f4;">VS Code</div>
+                <div style="font-size: 11px; color: #6b7280;">schema.ts - second-brain</div>
+              </div>
+              <div style="margin-left: auto; font-size: 13px; color: #34d399; font-weight: 500;">42m</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 8px;">Top Today</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                <div style="width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;"></div>
+                <span style="color: #d4d4d8; flex: 1;">VS Code</span>
+                <span style="color: #9ca3af;">2h 35m</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                <div style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></div>
+                <span style="color: #d4d4d8; flex: 1;">Chrome</span>
+                <span style="color: #9ca3af;">58m</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                <div style="width: 6px; height: 6px; border-radius: 50%; background: #a78bfa;"></div>
+                <span style="color: #d4d4d8; flex: 1;">Feishu</span>
+                <span style="color: #9ca3af;">39m</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #374151; display: flex; justify-content: space-between;">
+            <span style="font-size: 12px; color: #f59e0b; cursor: pointer;">&#9646;&#9646; Pause</span>
+            <span style="font-size: 12px; color: #3b82f6; cursor: pointer;">Open dashboard &rarr;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup">
+      <div class="mockup-header">B: With Timeline</div>
+      <div class="mockup-body" style="padding: 0; background: #1c1c1e; max-width: 280px; margin: 0 auto;">
+        <div style="padding: 20px; font-family: -apple-system, sans-serif;">
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #9ca3af;">Today's Focus</div>
+            <div style="font-size: 36px; font-weight: 700; color: #f5f5f4; margin-top: 4px;">4h 12m</div>
+            <div style="font-size: 13px; color: #6b7280; margin-top: 2px;">52% of 8h goal</div>
+          </div>
+
+          <div style="background: #374151; border-radius: 8px; height: 8px; margin-bottom: 20px; overflow: hidden;">
+            <div style="background: linear-gradient(90deg, #34d399, #10b981); width: 52%; height: 100%; border-radius: 8px;"></div>
+          </div>
+
+          <!-- Mini timeline -->
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 8px;">Timeline</div>
+            <div style="display: flex; height: 20px; border-radius: 6px; overflow: hidden; gap: 1px;">
+              <div style="flex: 2.5; background: #3b82f6;" title="VS Code 2.5h"></div>
+              <div style="flex: 0.5; background: #f59e0b;" title="Chrome 30min"></div>
+              <div style="flex: 0.6; background: #3b82f6;" title="VS Code 36min"></div>
+              <div style="flex: 1; background: #a78bfa;" title="Feishu 1h"></div>
+              <div style="flex: 0.4; background: #f59e0b;" title="Chrome 24min"></div>
+              <div style="flex: 0.5; background: #3b82f6;" title="VS Code 30min"></div>
+              <div style="flex: 2.5; background: #1f2937;" title="Remaining"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+              <span style="font-size: 10px; color: #4b5563;">9:00</span>
+              <span style="font-size: 10px; color: #4b5563;">12:00</span>
+              <span style="font-size: 10px; color: #4b5563;">15:00</span>
+              <span style="font-size: 10px; color: #4b5563;">18:00</span>
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px;">
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+                <div style="width: 8px; height: 8px; border-radius: 2px; background: #3b82f6;"></div>
+                <span style="color: #9ca3af;">Coding</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+                <div style="width: 8px; height: 8px; border-radius: 2px; background: #f59e0b;"></div>
+                <span style="color: #9ca3af;">Research</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+                <div style="width: 8px; height: 8px; border-radius: 2px; background: #a78bfa;"></div>
+                <span style="color: #9ca3af;">Meeting</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Current activity -->
+          <div style="background: #2c2c2e; border-radius: 10px; padding: 12px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 6px;">Now</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 28px; height: 28px; background: #3b82f6; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px;">&#128187;</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500; color: #f5f5f4;">VS Code</div>
+                <div style="font-size: 11px; color: #6b7280;">schema.ts - second-brain</div>
+              </div>
+              <div style="margin-left: auto; font-size: 13px; color: #34d399; font-weight: 500;">42m</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #374151; display: flex; justify-content: space-between;">
+            <span style="font-size: 12px; color: #f59e0b; cursor: pointer;">&#9646;&#9646; Pause</span>
+            <span style="font-size: 12px; color: #3b82f6; cursor: pointer;">Open dashboard &rarr;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Which dropdown style?</h3>
+  <div class="options">
+    <div class="option" data-choice="minimal" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Minimal</h3>
+        <p>Focus number + progress + top apps list. Clean and quick to scan.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="timeline" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>With Timeline</h3>
+        <p>Adds a color-coded timeline bar showing your day at a glance. More informative.</p>
+      </div>
+    </div>
+  </div>
+</div>

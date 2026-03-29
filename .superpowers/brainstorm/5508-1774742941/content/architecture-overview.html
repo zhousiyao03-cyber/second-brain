@@ -1,0 +1,98 @@
+<h2>Focus Tracker — Architecture Overview</h2>
+<p class="subtitle">Lightweight menubar app + Web dashboard for automatic focus time tracking</p>
+
+<div class="section">
+  <h3>System Architecture</h3>
+  <div class="mockup">
+    <div class="mockup-header">Data Flow</div>
+    <div class="mockup-body" style="padding: 24px; font-family: monospace; font-size: 13px; line-height: 2.2;">
+      <div style="display: flex; gap: 40px; align-items: flex-start;">
+        <!-- Left: Menubar App -->
+        <div style="flex: 1; border: 2px solid #d97706; border-radius: 16px; padding: 20px; background: #fffbeb;">
+          <div style="font-weight: 700; color: #92400e; font-size: 14px; margin-bottom: 12px;">Tauri Menubar App</div>
+          <div style="background: #fef3c7; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+            <span style="color: #92400e;">1.</span> Poll active window every 5s
+          </div>
+          <div style="background: #fef3c7; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+            <span style="color: #92400e;">2.</span> Capture: app name + window title
+          </div>
+          <div style="background: #fef3c7; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+            <span style="color: #92400e;">3.</span> Merge into continuous sessions
+          </div>
+          <div style="background: #fef3c7; border-radius: 8px; padding: 10px;">
+            <span style="color: #92400e;">4.</span> Write to shared SQLite (WAL)
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 60px;">
+          <div style="font-size: 28px; color: #a8a29e;">SQLite</div>
+          <div style="font-size: 32px; color: #a8a29e;">&#8596;</div>
+        </div>
+
+        <!-- Right: Web App -->
+        <div style="flex: 1; border: 2px solid #2563eb; border-radius: 16px; padding: 20px; background: #eff6ff;">
+          <div style="font-weight: 700; color: #1e40af; font-size: 14px; margin-bottom: 12px;">Second Brain (Next.js)</div>
+          <div style="background: #dbeafe; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+            <span style="color: #1e40af;">A.</span> Read activity sessions
+          </div>
+          <div style="background: #dbeafe; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+            <span style="color: #1e40af;">B.</span> AI categorize &amp; summarize
+          </div>
+          <div style="background: #dbeafe; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+            <span style="color: #1e40af;">C.</span> Dashboard focus card
+          </div>
+          <div style="background: #dbeafe; border-radius: 8px; padding: 10px;">
+            <span style="color: #1e40af;">D.</span> /focus detail page + AI insights
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Key Decisions</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+    <div style="background: #f5f5f4; border-radius: 12px; padding: 16px;">
+      <div class="label">Desktop App</div>
+      <div style="font-weight: 600; margin: 4px 0;">Tauri (Rust + React)</div>
+      <div style="font-size: 13px; color: #78716c;">Lightweight menubar, ~5MB, low memory</div>
+    </div>
+    <div style="background: #f5f5f4; border-radius: 12px; padding: 16px;">
+      <div class="label">Data Sync</div>
+      <div style="font-weight: 600; margin: 4px 0;">Shared SQLite (WAL mode)</div>
+      <div style="font-size: 13px; color: #78716c;">Both apps read/write same DB file</div>
+    </div>
+    <div style="background: #f5f5f4; border-radius: 12px; padding: 16px;">
+      <div class="label">Capture Granularity</div>
+      <div style="font-weight: 600; margin: 4px 0;">App name + window title</div>
+      <div style="font-size: 13px; color: #78716c;">Every 5s, merged into sessions</div>
+    </div>
+    <div style="background: #f5f5f4; border-radius: 12px; padding: 16px;">
+      <div class="label">MVP Scope</div>
+      <div style="font-weight: 600; margin: 4px 0;">Level A+B analysis</div>
+      <div style="font-size: 13px; color: #78716c;">Categorization + focus pattern insights</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Does this architecture look right?</h3>
+  <div class="options">
+    <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Looks good, proceed to detailed design</h3>
+        <p>Architecture is clear, let's dive into the details</p>
+      </div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Needs adjustment</h3>
+        <p>I have concerns or changes to suggest</p>
+      </div>
+    </div>
+  </div>
+</div>

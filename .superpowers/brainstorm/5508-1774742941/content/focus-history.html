@@ -1,0 +1,166 @@
+<h2>/focus — History View</h2>
+<p class="subtitle">Weekly and monthly focus trends below the daily report</p>
+
+<div class="section">
+  <h3>Focus History Dashboard</h3>
+  <p style="margin-bottom: 12px; color: #78716c; font-size: 14px;">Added below the daily report on the /focus page. User can toggle between week/month view.</p>
+
+  <div class="mockup">
+    <div class="mockup-header">/focus — History Section</div>
+    <div class="mockup-body" style="padding: 24px; background: #fafaf9; font-family: -apple-system, sans-serif;">
+
+      <!-- Section header with tabs -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+        <div style="font-size: 18px; font-weight: 700; color: #1c1917;">Focus History</div>
+        <div style="display: flex; background: #f5f5f4; border-radius: 10px; padding: 3px;">
+          <span style="padding: 5px 14px; border-radius: 8px; background: white; font-size: 13px; font-weight: 500; color: #1c1917; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">Week</span>
+          <span style="padding: 5px 14px; border-radius: 8px; font-size: 13px; color: #78716c;">Month</span>
+        </div>
+      </div>
+
+      <!-- Weekly stats summary -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #1c1917;">28h 45m</div>
+          <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">This Week</div>
+        </div>
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #1c1917;">5h 45m</div>
+          <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">Daily Average</div>
+        </div>
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #10b981;">72%</div>
+          <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">Avg Goal %</div>
+        </div>
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <span style="font-size: 24px; font-weight: 700; color: #10b981;">+12%</span>
+            <span style="font-size: 14px; color: #10b981;">&#9650;</span>
+          </div>
+          <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">vs Last Week</div>
+        </div>
+      </div>
+
+      <!-- Bar chart: daily focus hours -->
+      <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px; margin-bottom: 16px;">
+        <div style="font-size: 14px; font-weight: 600; color: #1c1917; margin-bottom: 16px;">Daily Focus Hours</div>
+
+        <div style="display: flex; align-items: flex-end; gap: 12px; height: 160px; padding-bottom: 24px; position: relative;">
+          <!-- 8h goal line -->
+          <div style="position: absolute; left: 0; right: 0; bottom: calc(24px + 160px * 8/10); border-top: 1px dashed #d6d3d1; z-index: 1;">
+            <span style="position: absolute; right: 0; top: -16px; font-size: 10px; color: #a8a29e;">8h goal</span>
+          </div>
+
+          <!-- Mon -->
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 100%; border-radius: 8px 8px 4px 4px; display: flex; flex-direction: column-reverse; overflow: hidden;" >
+              <div style="background: #3b82f6; height: 86px;"></div>
+              <div style="background: #f59e0b; height: 22px;"></div>
+              <div style="background: #a78bfa; height: 12px;"></div>
+            </div>
+            <span style="font-size: 11px; color: #78716c;">Mon</span>
+            <span style="font-size: 11px; font-weight: 500; color: #1c1917;">6h 30m</span>
+          </div>
+          <!-- Tue -->
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 100%; border-radius: 8px 8px 4px 4px; display: flex; flex-direction: column-reverse; overflow: hidden;">
+              <div style="background: #3b82f6; height: 96px;"></div>
+              <div style="background: #f59e0b; height: 18px;"></div>
+              <div style="background: #a78bfa; height: 16px;"></div>
+            </div>
+            <span style="font-size: 11px; color: #78716c;">Tue</span>
+            <span style="font-size: 11px; font-weight: 500; color: #1c1917;">7h 10m</span>
+          </div>
+          <!-- Wed -->
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 100%; border-radius: 8px 8px 4px 4px; display: flex; flex-direction: column-reverse; overflow: hidden;">
+              <div style="background: #3b82f6; height: 56px;"></div>
+              <div style="background: #f59e0b; height: 28px;"></div>
+              <div style="background: #a78bfa; height: 36px;"></div>
+            </div>
+            <span style="font-size: 11px; color: #78716c;">Wed</span>
+            <span style="font-size: 11px; font-weight: 500; color: #1c1917;">5h 00m</span>
+          </div>
+          <!-- Thu -->
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 100%; border-radius: 8px 8px 4px 4px; display: flex; flex-direction: column-reverse; overflow: hidden;">
+              <div style="background: #3b82f6; height: 76px;"></div>
+              <div style="background: #f59e0b; height: 14px;"></div>
+              <div style="background: #a78bfa; height: 20px;"></div>
+            </div>
+            <span style="font-size: 11px; color: #78716c;">Thu</span>
+            <span style="font-size: 11px; font-weight: 500; color: #1c1917;">5h 50m</span>
+          </div>
+          <!-- Fri (today) -->
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 100%; border-radius: 8px 8px 4px 4px; display: flex; flex-direction: column-reverse; overflow: hidden; outline: 2px solid #10b981; outline-offset: 2px;">
+              <div style="background: #3b82f6; height: 48px;"></div>
+              <div style="background: #f59e0b; height: 10px;"></div>
+              <div style="background: #a78bfa; height: 6px;"></div>
+            </div>
+            <span style="font-size: 11px; color: #10b981; font-weight: 600;">Today</span>
+            <span style="font-size: 11px; font-weight: 500; color: #1c1917;">4h 12m</span>
+          </div>
+          <!-- Sat -->
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 100%; border-radius: 8px 8px 4px 4px; background: #f5f5f4; height: 10px;"></div>
+            <span style="font-size: 11px; color: #d6d3d1;">Sat</span>
+            <span style="font-size: 11px; color: #d6d3d1;">—</span>
+          </div>
+          <!-- Sun -->
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 100%; border-radius: 8px 8px 4px 4px; background: #f5f5f4; height: 10px;"></div>
+            <span style="font-size: 11px; color: #d6d3d1;">Sun</span>
+            <span style="font-size: 11px; color: #d6d3d1;">—</span>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div style="display: flex; gap: 16px; margin-top: 8px; padding-top: 12px; border-top: 1px solid #f5f5f4;">
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 10px; height: 10px; border-radius: 3px; background: #3b82f6;"></div>
+            <span style="color: #78716c;">Coding</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 10px; height: 10px; border-radius: 3px; background: #f59e0b;"></div>
+            <span style="color: #78716c;">Research</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 10px; height: 10px; border-radius: 3px; background: #a78bfa;"></div>
+            <span style="color: #78716c;">Meeting</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly AI insight -->
+      <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px;">
+        <div style="font-size: 14px; font-weight: 600; color: #1c1917; margin-bottom: 10px;">Weekly Insight</div>
+        <div style="font-size: 14px; line-height: 1.7; color: #44403c; background: #fafaf9; border-radius: 12px; padding: 16px;">
+          This week you averaged <strong>5h 45m of focus per day</strong>, up 12% from last week. Your most productive days were Monday and Tuesday, with deep coding sessions exceeding 3 hours each.<br><br>
+          Wednesday had the most meeting time (2h 15m) which cut into deep work. Consider moving non-critical meetings to after 3pm to protect your morning focus window.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>How does this look?</h3>
+  <div class="options">
+    <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Looks good</h3>
+        <p>History view with bar chart and weekly insights works well</p>
+      </div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Needs changes</h3>
+        <p>I have feedback on the layout or data presentation</p>
+      </div>
+    </div>
+  </div>
+</div>

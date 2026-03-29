@@ -1,0 +1,347 @@
+<h2>/focus — Complete Page Design</h2>
+<p class="subtitle">Daily detail view with date picker + history trends</p>
+
+<div class="section">
+  <h3>Page Structure</h3>
+  <p style="margin-bottom: 12px; color: #78716c; font-size: 14px;">One page, two sections: top is the selected day's detail, bottom is week/month trends. Date picker lets you navigate any day.</p>
+
+  <div class="mockup">
+    <div class="mockup-header">/focus — Full Page</div>
+    <div class="mockup-body" style="padding: 24px; background: #fafaf9; font-family: -apple-system, sans-serif;">
+
+      <!-- Page header with date picker -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+        <div>
+          <h1 style="font-size: 24px; font-weight: 700; color: #1c1917; margin: 0;">Focus</h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e7e5e4; background: white; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&#9664;</button>
+          <div style="padding: 6px 16px; border-radius: 10px; border: 1px solid #e7e5e4; background: white; font-size: 14px; font-weight: 500; color: #1c1917;">Today, Mar 29</div>
+          <button style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e7e5e4; background: white; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #d6d3d1;">&#9654;</button>
+        </div>
+      </div>
+
+      <!-- ===== SECTION 1: Daily Detail ===== -->
+
+      <!-- Stats row -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+          <div style="font-size: 26px; font-weight: 700; color: #1c1917;">4h 12m</div>
+          <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">Total Focus</div>
+        </div>
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+          <div style="font-size: 26px; font-weight: 700; color: #10b981;">52%</div>
+          <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">Daily Goal</div>
+        </div>
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+          <div style="font-size: 26px; font-weight: 700; color: #1c1917;">1h 48m</div>
+          <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">Longest Streak</div>
+        </div>
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+          <div style="font-size: 26px; font-weight: 700; color: #1c1917;">12</div>
+          <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">App Switches</div>
+        </div>
+      </div>
+
+      <!-- Timeline + Categories side by side -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <!-- Timeline bar -->
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px;">
+          <div style="font-size: 14px; font-weight: 600; color: #1c1917; margin-bottom: 12px;">Timeline</div>
+          <div style="display: flex; height: 24px; border-radius: 6px; overflow: hidden; gap: 1px;">
+            <div style="flex: 2.5; background: #3b82f6;" title="VS Code"></div>
+            <div style="flex: 0.5; background: #f59e0b;" title="Chrome"></div>
+            <div style="flex: 0.6; background: #3b82f6;" title="VS Code"></div>
+            <div style="flex: 1; background: #a78bfa;" title="Feishu"></div>
+            <div style="flex: 0.4; background: #f59e0b;" title="Chrome"></div>
+            <div style="flex: 0.5; background: #3b82f6;" title="VS Code"></div>
+            <div style="flex: 2.5; background: #f5f5f4;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+            <span style="font-size: 10px; color: #d6d3d1;">9:00</span>
+            <span style="font-size: 10px; color: #d6d3d1;">11:00</span>
+            <span style="font-size: 10px; color: #d6d3d1;">13:00</span>
+            <span style="font-size: 10px; color: #d6d3d1;">15:00</span>
+            <span style="font-size: 10px; color: #d6d3d1;">17:00</span>
+          </div>
+        </div>
+        <!-- Categories -->
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px;">
+          <div style="font-size: 14px; font-weight: 600; color: #1c1917; margin-bottom: 14px;">Categories</div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                <span style="font-size: 13px; color: #1c1917;">Coding</span>
+                <span style="font-size: 13px; color: #78716c;">2h 35m</span>
+              </div>
+              <div style="background: #f5f5f4; border-radius: 4px; height: 5px; overflow: hidden;">
+                <div style="background: #3b82f6; width: 62%; height: 100%;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                <span style="font-size: 13px; color: #1c1917;">Research</span>
+                <span style="font-size: 13px; color: #78716c;">58m</span>
+              </div>
+              <div style="background: #f5f5f4; border-radius: 4px; height: 5px; overflow: hidden;">
+                <div style="background: #f59e0b; width: 23%; height: 100%;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                <span style="font-size: 13px; color: #1c1917;">Meeting</span>
+                <span style="font-size: 13px; color: #78716c;">39m</span>
+              </div>
+              <div style="background: #f5f5f4; border-radius: 4px; height: 5px; overflow: hidden;">
+                <div style="background: #a78bfa; width: 15%; height: 100%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session table (Rize-style) -->
+      <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+        <div style="font-size: 14px; font-weight: 600; color: #1c1917; margin-bottom: 14px;">Activity Log</div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 1px solid #f5f5f4;">
+              <th style="text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #a8a29e; font-weight: 500;">Time</th>
+              <th style="text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #a8a29e; font-weight: 500;">Duration</th>
+              <th style="text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #a8a29e; font-weight: 500;">App</th>
+              <th style="text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #a8a29e; font-weight: 500;">Category</th>
+              <th style="text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #a8a29e; font-weight: 500;">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #fafaf9;">
+              <td style="padding: 10px; color: #78716c;">09:00</td>
+              <td style="padding: 10px; font-weight: 500; color: #1c1917;">45 min</td>
+              <td style="padding: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;"></div>
+                  <span style="color: #1c1917;">VS Code</span>
+                </div>
+              </td>
+              <td style="padding: 10px;"><span style="background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 6px; font-size: 12px;">Coding</span></td>
+              <td style="padding: 10px; color: #44403c;">Implemented JWT refresh token logic in auth module</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #fafaf9;">
+              <td style="padding: 10px; color: #78716c;">09:45</td>
+              <td style="padding: 10px; font-weight: 500; color: #1c1917;">7 min</td>
+              <td style="padding: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></div>
+                  <span style="color: #1c1917;">Chrome</span>
+                </div>
+              </td>
+              <td style="padding: 10px;"><span style="background: #fffbeb; color: #d97706; padding: 2px 8px; border-radius: 6px; font-size: 12px;">Research</span></td>
+              <td style="padding: 10px; color: #44403c;">Researched JWT refresh token best practices on Stack Overflow</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #fafaf9;">
+              <td style="padding: 10px; color: #78716c;">09:52</td>
+              <td style="padding: 10px; font-weight: 500; color: #1c1917;">38 min</td>
+              <td style="padding: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;"></div>
+                  <span style="color: #1c1917;">VS Code</span>
+                </div>
+              </td>
+              <td style="padding: 10px;"><span style="background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 6px; font-size: 12px;">Coding</span></td>
+              <td style="padding: 10px; color: #44403c;">Continued auth module refactor, added token rotation</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #fafaf9;">
+              <td style="padding: 10px; color: #78716c;">10:30</td>
+              <td style="padding: 10px; font-weight: 500; color: #1c1917;">30 min</td>
+              <td style="padding: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="width: 6px; height: 6px; border-radius: 50%; background: #a78bfa;"></div>
+                  <span style="color: #1c1917;">Feishu</span>
+                </div>
+              </td>
+              <td style="padding: 10px;"><span style="background: #f5f3ff; color: #7c3aed; padding: 2px 8px; border-radius: 6px; font-size: 12px;">Meeting</span></td>
+              <td style="padding: 10px; color: #44403c;">Weekly standup — discussed sprint progress and blockers</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #fafaf9;">
+              <td style="padding: 10px; color: #78716c;">11:00</td>
+              <td style="padding: 10px; font-weight: 500; color: #1c1917;">1h 3m</td>
+              <td style="padding: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;"></div>
+                  <span style="color: #1c1917;">VS Code</span>
+                </div>
+              </td>
+              <td style="padding: 10px;"><span style="background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 6px; font-size: 12px;">Coding</span></td>
+              <td style="padding: 10px; color: #44403c;">Developed focus tracker menubar UI with Tauri</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; color: #78716c;">12:03</td>
+              <td style="padding: 10px; font-weight: 500; color: #1c1917;">46 min</td>
+              <td style="padding: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></div>
+                  <span style="color: #1c1917;">Chrome</span>
+                </div>
+              </td>
+              <td style="padding: 10px;"><span style="background: #fffbeb; color: #d97706; padding: 2px 8px; border-radius: 6px; font-size: 12px;">Research</span></td>
+              <td style="padding: 10px; color: #44403c;">Reviewed Tauri v2 docs and NSWorkspace API examples</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- AI Summary -->
+      <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px; margin-bottom: 32px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <div style="font-size: 14px; font-weight: 600; color: #1c1917;">AI Summary</div>
+          <button style="font-size: 12px; color: #3b82f6; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 4px 12px; cursor: pointer;">Refresh</button>
+        </div>
+        <div style="font-size: 14px; line-height: 1.7; color: #44403c; background: #fafaf9; border-radius: 12px; padding: 16px;">
+          Today you focused for <strong>4 hours 12 minutes</strong>. The morning was highly productive — a continuous 1h48m deep work session on the auth module with JWT token rotation, with a brief research detour on Stack Overflow. After the weekly standup (30min), you shifted to building the focus tracker menubar UI with Tauri. The afternoon included a research session on Tauri v2 docs.
+        </div>
+      </div>
+
+      <!-- ===== SECTION 2: History ===== -->
+      <div style="border-top: 1px solid #e7e5e4; padding-top: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <div style="font-size: 18px; font-weight: 700; color: #1c1917;">History</div>
+          <div style="display: flex; background: #f5f5f4; border-radius: 10px; padding: 3px;">
+            <span style="padding: 5px 14px; border-radius: 8px; background: white; font-size: 13px; font-weight: 500; color: #1c1917; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">Week</span>
+            <span style="padding: 5px 14px; border-radius: 8px; font-size: 13px; color: #78716c;">Month</span>
+          </div>
+        </div>
+
+        <!-- Week stats -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+          <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+            <div style="font-size: 22px; font-weight: 700; color: #1c1917;">28h 45m</div>
+            <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">This Week</div>
+          </div>
+          <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+            <div style="font-size: 22px; font-weight: 700; color: #1c1917;">5h 45m</div>
+            <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">Daily Average</div>
+          </div>
+          <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+            <div style="font-size: 22px; font-weight: 700; color: #10b981;">72%</div>
+            <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">Avg Goal %</div>
+          </div>
+          <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 14px; text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <span style="font-size: 22px; font-weight: 700; color: #10b981;">+12%</span>
+              <span style="font-size: 14px; color: #10b981;">&#9650;</span>
+            </div>
+            <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">vs Last Week</div>
+          </div>
+        </div>
+
+        <!-- Bar chart -->
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px; margin-bottom: 16px;">
+          <div style="font-size: 14px; font-weight: 600; color: #1c1917; margin-bottom: 16px;">Daily Focus Hours</div>
+          <div style="display: flex; align-items: flex-end; gap: 12px; height: 140px; padding-bottom: 24px; position: relative;">
+            <div style="position: absolute; left: 0; right: 0; bottom: calc(24px + 140px * 8/10); border-top: 1px dashed #d6d3d1;">
+              <span style="position: absolute; right: 0; top: -16px; font-size: 10px; color: #a8a29e;">8h goal</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="width: 100%; border-radius: 6px 6px 2px 2px; display: flex; flex-direction: column-reverse; overflow: hidden;">
+                <div style="background: #3b82f6; height: 76px;"></div>
+                <div style="background: #f59e0b; height: 18px;"></div>
+                <div style="background: #a78bfa; height: 10px;"></div>
+              </div>
+              <span style="font-size: 11px; color: #78716c;">Mon</span>
+              <span style="font-size: 11px; font-weight: 500; color: #1c1917;">6h30m</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="width: 100%; border-radius: 6px 6px 2px 2px; display: flex; flex-direction: column-reverse; overflow: hidden;">
+                <div style="background: #3b82f6; height: 86px;"></div>
+                <div style="background: #f59e0b; height: 14px;"></div>
+                <div style="background: #a78bfa; height: 12px;"></div>
+              </div>
+              <span style="font-size: 11px; color: #78716c;">Tue</span>
+              <span style="font-size: 11px; font-weight: 500; color: #1c1917;">7h10m</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="width: 100%; border-radius: 6px 6px 2px 2px; display: flex; flex-direction: column-reverse; overflow: hidden;">
+                <div style="background: #3b82f6; height: 46px;"></div>
+                <div style="background: #f59e0b; height: 22px;"></div>
+                <div style="background: #a78bfa; height: 30px;"></div>
+              </div>
+              <span style="font-size: 11px; color: #78716c;">Wed</span>
+              <span style="font-size: 11px; font-weight: 500; color: #1c1917;">5h00m</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="width: 100%; border-radius: 6px 6px 2px 2px; display: flex; flex-direction: column-reverse; overflow: hidden;">
+                <div style="background: #3b82f6; height: 66px;"></div>
+                <div style="background: #f59e0b; height: 12px;"></div>
+                <div style="background: #a78bfa; height: 16px;"></div>
+              </div>
+              <span style="font-size: 11px; color: #78716c;">Thu</span>
+              <span style="font-size: 11px; font-weight: 500; color: #1c1917;">5h50m</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="width: 100%; border-radius: 6px 6px 2px 2px; display: flex; flex-direction: column-reverse; overflow: hidden; outline: 2px solid #10b981; outline-offset: 2px;">
+                <div style="background: #3b82f6; height: 40px;"></div>
+                <div style="background: #f59e0b; height: 8px;"></div>
+                <div style="background: #a78bfa; height: 5px;"></div>
+              </div>
+              <span style="font-size: 11px; color: #10b981; font-weight: 600;">Today</span>
+              <span style="font-size: 11px; font-weight: 500; color: #1c1917;">4h12m</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="width: 100%; border-radius: 6px; background: #f5f5f4; height: 8px;"></div>
+              <span style="font-size: 11px; color: #d6d3d1;">Sat</span>
+              <span style="font-size: 11px; color: #d6d3d1;">—</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="width: 100%; border-radius: 6px; background: #f5f5f4; height: 8px;"></div>
+              <span style="font-size: 11px; color: #d6d3d1;">Sun</span>
+              <span style="font-size: 11px; color: #d6d3d1;">—</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 16px; margin-top: 4px; padding-top: 10px; border-top: 1px solid #f5f5f4;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+              <div style="width: 10px; height: 10px; border-radius: 3px; background: #3b82f6;"></div>
+              <span style="color: #78716c;">Coding</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+              <div style="width: 10px; height: 10px; border-radius: 3px; background: #f59e0b;"></div>
+              <span style="color: #78716c;">Research</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+              <div style="width: 10px; height: 10px; border-radius: 3px; background: #a78bfa;"></div>
+              <span style="color: #78716c;">Meeting</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly AI insight -->
+        <div style="background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px;">
+          <div style="font-size: 14px; font-weight: 600; color: #1c1917; margin-bottom: 10px;">Weekly Insight</div>
+          <div style="font-size: 14px; line-height: 1.7; color: #44403c; background: #fafaf9; border-radius: 12px; padding: 16px;">
+            This week you averaged <strong>5h 45m of focus per day</strong>, up 12% from last week. Monday and Tuesday were the most productive with 3+ hours of deep coding each. Wednesday had the heaviest meeting load (2h 15m). Consider batching meetings to protect morning focus windows.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Does this complete page structure work?</h3>
+  <div class="options">
+    <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Looks good, ready to finalize design</h3>
+        <p>Page structure, activity log table, and history section all work</p>
+      </div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Needs changes</h3>
+        <p>I have feedback on layout or content</p>
+      </div>
+    </div>
+  </div>
+</div>
