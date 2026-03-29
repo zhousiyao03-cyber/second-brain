@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, FileText } from "lucide-react";
+import { useMemo } from "react";
+import { Activity, ArrowRight, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import { useWorkspaceIdentity } from "@/components/layout/workspace-identity-provider";
+import {
+  buildTopApps,
+  FocusTimeline,
+  formatFocusDuration,
+  getLocalDateString,
+} from "@/components/focus/focus-shared";
 
 function getGreetingLabel(hour: number) {
   if (hour < 6) return "Late night";
@@ -21,8 +28,22 @@ export default function DashboardPage() {
   const router = useRouter();
   const identity = useWorkspaceIdentity();
   const { data, isLoading } = trpc.dashboard.stats.useQuery();
+  const timeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    []
+  );
+  const today = useMemo(() => getLocalDateString(), []);
+  const focusStats = trpc.focus.dailyStats.useQuery({ date: today, timeZone });
+  const focusSessions = trpc.focus.displaySessions.useQuery({ date: today, timeZone });
   const utils = trpc.useUtils();
   const noteCount = isLoading ? "-" : (data?.counts.notes ?? 0);
+  const topApps = useMemo(
+    () => buildTopApps(focusSessions.data ?? []),
+    [focusSessions.data]
+  );
+  const focusGoalPct = focusStats.data
+    ? Math.min(100, Math.round((focusStats.data.workHoursSecs / (8 * 3600)) * 100))
+    : 0;
   const greetingLabel = getGreetingLabel(new Date().getHours());
   const displayName = getUserDisplayName(
     identity.name,
@@ -117,17 +138,57 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="rounded-[24px] border border-stone-200 bg-stone-50/90 p-5 dark:border-stone-800 dark:bg-stone-900/60">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-stone-400 dark:text-stone-500">
-              Flow
+          <Link
+            href="/focus"
+            aria-label="Open focus page"
+            data-testid="dashboard-focus-card"
+            className="rounded-[24px] border border-sky-200 bg-sky-50/90 p-5 transition-all hover:border-sky-300 hover:bg-white dark:border-sky-900/60 dark:bg-sky-950/20 dark:hover:border-sky-800 dark:hover:bg-sky-950/30"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-sky-600 dark:text-sky-300/80">
+                  Working Hours
+                </div>
+                <div className="mt-2 text-2xl font-semibold text-stone-950 dark:text-stone-50">
+                  {focusStats.data ? formatFocusDuration(focusStats.data.workHoursSecs) : "--"}
+                </div>
+              </div>
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80 text-sky-700 shadow-sm dark:bg-stone-900 dark:text-sky-300">
+                <Activity className="h-4 w-4" />
+              </div>
             </div>
-            <div className="mt-2 text-xl font-semibold text-stone-950 dark:text-stone-50">
-              Write, search, and ask in one loop
+
+            <div className="mt-3 h-2 rounded-full bg-white/80 dark:bg-stone-900">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-teal-400 to-sky-400"
+                style={{ width: `${Math.max(6, focusGoalPct)}%` }}
+              />
             </div>
-            <p className="mt-2 text-sm leading-6 text-stone-500 dark:text-stone-400">
-              Notes stay primary, with search and Ask AI as supporting tools instead of a crowded multi-panel home.
-            </p>
-          </div>
+            <div className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+              {focusGoalPct}% of an 8h goal
+            </div>
+
+            <div className="mt-4">
+              <FocusTimeline sessions={focusSessions.data ?? []} compact />
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2 text-xs text-stone-600 dark:text-stone-300">
+              {topApps.length ? (
+                topApps.map((app) => (
+                  <span
+                    key={app.appName}
+                    className="rounded-full border border-stone-200 bg-white/80 px-2.5 py-1 dark:border-stone-700 dark:bg-stone-900"
+                  >
+                    {app.appName} • {formatFocusDuration(app.durationSecs)}
+                  </span>
+                ))
+              ) : (
+                <span className="text-stone-500 dark:text-stone-400">
+                  Upload a few sessions from the desktop collector to populate this card.
+                </span>
+              )}
+            </div>
+          </Link>
         </div>
       </section>
 

@@ -48,6 +48,8 @@ next-env.d.ts
 /data/**/*.db
 /data/**/*.db-wal
 /data/**/*.db-shm
+/data/**/*outbox.json
+/data/focus-collector/
 
 # test results
 /test-results/

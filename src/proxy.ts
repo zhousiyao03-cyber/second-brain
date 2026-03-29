@@ -17,6 +17,9 @@ export default auth((req) => {
     pathname.startsWith("/icon") ||
     pathname.startsWith("/apple-icon") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/focus/ingest") ||
+    pathname.startsWith("/api/focus/status") ||
+    pathname.startsWith("/api/focus/pair") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 

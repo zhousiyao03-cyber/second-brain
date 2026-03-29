@@ -9,7 +9,7 @@ import superjson from "superjson";
 
 function getBaseUrl() {
   if (typeof window !== "undefined") return "";
-  return `http://localhost:${process.env.PORT ?? 3000}`;
+  return `http://localhost:${process.env.PORT ?? 3200}`;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

@@ -5,6 +5,7 @@ import { todosRouter } from "./todos";
 import { learningRouter } from "./learning";
 import { workflowsRouter } from "./workflows";
 import { dashboardRouter } from "./dashboard";
+import { focusRouter } from "./focus";
 import { tokenUsageRouter } from "./token-usage";
 
 export const appRouter = router({
@@ -14,6 +15,7 @@ export const appRouter = router({
   learning: learningRouter,
   workflows: workflowsRouter,
   dashboard: dashboardRouter,
+  focus: focusRouter,
   tokenUsage: tokenUsageRouter,
 });
 

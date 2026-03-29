@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3200",
     "build": "next build",
     "start": "next start",
     "browser:install": "agent-browser install",
     "lint": "mkdir -p test-results && eslint",
     "test:e2e": "playwright test",
+    "focus:collector": "node tools/focus-collector/collector.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"

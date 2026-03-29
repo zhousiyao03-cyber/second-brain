@@ -18,7 +18,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: `${PLAYWRIGHT_PNPM_BIN} dev --port 3100`,
+    command: `${PLAYWRIGHT_PNPM_BIN} exec next dev --port 3100`,
     env: {
       ...process.env,
       PATH: PLAYWRIGHT_RUNTIME_PATH,

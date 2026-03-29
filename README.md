@@ -30,6 +30,7 @@
 - **搜索** — Cmd+K 全局搜索笔记，关键词高亮
 - **Ask AI** — 基于知识库的 chunk 级 hybrid RAG 问答，支持语义检索、关键词召回、邻近段落扩展和可点击引用来源
 - **Token Usage** — 自动读取本机里的 Codex / Claude Code 本地 session（含 Claude subagents，跨工作区聚合），用于展示真实 token 用量；也支持手动补录 OpenAI API / 其他来源，统一在 Dashboard 和独立页面聚合（线上环境默认禁用，本地开发可开启）
+- **Focus Tracker（进行中）** — 服务端 ingestion、Tauri collector、dashboard focus card 和 `/focus` 页面都已落地；当前已能跑通“桌面采样 -> Web 入库 -> 仪表盘/详情页展示”的主路径，剩余是鉴权、重试和 menubar 产品化
 - **Dashboard** — 统计概览 + 最近条目 + token usage 聚合概览
 - **暗色模式** — 全局可切换
 
@@ -65,7 +66,7 @@ nvm use          # 使用 .nvmrc 中固定的 Node 版本（首次可先 nvm ins
 pnpm install
 cp .env.example .env.local
 pnpm db:push       # 初始化数据库
-pnpm dev            # 启动开发服务器 http://localhost:3000
+pnpm dev            # 启动开发服务器 http://localhost:3200
 ```
 
 本地开发模式下，访问登录页会自动确保一个固定的 TEST 账号存在，方便直接进站验证：
@@ -175,6 +176,37 @@ NEXT_PUBLIC_TOKEN_USAGE_REFRESH_INTERVAL_MS=15000
 
 如果这两个目录不存在，页面会显示“未发现”，但手动录入仍然可用。
 
+Focus Tracker collector 的本地原型也已经放在仓库里，当前用于先打通“macOS 采样 -> ingestion API -> 数据库入库”的链路。个人部署时可以给服务端配置：
+
+```bash
+FOCUS_INGEST_API_KEY=your-focus-ingest-api-key
+FOCUS_INGEST_USER_ID=your-user-id
+```
+
+然后本地运行 collector：
+
+```bash
+FOCUS_COLLECTOR_BASE_URL=http://127.0.0.1:3200 \
+FOCUS_COLLECTOR_API_KEY=your-focus-ingest-api-key \
+pnpm focus:collector
+```
+
+如果只想做一次 fixture / dry-run 验证：
+
+```bash
+pnpm focus:collector --fixture tools/focus-collector/fixtures/demo-sessions.json --dry-run
+```
+
+现在仓库里还新增了一个独立的 Tauri collector 目录 `focus-tracker/`，用于把 collector 从 Node prototype 迁到真实桌面 runtime。当前已经能 `cargo test`、`cargo check`、`pnpm build`，并可用 `pnpm tauri dev --no-watch` 启动 tray + 后台采样原型；面板已经收成标准 menubar popover，点击 tray icon 会贴着状态栏图标弹出，默认展示 `Working Hours`、`Focused time`、当前活动、上传状态和一条 canonical timeline，并直接对齐 `/focus` 的服务端日统计。
+
+在 Web 端，`/focus` 页面现在已经可用：
+
+- dashboard 上有 Focus card，可直接进入 `/focus`
+- `/focus` 支持 true time-of-day timeline、top apps、weekly bars、merged focus blocks、raw activity drilldown
+- `/focus` 与 dashboard 现在默认强调 `Working Hours`（工作类别的 focused time），而不是把所有活跃 span 全算成工作
+- `/focus` 支持手动刷新 session 分类和 daily summary
+- `/focus` 支持为桌面端生成一次性 pairing code，桌面 collector 输入 code 后会自动换成 per-device token；设备列表会显示 `Connected / Recent / Revoked / Last seen`，配对与连接失败也会给出重连指引
+
 ## 常用命令
 
 ```bash
@@ -182,6 +214,7 @@ pnpm dev            # 开发服务器
 pnpm build          # 生产构建（含 TypeScript 检查）
 pnpm lint           # ESLint 检查
 pnpm test:e2e       # E2E 测试（使用独立测试库，不污染 data/second-brain.db）
+pnpm focus:collector # 运行 Focus Tracker collector 原型
 pnpm run browser:install  # 可选：下载 Chrome for Testing，供 agent-browser 使用
 pnpm db:generate    # 生成数据库迁移
 pnpm db:push        # 应用迁移到数据库
@@ -197,7 +230,7 @@ pnpm db:studio      # Drizzle Studio
 - 一个最小例子：
 
 ```bash
-pnpm exec agent-browser open http://127.0.0.1:3000/notes
+pnpm exec agent-browser open http://127.0.0.1:3200/notes
 pnpm exec agent-browser snapshot -i
 pnpm exec agent-browser close
 ```
@@ -212,8 +245,10 @@ src/
   server/
     db/             数据库连接和 schema
     routers/        tRPC routers
+    focus/          Focus Tracker 的区间切片与聚合逻辑
     ai/             AI 相关逻辑（chunking、indexer、hybrid RAG、本地/云端 provider、URL 内容抓取）
 e2e/                Playwright E2E 测试
+focus-tracker/      Tauri 桌面端 collector（tray、采样、sessionize、上传）
 docs/
   v1-plan.md        V1 收敛执行计划
   changelog/        变更记录

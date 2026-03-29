@@ -1,216 +1,254 @@
-# Focus Tracker — Design Spec
+# Focus Tracker - Design Spec
 
 ## Overview
 
-Automatic focus time tracking tool for Second Brain. A lightweight Tauri menubar app monitors active windows and writes data to a shared SQLite database. The Second Brain web app reads this data to display daily/weekly analytics and AI-generated summaries.
+Focus Tracker is a two-part feature for Second Brain:
+
+1. A lightweight Tauri menubar app running on macOS collects active-window samples, merges them into local sessions, and batches them to the Second Brain web app.
+2. The Second Brain web app persists normalized sessions in Turso, runs AI categorization and summaries server-side, and exposes daily and historical analytics in the dashboard and `/focus`.
+
+This replaces the earlier "shared SQLite database" idea. Shared local SQLite is acceptable for local prototypes, but it is not the production architecture for a deployed product backed by Turso.
 
 ## Goals
 
-1. Automatically track focus time without manual start/stop
-2. AI categorizes activities and generates natural language descriptions for each session
-3. AI generates daily summaries and inserts them into the user's journal note
-4. Dashboard card for at-a-glance daily progress; dedicated /focus page for full analytics
-5. History view with weekly/monthly trends
+1. Automatically track focus time without manual start/stop.
+2. Keep desktop collection lightweight and resilient to temporary network failures.
+3. Store canonical focus data in the deployed web app's database so analytics work in production.
+4. Generate AI labels and summaries server-side, where credentials, rate limits, and auditing already live.
+5. Show useful daily and weekly analytics in the dashboard and on `/focus`.
 
 ## Non-Goals (MVP)
 
-- Level C analysis (correlating with notes/todos/journal content) — deferred to v2
-- Distraction blocking
-- Focus score algorithm (beyond simple goal percentage)
-- Multi-device sync
-- Browser URL capture (window title is sufficient)
+- Full offline sync engine across multiple devices.
+- Desktop app direct writes to Turso.
+- Browser URL capture.
+- Cross-device reconciliation and merge conflict resolution.
+- Deep correlation with notes/todos/journal content.
+- Background blocking or focus enforcement features.
 
 ---
 
-## Architecture
+## Production Architecture
 
-```
-┌──────────────────────┐         ┌──────────────────────┐
-│  Tauri Menubar App   │         │  Second Brain (Next)  │
-│                      │         │                      │
-│  1. Poll active      │  SQLite │  A. Read sessions    │
-│     window (5s)      │◄───────►│  B. AI categorize    │
-│  2. App + title      │  (WAL)  │  C. Dashboard card   │
-│  3. Merge sessions   │         │  D. /focus page      │
-│  4. Write to DB      │         │  E. Journal insert   │
-└──────────────────────┘         └──────────────────────┘
+```text
+┌──────────────────────────┐        HTTPS / auth        ┌──────────────────────────┐
+│ Tauri Menubar App        │ ───────────────────────▶  │ Second Brain Web App     │
+│                          │                           │                          │
+│ 1. Sample active window  │                           │ A. Validate ingestion    │
+│ 2. Merge local session   │                           │ B. Upsert into Turso     │
+│ 3. Queue unsent events   │                           │ C. Run AI classification │
+│ 4. Batch upload          │                           │ D. Serve /focus + cards  │
+└──────────────────────────┘                           └──────────────────────────┘
+                                                               │
+                                                               ▼
+                                                        ┌────────────┐
+                                                        │ Turso DB   │
+                                                        └────────────┘
 ```
 
-### Key Decisions
+## Key Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Desktop app | Tauri (Rust + React) | Lightweight (~5MB), low memory, Rust for system APIs, React for UI reuse |
-| Data sync | Shared SQLite (WAL mode) | Both apps on same machine, zero network overhead, SQLite WAL supports concurrent read/write |
-| Capture granularity | App name + window title | Window title contains enough info (page titles, filenames), no extra permissions needed |
-| Sampling interval | Every 5 seconds | Balances accuracy vs resource usage |
-| AI analysis scope | Level A+B (categorization + pattern insights) | MVP scope, Level C (knowledge base correlation) deferred |
+| Canonical database | Turso / LibSQL via existing server | Matches the deployable architecture already used by the app |
+| Desktop write path | Call authenticated web ingestion endpoint | Keeps DB credentials off the desktop app and centralizes validation |
+| Local durability | Small local queue / outbox in Tauri | Enough to survive offline or transient failures without building full sync |
+| Sampling interval | 5 seconds | Good enough for MVP accuracy with low overhead |
+| Upload mode | Batched session upserts | Reduces network chatter and supports retry |
+| AI execution | Server-side only | Reuses existing provider code and avoids shipping model credentials |
 
 ---
 
 ## Data Model
 
-### `activity_sessions` — Raw activity data (written by menubar app)
+### `activity_sessions`
+
+Canonical persisted focus sessions.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | text PK | Server-generated UUID |
+| user_id | text FK -> users | Owner |
+| source_device_id | text | Stable desktop app/device identifier |
+| source_session_id | text | Client-generated idempotency key for a merged session |
+| app_name | text | Foreground app name |
+| window_title | text | Foreground window title |
+| started_at | integer timestamp | Session start |
+| ended_at | integer timestamp | Session end |
+| duration_secs | integer | Denormalized duration |
+| category | text nullable | AI-assigned category |
+| ai_summary | text nullable | AI-generated session description |
+| ingestion_status | text | `pending` / `processed` / `failed` |
+| ingested_at | integer timestamp | When server accepted the latest payload |
+| created_at | integer timestamp | Record creation |
+| updated_at | integer timestamp | Last update |
+
+Constraints:
+
+- Unique index on `(user_id, source_device_id, source_session_id)` for idempotent uploads.
+- Server accepts repeated uploads for the same logical session and updates the existing row.
+
+### `focus_daily_summaries`
+
+Cached AI daily summaries.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | text PK | UUID |
-| user_id | text FK → users | Owner |
-| app_name | text | Application name (e.g. "Visual Studio Code") |
-| window_title | text | Window title (e.g. "auth.ts - second-brain") |
-| started_at | integer (timestamp) | Session start |
-| ended_at | integer (timestamp) | Session end |
-| duration_secs | integer | Duration in seconds (denormalized for queries) |
-| category | text | AI-assigned category (e.g. "coding", "research", "meeting", "communication") |
-| ai_summary | text | AI-generated one-line description (e.g. "Implemented JWT refresh token logic") |
-| created_at | integer (timestamp) | Record creation time |
-
-### `focus_daily_summaries` — Daily AI analysis (generated by web app)
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | text PK | UUID |
-| user_id | text FK → users | Owner |
-| date | text | 'YYYY-MM-DD' |
-| total_focus_secs | integer | Total tracked time |
-| category_breakdown | text (JSON) | `{"coding": 9300, "research": 3480, ...}` |
-| ai_analysis | text | AI-generated daily summary paragraph |
-| generated_at | integer (timestamp) | When the summary was last generated |
-| created_at | integer (timestamp) | |
-| updated_at | integer (timestamp) | |
+| user_id | text FK -> users | Owner |
+| date | text | Local-calendar day in `YYYY-MM-DD` |
+| timezone | text | IANA timezone used for that day's aggregation |
+| total_focus_secs | integer | Total overlapped focus time for the day |
+| category_breakdown | text JSON | Per-category seconds |
+| ai_analysis | text | Cached daily summary |
+| source_updated_at | integer timestamp | Max session update time included in summary |
+| generated_at | integer timestamp | Last generation time |
+| created_at | integer timestamp | |
+| updated_at | integer timestamp | |
 
 ---
 
-## Tauri Menubar App
+## Desktop App Responsibilities
 
-### Menubar Display
+The Tauri app is a collector and uploader, not the source of truth.
 
-Compact one-line display in macOS menu bar (referencing Rize's style):
+### Local capture flow
 
+1. Every 5 seconds, read the active macOS app name and window title.
+2. If the sample matches the current in-memory session, extend it.
+3. If it changes, close the current session and append it to a local outbox.
+4. If the machine is idle for more than 5 minutes, close the current session and mark tracking paused.
+5. Periodically upload unsent sessions in batches to the web app.
+
+### Local storage
+
+The desktop app may keep a tiny local SQLite or JSON-backed outbox containing:
+
+- queued sessions waiting for upload
+- upload attempts / last error
+- stable `device_id`
+- lightweight local today stats for menu rendering
+
+This local store is not queried by the web app in production and is not treated as canonical business data.
+
+### Upload API contract
+
+The desktop app sends batched session payloads like:
+
+```json
+{
+  "deviceId": "macbook-pro-14-abc123",
+  "timezone": "Asia/Singapore",
+  "sessions": [
+    {
+      "sourceSessionId": "2026-03-29T09:00:00.000Z-vscode-auth-ts",
+      "appName": "Visual Studio Code",
+      "windowTitle": "auth.ts - second-brain",
+      "startedAt": "2026-03-29T09:00:00.000Z",
+      "endedAt": "2026-03-29T09:45:00.000Z"
+    }
+  ]
+}
 ```
-Tracking | 4h 12m WORK HOURS | 52% OF DAY
-```
 
-States:
-- **Tracking** (green) — actively monitoring
-- **Paused** (gray) — user manually paused
+Server behavior:
 
-Daily goal: 8 hours (configurable).
-
-### Dropdown Panel (click to expand)
-
-- Large focus time number + "of 8h goal"
-- Progress bar (percentage of daily goal)
-- **Timeline color bar** — horizontal bar divided by category colors showing the day at a glance, with time labels (9:00, 12:00, 15:00, 18:00) and category legend
-- "Now" block showing current app + window title + elapsed time
-- Actions: Pause/Resume tracking, Open dashboard (launches Second Brain /focus in browser)
-
-### Data Collection
-
-1. Every 5 seconds, read the active window's app name and window title via macOS `NSWorkspace` / Accessibility API
-2. If same app+title as previous sample, extend current session
-3. If different, close previous session (write to SQLite) and start new one
-4. Idle detection: if no input for >5 minutes, pause the current session
+- require authenticated user context
+- validate payload shape and timestamps
+- compute `duration_secs`
+- upsert by `(user_id, source_device_id, source_session_id)`
+- return accepted ids and retryable failures
 
 ---
 
-## Web App — Dashboard Focus Card
+## Web App Responsibilities
 
-New card in the existing Dashboard grid (alongside "Today's Note" and "Notes" cards):
+### Ingestion
 
-- "Today's Focus" label
-- Large time number + "/8h" goal
-- Progress bar with percentage
-- Mini timeline color bar (same as menubar)
-- Top 3 apps with time
-- "View details →" link to /focus
+The web app owns canonical persistence. This is implemented as an authenticated server endpoint or protected tRPC mutation used by the desktop app.
 
----
+### Aggregation semantics
 
-## Web App — /focus Page
+Daily and weekly analytics must use interval overlap, not "session started on that day".
 
-Single page with two major sections:
+Rules:
 
-### Section 1: Daily Detail (top)
+- A session belongs to a day if its interval overlaps that day window.
+- If a session crosses midnight, it must be split logically during aggregation so each day only receives its overlapped duration.
+- Day boundaries are computed in the viewer's local timezone.
+- Stored raw sessions remain intact; splitting happens in query/aggregation code.
 
-**Header:** Page title "Focus" + date picker with left/right arrows for navigation.
+### Longest streak
 
-**Stats row (4 cards):**
-- Total Focus time
-- Daily Goal percentage
-- Longest Streak (longest continuous focus without switching to unrelated apps)
-- App Switches count
+For MVP, "Longest Streak" means the longest continuous overlapped focus duration within a day where:
 
-**Timeline + Categories (side by side):**
-- Left: Timeline color bar with time labels
-- Right: Category breakdown with progress bars (Coding, Research, Meeting, etc.)
+- idle gaps larger than 2 minutes break the streak
+- explicit paused periods break the streak
+- switching sessions does not automatically break the streak if there is no qualifying gap
 
-**Activity Log table (below timeline):**
+This is a pragmatic interpretation of uninterrupted focus time. "Unrelated apps" inference is deferred.
 
-| Time | Duration | App | Category | Description |
-|------|----------|-----|----------|-------------|
-| 09:00 | 45 min | VS Code | Coding | Implemented JWT refresh token logic in auth module |
-| 09:45 | 7 min | Chrome | Research | Researched JWT refresh token best practices |
-| ... | ... | ... | ... | ... |
+### AI flow
 
-Each row's "Description" is AI-generated from window titles.
-
-**AI Summary block:**
-- Natural language summary of the day's work
-- "Refresh" button to regenerate with latest data
-
-### Section 2: History (bottom, separated by divider)
-
-**Week/Month toggle tabs**
-
-**Weekly stats (4 cards):** This Week total, Daily Average, Avg Goal %, vs Last Week change
-
-**Stacked bar chart:** Daily focus hours by category, with 8h goal dashed line. Today's bar highlighted with green outline.
-
-**Weekly AI Insight:** Natural language analysis of the week's patterns and suggestions.
+1. Newly ingested sessions are marked `pending`.
+2. On `/focus` load or manual refresh, the server classifies any pending sessions for the selected day or week.
+3. Daily summary generation reads normalized sessions and cached aggregates, then stores a summary row.
+4. Journal insertion is deferred until the focus page and summary pipeline are stable.
 
 ---
 
-## AI Integration
+## UI Scope
 
-### Per-Session Description
+### Dashboard card
 
-**When:** After a session ends (or on batch when user opens /focus page).
+- Today's total focus time
+- Goal progress
+- Mini day timeline using true time-of-day positioning
+- Top apps by duration
+- Link to `/focus`
 
-**Input:** App name + window title of the session, plus surrounding session context.
+### `/focus`
 
-**Output:** One-line natural language description (e.g. "Implemented JWT refresh token logic in auth module").
+Top section:
 
-**Method:** Send batch of uncategorized sessions to AI with a prompt requesting category assignment and one-line descriptions. Lightweight — each session is ~20 tokens of input.
+- selected day header
+- total focus
+- goal percentage
+- longest streak
+- app switches
+- true time-of-day timeline
+- category breakdown
+- activity log
+- AI summary
 
-### Daily Summary Generation
+Bottom section:
 
-**When:** User-triggered via "Refresh" button on /focus page or in journal note.
-
-**Flow:**
-1. Collect all `activity_sessions` for the selected date
-2. Pre-process: group by app, calculate per-category totals, identify longest streaks, count switches
-3. Send pre-processed stats + session list to AI
-4. AI returns natural language summary paragraph
-5. Save to `focus_daily_summaries` table
-6. Optionally insert into today's journal note
-
-### Journal Integration
-
-When user opens today's journal note, check if a focus summary block exists:
-- If no summary exists and there's activity data → show "Add focus summary" prompt
-- If summary exists but data has changed since last generation → show "Update summary" indicator
-- User clicks to generate/refresh — AI summary is appended to the journal note as a dedicated section
-
-### Weekly Insight
-
-Same pattern as daily summary, but aggregates the week's data. Generated on demand when viewing the History section.
+- weekly trend cards
+- stacked daily bars by category
+- optional weekly AI insight after core daily flow is stable
 
 ---
 
-## Mockups
+## Verification Strategy
 
-Visual mockups are available in `.superpowers/brainstorm/` directory:
-- `menubar-mockup-v2.html` — Menubar compact view + dropdown panel
-- `web-dashboard-focus.html` — Dashboard card + /focus daily detail
-- `focus-page-final.html` — Complete /focus page with activity log table and history
+### Web
+
+- Unit or integration tests for day-overlap aggregation helpers.
+- E2E coverage for `/focus` empty state, seeded state, navigation, and summary refresh flow.
+- `pnpm lint` and `pnpm build` before completion.
+
+### Desktop
+
+- Command-level verification for the tracking loop and upload retry behavior.
+- At least one executable ingest smoke test against a local/dev server.
+
+---
+
+## Delivery Order
+
+1. Web data model and aggregation utilities.
+2. Web ingestion endpoint and focus router.
+3. `/focus` page and dashboard card.
+4. E2E coverage for web flow.
+5. Tauri collector and uploader.
+6. Desktop status UI and final end-to-end smoke checks.
