@@ -197,7 +197,7 @@ pnpm focus:collector
 pnpm focus:collector --fixture tools/focus-collector/fixtures/demo-sessions.json --dry-run
 ```
 
-现在仓库里还新增了一个独立的 Tauri collector 目录 `focus-tracker/`，用于把 collector 从 Node prototype 迁到真实桌面 runtime。当前已经能 `cargo test`、`cargo check`、`pnpm build`，并可用 `pnpm tauri dev --no-watch` 启动 tray + 后台采样原型；面板已经收成标准 menubar popover，点击 tray icon 会贴着状态栏图标弹出，默认展示 `Working Hours`、`Focused time`、当前活动、上传状态和一条 canonical timeline，并直接对齐 `/focus` 的服务端日统计。
+现在仓库里还新增了一个独立的 Tauri collector 目录 `focus-tracker/`，用于把 collector 从 Node prototype 迁到真实桌面 runtime。当前已经能 `cargo test`、`cargo check`、`pnpm build`，并可用 `pnpm tauri dev --no-watch` 启动 tray + 后台采样原型；面板已经收成标准 menubar popover，点击 tray icon 会贴着状态栏图标弹出，菜单栏顶栏会直接显示 `Working Hours · 8h progress`，面板内则保留一条更紧凑的 canonical timeline 和 `/focus` 入口，并直接对齐 `/focus` 的服务端日统计。
 
 注意：`focus-tracker/` 是独立桌面工程。根目录的 `pnpm build` 只构建 Web 应用；桌面端需要进入 `focus-tracker/` 单独构建。
 

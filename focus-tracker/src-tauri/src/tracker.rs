@@ -23,6 +23,28 @@ pub fn get_idle_seconds() -> i64 {
         .unwrap_or(0)
 }
 
+pub fn is_user_away() -> bool {
+    is_console_locked() || is_screen_saver_running()
+}
+
+fn is_console_locked() -> bool {
+    Command::new("/usr/sbin/ioreg")
+        .args(["-w0", "-l", "-d", "1"])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).contains("\"IOConsoleLocked\" = Yes"))
+        .unwrap_or(false)
+}
+
+fn is_screen_saver_running() -> bool {
+    run_applescript(
+        r#"tell application "System Events" to get running of screen saver preferences"#,
+    )
+    .map(|value| value.trim().eq_ignore_ascii_case("true"))
+    .unwrap_or(false)
+}
+
 pub fn get_active_window_sample() -> Option<WindowSample> {
     let app_name = run_applescript(
         r#"tell application "System Events" to get name of first application process whose frontmost is true"#,

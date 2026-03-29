@@ -14,7 +14,8 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    ActivationPolicy, AppHandle, Manager, PhysicalPosition, Position, Rect, Size, State,
+    ActivationPolicy, AppHandle, LogicalSize, Manager, PhysicalPosition, Position, Rect, Size,
+    State,
     WindowEvent,
 };
 
@@ -27,19 +28,65 @@ use crate::{
         SharedState, TrackerStatus,
     },
     status_sync::fetch_remote_day_status,
-    tracker::{get_active_window_sample, get_idle_seconds},
+    tracker::{get_active_window_sample, get_idle_seconds, is_user_away},
     uploader::upload_sessions,
 };
 
 const DEMO_FIXTURE: &str = include_str!("../../../tools/focus-collector/fixtures/demo-sessions.json");
+const TRAY_ID: &str = "focus-tracker-tray";
 const SAMPLE_IDLE_THRESHOLD_SECS: i64 = 1_800;
+const COLLECT_GAP_FLUSH_SECS: i64 = 60;
 const STATUS_SYNC_INTERVAL_SECS: i64 = 30;
 const PANEL_EDGE_MARGIN_PX: i32 = 12;
 const PANEL_VERTICAL_GAP_PX: i32 = 10;
+const PANEL_WIDTH_PX: f64 = 368.0;
+const PANEL_COMPACT_HEIGHT_PX: f64 = 330.0;
+const PANEL_EXPANDED_HEIGHT_PX: f64 = 520.0;
 
 fn hide_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.hide();
+    }
+}
+
+fn format_short_duration(seconds: i64) -> String {
+    let total_minutes = (seconds.max(0) + 59) / 60;
+    let hours = total_minutes / 60;
+    let minutes = total_minutes % 60;
+
+    if hours == 0 {
+        format!("{total_minutes}m")
+    } else if minutes == 0 {
+        format!("{hours}h")
+    } else {
+        format!("{hours}h {minutes}m")
+    }
+}
+
+fn format_tray_title(work_secs: i64, goal_secs: i64) -> String {
+    let clamped_goal = goal_secs.max(1);
+    let progress = ((work_secs.max(0) * 100) / clamped_goal).clamp(0, 100);
+    format!("{} · {}%", format_short_duration(work_secs), progress)
+}
+
+fn update_tray_title(app: &AppHandle, status: &TrackerStatus) {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_title(Some(format_tray_title(
+            status.today_work_secs,
+            status.today_goal_secs,
+        )));
+    }
+}
+
+fn refresh_tray_title(app: &AppHandle, state: &SharedState) {
+    let status = state
+        .inner
+        .lock()
+        .map(|runtime| build_status(&runtime))
+        .ok();
+
+    if let Some(status) = status {
+        update_tray_title(app, &status);
     }
 }
 
@@ -216,10 +263,22 @@ fn toggle_main_window(app: &AppHandle, tray_anchor: Option<(PhysicalPosition<f64
     }
 }
 
+fn set_panel_expanded_inner(app: &AppHandle, expanded: bool) {
+    if let Some(window) = app.get_webview_window("main") {
+        let height = if expanded {
+            PANEL_EXPANDED_HEIGHT_PX
+        } else {
+            PANEL_COMPACT_HEIGHT_PX
+        };
+        let _ = window.set_size(Size::Logical(LogicalSize::new(PANEL_WIDTH_PX, height)));
+    }
+}
+
 fn collect_once_inner(state: &SharedState) -> Result<(), String> {
     let observed_at = Utc::now();
     let idle_secs = get_idle_seconds();
-    let sample = if idle_secs >= SAMPLE_IDLE_THRESHOLD_SECS {
+    let away = is_user_away();
+    let sample = if away || idle_secs >= SAMPLE_IDLE_THRESHOLD_SECS {
         None
     } else {
         get_active_window_sample()
@@ -230,12 +289,34 @@ fn collect_once_inner(state: &SharedState) -> Result<(), String> {
         .lock()
         .map_err(|_| "failed to lock runtime state".to_string())?;
 
+    if let Some(previous_collected_at) = runtime.last_collected_at {
+        if should_flush_for_collect_gap(previous_collected_at, observed_at) {
+            if let Some(closed) = runtime.sessionizer.flush(previous_collected_at) {
+                runtime.outbox.record_session(closed);
+                runtime.persist()?;
+            }
+        }
+    }
+
     if let Some(closed) = runtime.sessionizer.observe(sample, observed_at, idle_secs) {
         runtime.outbox.record_session(closed);
         runtime.persist()?;
     }
 
+    runtime.last_collected_at = Some(observed_at);
+
     Ok(())
+}
+
+fn should_flush_for_collect_gap(
+    previous_collected_at: chrono::DateTime<Utc>,
+    observed_at: chrono::DateTime<Utc>,
+) -> bool {
+    (observed_at - previous_collected_at).num_seconds() >= COLLECT_GAP_FLUSH_SECS
+}
+
+fn should_hide_on_focus_lost(_start_visible_mode: bool) -> bool {
+    true
 }
 
 fn upload_queue_inner(
@@ -438,6 +519,11 @@ fn hide_panel(app: AppHandle) {
 }
 
 #[tauri::command]
+fn set_panel_expanded(app: AppHandle, expanded: bool) {
+    set_panel_expanded_inner(&app, expanded);
+}
+
+#[tauri::command]
 fn update_settings(
     base_url: String,
     time_zone: String,
@@ -504,6 +590,7 @@ fn spawn_background_loop(app: AppHandle) {
                 runtime.last_upload_message = Some(normalized);
             }
         }
+        refresh_tray_title(&app, &state);
 
         let interval_secs = state
             .inner
@@ -527,9 +614,10 @@ fn setup_tray(app: &AppHandle) -> Result<(), String> {
     let menu = Menu::with_items(app, &[&show_hide, &collect, &upload, &quit])
         .map_err(|error| format!("failed to build tray menu: {error}"))?;
 
-    TrayIconBuilder::new()
+    TrayIconBuilder::with_id(TRAY_ID)
         .icon(menu_bar_icon())
         .icon_as_template(true)
+        .title("0m · 0%")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -588,6 +676,8 @@ pub fn run() {
             let state = create_state(&app.handle())?;
             app.manage(state);
             setup_tray(&app.handle())?;
+            let state = app.state::<SharedState>();
+            refresh_tray_title(&app.handle(), &state);
             spawn_background_loop(app.handle().clone());
             if start_visible_mode_enabled() {
                 show_main_window(&app.handle(), None);
@@ -601,10 +691,9 @@ pub fn run() {
             }
 
             if let WindowEvent::Focused(false) = event {
-                if start_visible_mode_enabled() {
-                    return;
+                if should_hide_on_focus_lost(start_visible_mode_enabled()) {
+                    hide_main_window(&window.app_handle());
                 }
-                hide_main_window(&window.app_handle());
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -616,6 +705,8 @@ pub fn run() {
             pair_device,
             update_settings,
             hide_panel
+            ,
+            set_panel_expanded
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -623,7 +714,12 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::compute_popover_origin;
+    use chrono::{TimeZone, Utc};
+
+    use super::{
+        compute_popover_origin, format_tray_title, should_flush_for_collect_gap,
+        should_hide_on_focus_lost,
+    };
 
     #[test]
     fn centers_panel_below_tray_icon() {
@@ -637,5 +733,33 @@ mod tests {
         let (x, y) = compute_popover_origin(1400.0, 0.0, 24.0, 24.0, 368, 440, 0, 24, 1440, 876);
         assert_eq!(x, 1060);
         assert_eq!(y, 36);
+    }
+
+    #[test]
+    fn flushes_after_long_collect_gap() {
+        let previous = Utc.with_ymd_and_hms(2026, 3, 29, 10, 0, 0).unwrap();
+        let observed = Utc.with_ymd_and_hms(2026, 3, 29, 10, 2, 0).unwrap();
+
+        assert!(should_flush_for_collect_gap(previous, observed));
+    }
+
+    #[test]
+    fn keeps_session_open_for_short_collect_gap() {
+        let previous = Utc.with_ymd_and_hms(2026, 3, 29, 10, 0, 0).unwrap();
+        let observed = Utc.with_ymd_and_hms(2026, 3, 29, 10, 0, 30).unwrap();
+
+        assert!(!should_flush_for_collect_gap(previous, observed));
+    }
+
+    #[test]
+    fn formats_tray_title_with_work_hours_and_goal_progress() {
+        assert_eq!(format_tray_title(21_060, 28_800), "5h 51m · 73%");
+        assert_eq!(format_tray_title(600, 28_800), "10m · 2%");
+    }
+
+    #[test]
+    fn hides_window_when_focus_is_lost_even_in_start_visible_mode() {
+        assert!(should_hide_on_focus_lost(true));
+        assert!(should_hide_on_focus_lost(false));
     }
 }

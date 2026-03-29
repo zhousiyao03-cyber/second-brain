@@ -41,7 +41,7 @@ type TimelineSegment = {
   interruptionCount: number;
 };
 
-const DEFAULT_BASE_URL = "http://127.0.0.1:3200";
+const DEFAULT_BASE_URL = "https://second-brain-self-alpha.vercel.app";
 const DAY_SECS = 24 * 60 * 60;
 
 function formatDuration(seconds: number) {
@@ -54,6 +54,15 @@ function formatDuration(seconds: number) {
   }
 
   return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
+}
+
+function formatRemainingGoal(workSecs: number, goalSecs: number) {
+  const remaining = Math.max(goalSecs - workSecs, 0);
+  return remaining === 0 ? "8h goal reached" : `${formatDuration(remaining)} left to 8h`;
+}
+
+function formatProgressLabel(progress: number) {
+  return progress >= 100 ? "8h reached today" : `${progress}% of 8h`;
 }
 
 function appColor(appName: string) {
@@ -90,14 +99,30 @@ function getRecoveryGuidance(message: string, hasToken: boolean) {
   return message;
 }
 
+function getTauriErrorMessage(caughtError: unknown, fallback: string) {
+  if (typeof caughtError === "string" && caughtError.trim()) {
+    return caughtError;
+  }
+
+  if (
+    caughtError &&
+    typeof caughtError === "object" &&
+    "message" in caughtError &&
+    typeof caughtError.message === "string" &&
+    caughtError.message.trim()
+  ) {
+    return caughtError.message;
+  }
+
+  return fallback;
+}
+
 function App() {
   const [status, setStatus] = useState<TrackerStatus | null>(null);
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
   const [pairingCode, setPairingCode] = useState("");
   const [busy, setBusy] = useState<"save" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSetup, setShowSetup] = useState(false);
-  const [copiedDeviceId, setCopiedDeviceId] = useState(false);
   const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
   const progress = status
@@ -111,20 +136,16 @@ function App() {
     uploadMessage.toLowerCase().includes("unauthorized") ||
     uploadMessage.toLowerCase().includes("desktop token is no longer valid") ||
     uploadMessage.toLowerCase().includes("rate-limited");
-  const uploadLabel = !status?.apiKeyPresent
-    ? "Setup required"
-    : status?.lastUploadAt
-      ? new Date(status.lastUploadAt).toLocaleTimeString([], {
-          hour: "numeric",
-          minute: "2-digit",
-        })
-      : "Syncing";
   const recoveryGuidance = getRecoveryGuidance(uploadMessage, Boolean(status?.apiKeyPresent));
+  const currentLabel = status?.currentSession?.appName ?? "On track";
+  const remainingGoalLabel = formatRemainingGoal(
+    status?.todayWorkSecs ?? 0,
+    status?.todayGoalSecs ?? 8 * 60 * 60
+  );
 
   async function refreshStatus() {
     const next = await invoke<TrackerStatus>("get_status");
     setStatus(next);
-    setBaseUrl(next.baseUrl);
   }
 
   async function runAction(action: () => Promise<TrackerStatus>) {
@@ -136,9 +157,7 @@ function App() {
       setShowSetup(false);
       setPairingCode("");
     } catch (caughtError) {
-      setError(
-        caughtError instanceof Error ? caughtError.message : "Unknown Tauri error"
-      );
+      setError(getTauriErrorMessage(caughtError, "Unknown Tauri error"));
     } finally {
       setBusy(null);
     }
@@ -146,18 +165,14 @@ function App() {
 
   useEffect(() => {
     void refreshStatus().catch((caughtError) => {
-      setError(
-        caughtError instanceof Error ? caughtError.message : "Failed to load status"
-      );
+      setError(getTauriErrorMessage(caughtError, "Failed to load status"));
     });
   }, []);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       void refreshStatus().catch((caughtError) => {
-        setError(
-          caughtError instanceof Error ? caughtError.message : "Failed to refresh status"
-        );
+        setError(getTauriErrorMessage(caughtError, "Failed to refresh status"));
       });
     }, 5_000);
 
@@ -175,66 +190,62 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeydown);
   }, []);
 
+  useEffect(() => {
+    void invoke("set_panel_expanded", {
+      expanded: showSetup || uploadNeedsAttention,
+    }).catch(() => {
+      return undefined;
+    });
+  }, [showSetup, uploadNeedsAttention]);
+
   return (
     <main className="shell minimal-shell">
       <section className="hero compact">
-        <div>
+        <div className="hero-copy">
           <p className="eyebrow">Working Hours</p>
           <h1>{formatDuration(status?.todayWorkSecs ?? 0)}</h1>
-          <p className="lede">
-            Focused {formatDuration(status?.todayFocusedSecs ?? 0)}.{" "}
-            {status?.trackingEnabled ? "Tracking is live." : "Tracking is paused."}{" "}
-            {status?.currentSession?.appName ?? "Waiting for the next sample."}
+          <p className="lede">{remainingGoalLabel}</p>
+          <p className="hero-subtle">
+            {formatDuration(status?.todayFocusedSecs ?? 0)} focused · {currentLabel}
           </p>
         </div>
         <div className="hero-card compact">
-          <div className="metric-label">Today</div>
+          <div className="metric-label">8h Goal</div>
           <div className="metric-value">{progress}%</div>
-          <div className="metric-subtle">
-            {formatDuration(status?.todayGoalSecs ?? 0)} goal
-          </div>
+          <div className="metric-subtle">{formatProgressLabel(progress)}</div>
         </div>
       </section>
 
       <section className="panel summary-panel">
-        <div className="section-header tight">
-          <div>
-            <h2>Today</h2>
-            <p>
-              Focused {formatDuration(status?.todayFocusedSecs ?? 0)}. Auto sampling
-              every {status?.sampleIntervalSecs ?? 5}s
-            </p>
+        <div className="panel-topline">
+          <div className="panel-meta">Today</div>
+          <div className="inline-actions">
+            <button
+              className="text-button"
+              disabled={!status?.baseUrl}
+              onClick={() =>
+                void openUrl(`${(status?.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "")}/focus`)
+              }
+            >
+              Open /focus
+            </button>
+            <button
+              className="text-button subtle"
+              type="button"
+              onClick={() => setShowSetup((current) => !current)}
+            >
+              {showSetup ? "Hide setup" : status?.apiKeyPresent ? "Reconnect" : "Fix setup"}
+            </button>
           </div>
-          <button
-            className="ghost"
-            disabled={!baseUrl}
-            onClick={() => void openUrl(`${baseUrl.replace(/\/$/, "")}/focus`)}
-          >
-            Open /focus
-          </button>
+        </div>
+
+        <div className="summary-copy">
+          <span>{formatDuration(status?.todayFocusedSecs ?? 0)} focused</span>
+          <span>{remainingGoalLabel}</span>
         </div>
 
         <div className="progress-rail">
           <div className="progress-fill" style={{ width: `${progress}%` }} />
-        </div>
-
-        <div className="status-grid compact-grid">
-          <div className="status-card">
-            <div className="metric-label">Current</div>
-            <div className="status-title">
-              {status?.currentSession?.appName ?? "Idle"}
-            </div>
-            <div className="metric-subtle">
-              {status?.currentSession?.windowTitle ?? "No active window"}
-            </div>
-          </div>
-          <div className="status-card">
-            <div className="metric-label">Upload</div>
-            <div className="status-title">{uploadLabel}</div>
-            <div className="metric-subtle">
-              {uploadNeedsAttention ? recoveryGuidance : uploadMessage}
-            </div>
-          </div>
         </div>
 
         <div className="timeline">
@@ -267,57 +278,36 @@ function App() {
             ))}
           </div>
         </div>
+
+        {uploadNeedsAttention ? (
+          <p className="supporting-status warning">{recoveryGuidance}</p>
+        ) : null}
       </section>
 
-      {uploadNeedsAttention ? (
+      {showSetup || uploadNeedsAttention ? (
         <section className="panel">
           <div className="section-header tight">
             <div>
-              <h2>Attention needed</h2>
-              <p>{recoveryGuidance}</p>
+              <h2>{uploadNeedsAttention ? "Attention needed" : "Desktop setup"}</h2>
+              <p>
+                {uploadNeedsAttention
+                  ? recoveryGuidance
+                  : "Reconnect this desktop or pair it to another environment."}
+              </p>
             </div>
             <button
               className="ghost"
               type="button"
-              onClick={() => setShowSetup((current) => !current)}
+              onClick={() => setShowSetup(false)}
+              disabled={!showSetup}
             >
-              {showSetup ? "Hide setup" : status?.apiKeyPresent ? "Reconnect" : "Fix setup"}
+              Close
             </button>
           </div>
 
           {showSetup ? (
             <>
               <div className="form-grid compact-form">
-                <label>
-                  <span>Device ID</span>
-                  <div className="readonly-input-row">
-                    <input value={status?.deviceId ?? ""} readOnly />
-                    <button
-                      className="ghost small"
-                      type="button"
-                      disabled={!status?.deviceId}
-                      onClick={async () => {
-                        if (!status?.deviceId) {
-                          return;
-                        }
-
-                        await navigator.clipboard.writeText(status.deviceId);
-                        setCopiedDeviceId(true);
-                        window.setTimeout(() => setCopiedDeviceId(false), 1500);
-                      }}
-                    >
-                      {copiedDeviceId ? "Copied" : "Copy"}
-                    </button>
-                  </div>
-                </label>
-                <label>
-                  <span>Base URL</span>
-                  <input
-                    value={baseUrl}
-                    onChange={(event) => setBaseUrl(event.currentTarget.value)}
-                    placeholder="http://127.0.0.1:3200"
-                  />
-                </label>
                 <label>
                   <span>Pairing code</span>
                   <input
@@ -326,19 +316,15 @@ function App() {
                     placeholder="Paste the code from /focus"
                   />
                 </label>
-                <label>
-                  <span>Time zone</span>
-                  <input value={browserTimeZone} readOnly disabled />
-                </label>
               </div>
               <div className="actions compact-actions">
                 <button
                   className="accent"
-                  disabled={busy !== null || !baseUrl || !pairingCode.trim()}
+                  disabled={busy !== null || !status?.baseUrl || !pairingCode.trim()}
                   onClick={() =>
                     runAction(() =>
                       invoke("pair_device", {
-                        baseUrl,
+                        baseUrl: status?.baseUrl ?? DEFAULT_BASE_URL,
                         pairingCode,
                         deviceName: "MacBook Focus Tracker",
                         timeZone: browserTimeZone,
@@ -350,7 +336,7 @@ function App() {
                 </button>
               </div>
               <p className="metric-subtle">
-                Generate a pairing code in `/focus`, paste it here once, and the collector will store its own device token automatically.
+                Generate a pairing code in `/focus`, paste it here once, and this desktop will connect automatically.
               </p>
             </>
           ) : null}

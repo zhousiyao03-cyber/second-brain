@@ -28,6 +28,7 @@ pub struct RuntimeState {
     pub upload_interval_secs: u64,
     pub last_upload_at: Option<DateTime<Utc>>,
     pub last_upload_message: Option<String>,
+    pub last_collected_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone)]
@@ -129,6 +130,7 @@ pub fn create_state(app: &AppHandle) -> Result<SharedState, String> {
             upload_interval_secs: settings.upload_interval_secs,
             last_upload_at: None,
             last_upload_message: None,
+            last_collected_at: None,
         }),
     })
 }
@@ -292,7 +294,7 @@ fn local_overlay_sessions(
         .collect::<std::collections::HashSet<_>>();
 
     let mut overlay = Vec::new();
-    for session in &state.outbox.recent_sessions {
+    for session in &state.outbox.queued_sessions {
         if !snapshot_ids.contains(session.source_session_id.as_str()) {
             overlay.push(session.clone());
             snapshot_ids.insert(session.source_session_id.as_str());
@@ -411,7 +413,7 @@ fn remote_display_session_to_timeline_segment(
 fn default_settings() -> PersistedSettings {
     PersistedSettings {
         base_url: std::env::var("FOCUS_COLLECTOR_BASE_URL")
-            .unwrap_or_else(|_| "http://127.0.0.1:3200".into()),
+            .unwrap_or_else(|_| "https://second-brain-self-alpha.vercel.app".into()),
         api_key: std::env::var("FOCUS_COLLECTOR_API_KEY")
             .or_else(|_| std::env::var("FOCUS_INGEST_API_KEY"))
             .unwrap_or_default(),
@@ -472,8 +474,8 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use super::{
-        build_status, build_status_at, default_settings, load_settings, save_settings,
-        should_auto_upload, PersistedSettings, RuntimeState, ServerDaySnapshot,
+        build_status_at, default_settings, load_settings, save_settings, should_auto_upload,
+        PersistedSettings, RuntimeState, ServerDaySnapshot,
     };
     use crate::{
         outbox::OutboxState,
@@ -512,7 +514,7 @@ mod tests {
     fn default_settings_fall_back_without_env() {
         let settings = default_settings();
 
-        assert_eq!(settings.base_url, "http://127.0.0.1:3200");
+        assert_eq!(settings.base_url, "https://second-brain-self-alpha.vercel.app");
         assert_eq!(settings.time_zone, "UTC");
         assert_eq!(settings.sample_interval_secs, 5);
         assert_eq!(settings.upload_interval_secs, 120);
@@ -579,9 +581,10 @@ mod tests {
             upload_interval_secs: 120,
             last_upload_at: None,
             last_upload_message: Some("ok".into()),
+            last_collected_at: None,
         };
 
-        let status = build_status(&runtime);
+        let status = build_status_at(&runtime, now);
 
         assert!(status.tracking_enabled);
         assert_eq!(status.today_focused_secs, 6_840);
@@ -622,6 +625,7 @@ mod tests {
             upload_interval_secs: 120,
             last_upload_at: None,
             last_upload_message: None,
+            last_collected_at: None,
         };
 
         let status = build_status_at(
@@ -663,6 +667,7 @@ mod tests {
             upload_interval_secs: 120,
             last_upload_at: None,
             last_upload_message: None,
+            last_collected_at: None,
         };
 
         assert!(!should_auto_upload(
@@ -712,6 +717,7 @@ mod tests {
             upload_interval_secs: 120,
             last_upload_at: Some(Utc.with_ymd_and_hms(2026, 3, 29, 10, 46, 0).unwrap()),
             last_upload_message: Some("Uploaded 1 session".into()),
+            last_collected_at: None,
         };
 
         let status = build_status_at(
@@ -781,6 +787,7 @@ mod tests {
             upload_interval_secs: 120,
             last_upload_at: None,
             last_upload_message: None,
+            last_collected_at: None,
         };
 
         let status = build_status_at(
@@ -788,8 +795,78 @@ mod tests {
             Utc.with_ymd_and_hms(2026, 3, 29, 10, 0, 0).unwrap(),
         );
 
-        assert_eq!(status.today_focused_secs, 5460);
+        assert_eq!(status.today_focused_secs, 5400);
         assert_eq!(status.today_work_secs, 5400);
-        assert_eq!(status.timeline_segments.len(), 2);
+        assert_eq!(status.timeline_segments.len(), 1);
+    }
+
+    #[test]
+    fn build_status_does_not_readd_recent_history_once_snapshot_exists() {
+        let runtime = RuntimeState {
+            sessionizer: FocusSessionizer::new(300),
+            outbox_path: unique_temp_file("outbox"),
+            settings_path: unique_temp_file("settings"),
+            outbox: OutboxState {
+                device_id: "device-6".into(),
+                recent_sessions: vec![QueuedSession {
+                    source_session_id: "local-history-1".into(),
+                    app_name: "WeChat".into(),
+                    window_title: Some("Weixin".into()),
+                    started_at: Utc.with_ymd_and_hms(2026, 3, 29, 12, 0, 0).unwrap(),
+                    ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 14, 0, 0).unwrap(),
+                    duration_secs: 7200,
+                }],
+                queued_sessions: Vec::new(),
+            },
+            server_day_snapshot: Some(ServerDaySnapshot {
+                date: "2026-03-29".into(),
+                time_zone: "Asia/Singapore".into(),
+                focused_secs: 21_138,
+                work_hours_secs: 21_138,
+                sessions: vec![QueuedSession {
+                    source_session_id: "remote-1".into(),
+                    app_name: "Visual Studio Code".into(),
+                    window_title: Some("focus.ts".into()),
+                    started_at: Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
+                    ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 13, 52, 18).unwrap(),
+                    duration_secs: 21_138,
+                }],
+                display_sessions: vec![RemoteDisplaySession {
+                    source_session_id: "display-remote-1".into(),
+                    app_name: "Visual Studio Code".into(),
+                    window_title: Some("focus.ts".into()),
+                    started_at: Utc
+                        .with_ymd_and_hms(2026, 3, 29, 8, 0, 0)
+                        .unwrap()
+                        .to_rfc3339(),
+                    ended_at: Utc
+                        .with_ymd_and_hms(2026, 3, 29, 13, 52, 18)
+                        .unwrap()
+                        .to_rfc3339(),
+                    duration_secs: 21_138,
+                    focused_secs: 21_138,
+                    span_secs: 21_138,
+                    interruption_count: 0,
+                }],
+                fetched_at: Utc.with_ymd_and_hms(2026, 3, 29, 14, 0, 0).unwrap(),
+            }),
+            base_url: "http://127.0.0.1:3200".into(),
+            api_key: "token".into(),
+            time_zone: "Asia/Singapore".into(),
+            sample_interval_secs: 5,
+            upload_interval_secs: 120,
+            last_upload_at: None,
+            last_upload_message: None,
+            last_collected_at: None,
+        };
+
+        let status = build_status_at(
+            &runtime,
+            Utc.with_ymd_and_hms(2026, 3, 29, 14, 5, 0).unwrap(),
+        );
+
+        assert_eq!(status.today_focused_secs, 21_138);
+        assert_eq!(status.today_work_secs, 21_138);
+        assert_eq!(status.timeline_segments.len(), 1);
     }
 }

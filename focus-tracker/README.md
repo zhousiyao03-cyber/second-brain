@@ -27,6 +27,9 @@
 - idle 判定更宽松：
   - 默认 `30min` 无输入才会把当前窗口视为 idle
 - tray icon + 隐藏/显示面板
+- 菜单栏顶栏摘要：
+  - tray title 会直接显示 `Working Hours · 8h progress`
+  - 不点开 panel 也能看到今天工作进度
 - 标准 menubar popover 行为：
   - 点击 tray icon 时固定宽度 panel 会贴在状态栏图标下方
   - 自动做屏幕边界 clamp，避免在多屏或右侧边缘溢出
@@ -35,11 +38,9 @@
 - React 面板支持：
   - working hours + focused time + 8h progress
   - compact local timeline
-  - current activity / upload state
   - open `/focus`
   - setup needed / upload failed 时显示修复入口
-  - 使用 `/focus` 生成的 per-device token
-  - save settings
+  - 使用 `/focus` 生成的 pairing code
 
 ## 运行前提
 

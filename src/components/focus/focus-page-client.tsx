@@ -5,10 +5,8 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
-  BarChart3,
   Check,
   Copy,
-  Flame,
   KeyRound,
   RefreshCcw,
   Trash2,
@@ -101,6 +99,16 @@ function getDeviceStatus(device: {
   };
 }
 
+function shouldShowFocusBlock(session: {
+  focusedSecs?: number;
+  durationSecs: number;
+  spanSecs?: number;
+}) {
+  const focusedSecs = session.focusedSecs ?? session.durationSecs;
+  const spanSecs = session.spanSecs ?? session.durationSecs;
+  return Math.max(focusedSecs, spanSecs) >= 120;
+}
+
 export function FocusPageClient() {
   const timeZone = useMemo(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
@@ -169,9 +177,19 @@ export function FocusPageClient() {
     () => buildTopApps(displaySessions.data ?? []),
     [displaySessions.data]
   );
+  const visibleDisplaySessions = useMemo(
+    () => (displaySessions.data ?? []).filter(shouldShowFocusBlock),
+    [displaySessions.data]
+  );
   const goalPct = dailyStats.data
     ? Math.min(100, Math.round((dailyStats.data.workHoursSecs / (8 * 3600)) * 100))
     : 0;
+  const goalRemainingSecs = dailyStats.data
+    ? Math.max(0, 8 * 3600 - dailyStats.data.workHoursSecs)
+    : null;
+  const goalReached = dailyStats.data
+    ? dailyStats.data.workHoursSecs >= 8 * 3600
+    : false;
 
   return (
     <div className="space-y-6 xl:space-y-8">
@@ -231,9 +249,31 @@ export function FocusPageClient() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-4">
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <div className="rounded-[24px] border border-teal-200 bg-teal-50/90 p-5 dark:border-teal-900/60 dark:bg-teal-950/30">
             <div className="text-[11px] uppercase tracking-[0.18em] text-teal-600 dark:text-teal-200/80">
+              8h Goal
+            </div>
+            <div className="mt-2 text-3xl font-semibold text-stone-950 dark:text-stone-50">
+              {goalPct}%
+            </div>
+            <div className="mt-2 text-sm font-medium text-stone-700 dark:text-stone-300">
+              {goalReached
+                ? "You have reached today's standard."
+                : goalRemainingSecs !== null
+                  ? `${formatFocusDuration(goalRemainingSecs)} left to reach 8h.`
+                  : "Tracking today's progress."}
+            </div>
+            <div className="mt-3 h-2 rounded-full bg-white/80 dark:bg-stone-900">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-teal-400 to-sky-400"
+                style={{ width: `${Math.max(goalPct, 4)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-stone-200 bg-stone-50/90 p-5 dark:border-stone-800 dark:bg-stone-900/60">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-stone-400 dark:text-stone-500">
               Working Hours
             </div>
             <div
@@ -242,52 +282,25 @@ export function FocusPageClient() {
             >
               {dailyStats.data ? formatFocusDuration(dailyStats.data.workHoursSecs) : "--"}
             </div>
-            <div className="mt-2 text-xs leading-5 text-stone-600 dark:text-stone-300">
-              {goalPct}% of an 8h goal from {dailyStats.data ? formatFocusDuration(dailyStats.data.focusedSecs) : "--"} focused time and {dailyStats.data ? formatFocusDuration(dailyStats.data.spanSecs) : "--"} active span
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-stone-200 bg-stone-50/90 p-5 dark:border-stone-800 dark:bg-stone-900/60">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-300">
-              <Flame className="h-4 w-4" />
-            </div>
-            <div className="mt-5 text-3xl font-semibold text-stone-950 dark:text-stone-50">
-              {dailyStats.data ? formatFocusDuration(dailyStats.data.longestStreakSecs) : "--"}
-            </div>
-            <div className="mt-1 text-sm font-medium text-stone-700 dark:text-stone-300">
-              Longest streak
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-stone-200 bg-stone-50/90 p-5 dark:border-stone-800 dark:bg-stone-900/60">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-300">
-              <BarChart3 className="h-4 w-4" />
-            </div>
-            <div
-              data-testid="focus-session-count"
-              className="mt-5 text-3xl font-semibold text-stone-950 dark:text-stone-50"
-            >
-              {dailyStats.data?.sessionCount ?? 0}
-            </div>
-            <div className="mt-1 text-sm font-medium text-stone-700 dark:text-stone-300">
-              Raw sessions
+            <div className="mt-2 text-sm font-medium text-stone-700 dark:text-stone-300">
+              Actual work time recorded for today.
             </div>
             <div className="mt-2 text-xs leading-5 text-stone-500 dark:text-stone-400">
-              {dailyStats.data?.displaySessionCount ?? 0} focus blocks after merging short fragments.
+              {dailyStats.data ? formatFocusDuration(dailyStats.data.focusedSecs) : "--"} focused time and {dailyStats.data ? formatFocusDuration(dailyStats.data.spanSecs) : "--"} active span
             </div>
           </div>
+        </div>
 
-          <div className="rounded-[24px] border border-stone-200 bg-stone-50/90 p-5 dark:border-stone-800 dark:bg-stone-900/60">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-stone-400 dark:text-stone-500">
-              App switches
-            </div>
-            <div className="mt-2 text-3xl font-semibold text-stone-950 dark:text-stone-50">
-              {dailyStats.data?.appSwitches ?? 0}
-            </div>
-            <div className="mt-2 text-xs leading-5 text-stone-500 dark:text-stone-400">
-              Breaks longer than 2 minutes reset streak continuity.
-            </div>
-          </div>
+        <div className="mt-4 flex flex-wrap gap-3 text-xs text-stone-500 dark:text-stone-400">
+          <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 dark:border-stone-800 dark:bg-stone-900/60">
+            Longest streak: {dailyStats.data ? formatFocusDuration(dailyStats.data.longestStreakSecs) : "--"}
+          </span>
+          <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 dark:border-stone-800 dark:bg-stone-900/60">
+            Focus blocks: {dailyStats.data?.displaySessionCount ?? 0}
+          </span>
+          <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 dark:border-stone-800 dark:bg-stone-900/60">
+            App switches: {dailyStats.data?.appSwitches ?? 0}
+          </span>
         </div>
       </section>
 
@@ -307,7 +320,7 @@ export function FocusPageClient() {
           </Link>
         </div>
 
-        <FocusTimeline sessions={displaySessions.data ?? []} testId="focus-day-timeline" />
+        <FocusTimeline sessions={visibleDisplaySessions} testId="focus-day-timeline" />
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
@@ -324,8 +337,8 @@ export function FocusPageClient() {
               <div className="rounded-[22px] border border-dashed border-stone-200 px-4 py-10 text-center text-sm text-stone-400 dark:border-stone-800">
                 Loading focus blocks...
               </div>
-            ) : displaySessions.data?.length ? (
-              displaySessions.data.map((session) => (
+            ) : visibleDisplaySessions.length ? (
+              visibleDisplaySessions.map((session) => (
                 <div
                   key={session.id}
                   className="rounded-[22px] border border-stone-200 bg-stone-50/80 p-4 dark:border-stone-800 dark:bg-stone-900/50"
@@ -363,10 +376,10 @@ export function FocusPageClient() {
             ) : (
               <div className="rounded-[22px] border border-dashed border-stone-200 px-4 py-10 text-center dark:border-stone-800">
                 <div className="text-base font-medium text-stone-900 dark:text-stone-100">
-                  No sessions for this day
+                  No focus blocks for this day
                 </div>
                 <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-                  Run the desktop collector and upload a few sessions to start building the timeline.
+                  Short fragments under 2 minutes are hidden from the default view. Upload a few longer sessions to populate this list.
                 </p>
               </div>
             )}

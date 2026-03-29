@@ -24,6 +24,10 @@ const timelinePalette = [
 ];
 
 export function formatFocusDuration(totalSecs: number) {
+  if (totalSecs > 0 && totalSecs < 60) {
+    return "<1m";
+  }
+
   const minutes = Math.floor(totalSecs / 60);
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
