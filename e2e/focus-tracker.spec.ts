@@ -49,17 +49,15 @@ test.describe("Focus Tracker flow", () => {
     await expect(page.getByTestId("focus-session-count")).toContainText("2");
     await expect(page.getByTestId("focus-session-list")).toContainText("Visual Studio Code");
     await expect(page.getByTestId("focus-session-list")).toContainText("Google Chrome");
+    await expect(page.getByRole("heading", { name: "Filtered out" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Raw activity" })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Refresh insights" }).click();
+    await expect(page.getByTestId("focus-summary-card")).toBeVisible();
+    await page.getByRole("button", { name: "Regenerate summary" }).click();
     await expect(page.getByTestId("focus-summary-card")).not.toContainText(
-      "No generated summary yet",
-      {
-        timeout: 10_000,
-      }
+      "No daily summary yet."
     );
-    await expect(page.getByTestId("focus-summary-card")).toContainText(
-      "focus.ts"
-    );
+    await expect(page.getByTestId("focus-summary-card")).not.toHaveText(/^\s*$/);
 
     await page.getByRole("button", { name: "Generate pairing code" }).click();
     await expect(page.getByText(/^[A-Z2-9]{10}$/)).toBeVisible();

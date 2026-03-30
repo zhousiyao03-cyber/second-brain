@@ -251,6 +251,8 @@ export const focusRouter = router({
         focusedSecs: daily.focusedSecs,
         spanSecs: daily.spanSecs,
         workHoursSecs: daily.workHoursSecs,
+        filteredOutSecs: daily.filteredOutSecs,
+        nonWorkBreakdown: daily.nonWorkBreakdown,
         tagBreakdown: daily.tagBreakdown,
         longestStreakSecs: daily.longestStreakSecs,
         appSwitches: daily.appSwitches,

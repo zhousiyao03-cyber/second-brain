@@ -1,5 +1,7 @@
 "use client";
 
+export { buildTopApps } from "./focus-top-apps";
+
 type FocusSessionSlice = {
   id: string;
   appName: string;
@@ -70,28 +72,6 @@ export function formatClockLabel(value: string | Date) {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-
-export function buildTopApps(sessions: FocusSessionSlice[]) {
-  const byApp = new Map<
-    string,
-    { appName: string; durationSecs: number; sessions: number }
-  >();
-
-  for (const session of sessions) {
-    const current = byApp.get(session.appName) ?? {
-      appName: session.appName,
-      durationSecs: 0,
-      sessions: 0,
-    };
-    current.durationSecs += session.focusedSecs ?? session.durationSecs;
-    current.sessions += 1;
-    byApp.set(session.appName, current);
-  }
-
-  return [...byApp.values()]
-    .sort((left, right) => right.durationSecs - left.durationSecs)
-    .slice(0, 4);
 }
 
 export function getFocusSessionLabel(session: FocusSessionSlice) {
