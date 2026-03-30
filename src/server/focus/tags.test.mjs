@@ -6,6 +6,7 @@ import {
   autoTag,
   countsTowardWorkHours,
   domainTags,
+  getNonWorkReason,
 } from "./tags.ts";
 
 test("domainTags tags github as git + coding", () => {
@@ -22,6 +23,14 @@ test("domainTags tags gobyexample as golang + learning", () => {
 
 test("domainTags tags youtube as entertainment by default", () => {
   assert.ok(domainTags("https://youtube.com/watch?v=abc").includes("entertainment"));
+});
+
+test("domainTags tags web whatsapp as social-media", () => {
+  assert.ok(domainTags("https://web.whatsapp.com").includes("social-media"));
+});
+
+test("domainTags tags weixin as social-media", () => {
+  assert.ok(domainTags("https://weixin.qq.com").includes("social-media"));
 });
 
 test("domainTags tags stackoverflow as coding + reference", () => {
@@ -82,6 +91,11 @@ test("appTags tags Slack as communication", () => {
   assert.ok(appTags("Slack").includes("communication"));
 });
 
+test("appTags tags WeChat and WhatsApp as social-media", () => {
+  assert.ok(appTags("WeChat").includes("social-media"));
+  assert.ok(appTags("WhatsApp").includes("social-media"));
+});
+
 test("appTags returns empty for unknown apps", () => {
   assert.deepEqual(appTags("SomeRandomApp"), []);
 });
@@ -137,6 +151,10 @@ test("countsTowardWorkHours returns false for social-media", () => {
 
 test("countsTowardWorkHours returns true for empty tags", () => {
   assert.equal(countsTowardWorkHours([]), true);
+});
+
+test("getNonWorkReason prioritizes social-media over entertainment", () => {
+  assert.equal(getNonWorkReason(["browser", "social-media", "entertainment"]), "social-media");
 });
 
 test("autoTag uses browser surface type when URL rules are weak", () => {

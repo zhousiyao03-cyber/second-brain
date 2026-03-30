@@ -30,7 +30,7 @@
 - **搜索** — Cmd+K 全局搜索笔记，关键词高亮
 - **Ask AI** — 基于知识库的 chunk 级 hybrid RAG 问答，支持语义检索、关键词召回、邻近段落扩展和可点击引用来源
 - **Token Usage** — 自动读取本机里的 Codex / Claude Code 本地 session（含 Claude subagents，跨工作区聚合），用于展示真实 token 用量；也支持手动补录 OpenAI API / 其他来源，统一在 Dashboard 和独立页面聚合（线上环境默认禁用，本地开发可开启）
-- **Focus Tracker（进行中）** — 服务端 ingestion、Tauri collector、dashboard focus card 和 `/focus` 页面都已落地；当前已完成 V2 的服务端标签系统、富信号 ingest/status API 和 schema 迁移，`/focus` 侧已切到 tags + browser URL 数据模型；桌面端 collector 也已切到 enriched sample / pure-append outbox / server-first metrics，并通过 `cargo test` + `cargo build`，但 AX URL 抓取和多屏窗口识别还缺一次真实桌面手测收口。Web 端 `/focus` 现在会默认折叠 `<10m` 的 blocks 和 raw sessions，避免短碎片把主视图刷满；折叠只影响展示，不影响统计和入库。浏览器语义层也开始落地：collector 现在会从 URL 提取 `host/path/query/surface_type`，服务端会按 semantic key 做第一批 block merge 和命名，Web 端展示会优先用 `Search: ...`、`GitHub PR review`、`Documentation` 这类标签，而不只是笼统的 `Google Chrome`
+- **Focus Tracker（进行中）** — 服务端 ingestion、Tauri collector、dashboard focus card 和 `/focus` 页面都已落地；当前已完成 V2 的服务端标签系统、富信号 ingest/status API 和 schema 迁移，`/focus` 侧已切到 tags + browser URL 数据模型；桌面端 collector 也已切到 enriched sample / pure-append outbox / server-first metrics，并通过 `cargo test` + `cargo build`，但 AX URL 抓取和多屏窗口识别还缺一次真实桌面手测收口。Web 端 `/focus` 现在会默认折叠 `<10m` 的 blocks 和 raw sessions，避免短碎片把主视图刷满；折叠只影响展示，不影响统计和入库。活动块聚合也不再只看紧邻碎片：同一语义的工作在 `10m` 内短暂切去聊天或别的 app 后再回来，会继续并成同一段 block。浏览器语义层也开始落地：collector 现在会从 URL 提取 `host/path/query/surface_type`，服务端会按 semantic key 做第一批 block merge 和命名，Web 端展示会优先用 `Search: ...`、`GitHub PR review`、`Documentation` 这类标签，而不只是笼统的 `Google Chrome`
 - **Dashboard** — 统计概览 + 最近条目 + token usage 聚合概览
 - **暗色模式** — 全局可切换
 
@@ -204,7 +204,7 @@ pnpm focus:collector --fixture tools/focus-collector/fixtures/demo-sessions.json
 在 Web 端，`/focus` 页面现在已经可用：
 
 - dashboard 上有 Focus card，可直接进入 `/focus`
-- `/focus` 支持 true time-of-day timeline、top apps、weekly bars、merged focus blocks、raw activity drilldown
+- `/focus` 支持 true time-of-day timeline、top apps、weekly bars、merged focus blocks，以及单独展示被 `social-media / entertainment / gaming` 排除出 `Working Hours` 的时间
 - `/focus` 与 dashboard 现在默认强调 `Working Hours`（工作类别的 focused time），而不是把所有活跃 span 全算成工作
 - `/focus` 支持手动刷新 session 分类和 daily summary
 - `/focus` 支持为桌面端生成一次性 pairing code，桌面 collector 输入 code 后会自动换成 per-device token；设备列表会显示 `Connected / Recent / Revoked / Last seen`，配对与连接失败也会给出重连指引

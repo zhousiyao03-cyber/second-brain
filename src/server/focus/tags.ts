@@ -25,6 +25,11 @@ type TagRule = {
 };
 
 const NON_WORK_TAGS: FocusTag[] = ["entertainment", "social-media", "gaming"];
+export const NON_WORK_REASON_LABELS = {
+  "social-media": "Social / Messaging",
+  entertainment: "Entertainment",
+  gaming: "Gaming",
+} as const;
 
 const DOMAIN_TAG_RULES: TagRule[] = [
   { pattern: /github\.com/i, tags: ["git", "coding"] },
@@ -42,6 +47,8 @@ const DOMAIN_TAG_RULES: TagRule[] = [
   { pattern: /zoom\.us/i, tags: ["meeting"] },
   { pattern: /mail\.google\.com|outlook\.live\.com/i, tags: ["communication"] },
   { pattern: /youtube\.com/i, tags: ["entertainment"] },
+  { pattern: /web\.whatsapp\.com|whatsapp\.com/i, tags: ["social-media"] },
+  { pattern: /weixin\.qq\.com|wx\.qq\.com/i, tags: ["social-media"] },
   { pattern: /twitter\.com|x\.com/i, tags: ["social-media"] },
   { pattern: /reddit\.com/i, tags: ["social-media"] },
   { pattern: /figma\.com/i, tags: ["design"] },
@@ -55,6 +62,7 @@ const APP_TAG_RULES: TagRule[] = [
   { pattern: /figma|sketch|framer/i, tags: ["design"] },
   { pattern: /zoom/i, tags: ["meeting"] },
   { pattern: /slack|discord|mail|gmail/i, tags: ["communication"] },
+  { pattern: /wechat|weixin|whatsapp/i, tags: ["social-media"] },
   { pattern: /chrome|safari|arc|firefox/i, tags: ["browser"] },
 ];
 
@@ -150,4 +158,20 @@ export function countsTowardWorkHours(tags: readonly string[]) {
   }
 
   return !tags.some((tag) => NON_WORK_TAGS.includes(tag as FocusTag));
+}
+
+export function getNonWorkReason(tags: readonly string[]) {
+  if (tags.includes("social-media")) {
+    return "social-media";
+  }
+
+  if (tags.includes("entertainment")) {
+    return "entertainment";
+  }
+
+  if (tags.includes("gaming")) {
+    return "gaming";
+  }
+
+  return null;
 }

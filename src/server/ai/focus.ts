@@ -1,6 +1,8 @@
 import { z } from "zod/v4";
 import { generateStructuredData } from "./provider";
 
+const FOCUS_AI_TIMEOUT_MS = 4_000;
+
 function formatDurationShort(totalSecs: number) {
   const minutes = Math.max(1, Math.round(totalSecs / 60));
   const hours = Math.floor(minutes / 60);
@@ -31,6 +33,19 @@ function fallbackSessionSummary(session: SessionForClassification) {
     return `${title} in ${session.appName}`;
   }
   return `Worked in ${session.appName} for ${formatDurationShort(session.durationSecs)}`;
+}
+
+function createFocusAiTimeoutSignal() {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    return AbortSignal.timeout(FOCUS_AI_TIMEOUT_MS);
+  }
+
+  return undefined;
+}
+
+function normalizeGeneratedText(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
 }
 
 const sessionSummarySchema = z.object({
@@ -91,9 +106,17 @@ export async function classifyActivitySessions(sessions: SessionForClassificatio
 Sessions:
 ${sessionList}`,
       schema: sessionSummarySchema,
+      signal: createFocusAiTimeoutSignal(),
     });
 
-    return result.sessions;
+    return result.sessions.map((session) => ({
+      id: session.id,
+      summary:
+        normalizeGeneratedText(session.summary) ??
+        fallbackSessionSummary(
+          sessions.find((candidate) => candidate.id === session.id) ?? sessions[0]
+        ),
+    }));
   } catch {
     return sessions.map((session) => ({
       id: session.id,
@@ -149,23 +172,30 @@ Tag breakdown: ${breakdown}
 Timeline:
 ${timeline}`,
       schema: z.object({ summary: z.string() }),
+      signal: createFocusAiTimeoutSignal(),
     });
 
-    return result.summary;
+    return (
+      normalizeGeneratedText(result.summary) ??
+      `Focused for ${formatDurationShort(input.totalSecs)} on ${input.date}, mostly in ${topLabelsFromSessions(input.sessions).join(", ")}. Longest streak was ${formatDurationShort(input.longestStreakSecs)} with ${input.appSwitches} app switches.`
+    );
   } catch {
-    const topLabels = [
-      ...new Set(
-        input.sessions.map(
-          (session) =>
-            session.displayLabel ??
-            session.browserPageTitle ??
-            session.windowTitle ??
-            session.appName
-        )
-      ),
-    ].slice(0, 3);
-    return `Focused for ${formatDurationShort(input.totalSecs)} on ${input.date}, mostly in ${topLabels.join(", ")}. Longest streak was ${formatDurationShort(input.longestStreakSecs)} with ${input.appSwitches} app switches.`;
+    return `Focused for ${formatDurationShort(input.totalSecs)} on ${input.date}, mostly in ${topLabelsFromSessions(input.sessions).join(", ")}. Longest streak was ${formatDurationShort(input.longestStreakSecs)} with ${input.appSwitches} app switches.`;
   }
+}
+
+function topLabelsFromSessions(sessions: SessionForSummary[]) {
+  return [
+    ...new Set(
+      sessions.map(
+        (session) =>
+          session.displayLabel ??
+          session.browserPageTitle ??
+          session.windowTitle ??
+          session.appName
+      )
+    ),
+  ].slice(0, 3);
 }
 
 function parseTags(tags: string | null | undefined) {

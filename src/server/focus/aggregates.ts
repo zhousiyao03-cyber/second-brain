@@ -1,4 +1,8 @@
-import { countsTowardWorkHours } from "./tags.js";
+import {
+  countsTowardWorkHours,
+  getNonWorkReason,
+  NON_WORK_REASON_LABELS,
+} from "./tags.js";
 
 export type FocusSessionRecord = {
   id: string;
@@ -55,10 +59,12 @@ type BuildDailyStatsOptions = DayRangeOptions & {
   sessions: FocusSessionRecord[];
 };
 
+type NonWorkReason = keyof typeof NON_WORK_REASON_LABELS;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STREAK_GAP_SECS = 120;
-const DISPLAY_MERGE_GAP_SECS = 120;
-const DISPLAY_TRANSIENT_SECS = 120;
+// Display blocks should represent a coherent work burst, not only strictly adjacent samples.
+const DISPLAY_REJOIN_GAP_SECS = 10 * 60;
 
 export function addDaysToDateString(date: string, days: number) {
   const [year, month, day] = date.split("-").map(Number);
@@ -155,6 +161,11 @@ export function buildDailyStats({
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
 
   const tagBreakdown: Record<string, number> = {};
+  const nonWorkBreakdown: Record<NonWorkReason, number> = {
+    "social-media": 0,
+    entertainment: 0,
+    gaming: 0,
+  };
   let totalSecs = 0;
   let appSwitches = 0;
   let longestStreakSecs = 0;
@@ -189,14 +200,25 @@ export function buildDailyStats({
   const displaySessions = buildDisplaySessionsFromSlices(slices);
   const workHoursSecs = displaySessions.reduce((sum, session) => {
     const tags = parseJsonStringArray(session.tags);
-    return countsTowardWorkHours(tags) ? sum + session.focusedSecs : sum;
+    const focusedSecs = session.focusedSecs;
+    const nonWorkReason = getNonWorkReason(tags);
+
+    if (nonWorkReason) {
+      nonWorkBreakdown[nonWorkReason] += focusedSecs;
+      return sum;
+    }
+
+    return countsTowardWorkHours(tags) ? sum + focusedSecs : sum;
   }, 0);
+  const filteredOutSecs = Object.values(nonWorkBreakdown).reduce((sum, secs) => sum + secs, 0);
 
   return {
     totalSecs,
     focusedSecs: displaySessions.reduce((sum, session) => sum + session.focusedSecs, 0),
     spanSecs: displaySessions.reduce((sum, session) => sum + session.spanSecs, 0),
     workHoursSecs,
+    filteredOutSecs,
+    nonWorkBreakdown,
     tagBreakdown,
     longestStreakSecs,
     appSwitches,
@@ -387,7 +409,7 @@ function mergeIntoDisplaySession(
 
 function mergeDisplaySessions(
   base: FocusDisplaySession,
-  transient: FocusSessionSlice,
+  transient: FocusDisplaySession,
   next: FocusDisplaySession
 ): FocusDisplaySession {
   return {
@@ -401,7 +423,7 @@ function mergeDisplaySessions(
       base.interruptionCount + next.interruptionCount + 1,
     mergedSourceSessionIds: [
       ...base.mergedSourceSessionIds,
-      transient.sourceSessionId,
+      ...transient.mergedSourceSessionIds,
       ...next.mergedSourceSessionIds,
     ],
   };
@@ -425,7 +447,7 @@ export function buildDisplaySessionsFromSlices(
       (slice.startedAt.getTime() - previous.endedAt.getTime()) / 1000
     );
 
-    if (gapSecs <= DISPLAY_MERGE_GAP_SECS && sharesDisplayGroup(previous, slice)) {
+    if (gapSecs <= DISPLAY_REJOIN_GAP_SECS && sharesDisplayGroup(previous, slice)) {
       acc[acc.length - 1] = mergeIntoDisplaySession(previous, slice);
       return acc;
     }
@@ -444,7 +466,7 @@ export function buildDisplaySessionsFromSlices(
     if (
       previous &&
       next &&
-      current.durationSecs < DISPLAY_TRANSIENT_SECS &&
+      current.spanSecs <= DISPLAY_REJOIN_GAP_SECS &&
       sharesDisplayGroup(previous, next)
     ) {
       const previousGap = Math.floor(
@@ -455,8 +477,8 @@ export function buildDisplaySessionsFromSlices(
       );
 
       if (
-        previousGap <= DISPLAY_MERGE_GAP_SECS &&
-        nextGap <= DISPLAY_MERGE_GAP_SECS
+        previousGap <= DISPLAY_REJOIN_GAP_SECS &&
+        nextGap <= DISPLAY_REJOIN_GAP_SECS
       ) {
         merged[merged.length - 1] = mergeDisplaySessions(previous, current, next);
         index += 1;
