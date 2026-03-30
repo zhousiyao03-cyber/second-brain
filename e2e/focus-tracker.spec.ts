@@ -62,4 +62,55 @@ test.describe("Focus Tracker flow", () => {
     await page.getByRole("button", { name: "Generate pairing code" }).click();
     await expect(page.getByText(/^[A-Z2-9]{10}$/)).toBeVisible();
   });
+
+  test("focus page merges the same workflow across two short interruptions", async ({
+    page,
+    request,
+  }) => {
+    const deviceId = `focus-merge-${Date.now()}`;
+    const payload = {
+      deviceId,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+      sessions: [
+        {
+          sourceSessionId: `${deviceId}-code-a`,
+          appName: "Code",
+          windowTitle: "index.tsx — web_monorepo-master",
+          startedAt: localIsoAt(15, 19),
+          endedAt: localIsoAt(15, 28),
+        },
+        {
+          sourceSessionId: `${deviceId}-chrome-a`,
+          appName: "Google Chrome",
+          windowTitle: "Google Chrome",
+          startedAt: localIsoAt(15, 28),
+          endedAt: localIsoAt(15, 32),
+        },
+        {
+          sourceSessionId: `${deviceId}-devtools-a`,
+          appName: "HybridDevtool",
+          windowTitle: "DevTool (electron) (v0.0.72)",
+          startedAt: localIsoAt(15, 33),
+          endedAt: localIsoAt(15, 38),
+        },
+        {
+          sourceSessionId: `${deviceId}-code-b`,
+          appName: "Code",
+          windowTitle: "index.tsx — web_monorepo-master",
+          startedAt: localIsoAt(15, 38),
+          endedAt: localIsoAt(15, 44),
+        },
+      ],
+    };
+
+    const upload = await request.post("/api/focus/ingest", { data: payload });
+    expect(upload.ok()).toBeTruthy();
+
+    await page.goto("/focus");
+    await expect(page.getByRole("heading", { name: "Focus", exact: true })).toBeVisible();
+    await expect(page.getByTestId("focus-session-count")).toContainText("1");
+    await expect(page.getByTestId("focus-session-list")).toContainText("Code");
+    await expect(page.getByTestId("focus-session-list")).toContainText("2 short interruptions");
+    await expect(page.getByTestId("focus-session-list")).toContainText("3:19 PM-3:44 PM");
+  });
 });

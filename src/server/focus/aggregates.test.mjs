@@ -428,3 +428,75 @@ test("buildDisplaySessionsFromSlices merges the same PR across a short interrupt
   assert.equal(displaySessions[0].rawSessionCount, 3);
   assert.equal(displaySessions[0].interruptionCount, 1);
 });
+
+test("buildDisplaySessionsFromSlices merges the same work across two short interruptions", () => {
+  const slices = [
+    {
+      ...baseSession,
+      id: "coding-a",
+      sourceSessionId: "coding-a",
+      appName: "Code",
+      windowTitle: "index.tsx — web_monorepo-master",
+      tags: JSON.stringify(["editor", "coding"]),
+      startedAt: new Date("2026-03-30T07:19:00.000Z"),
+      endedAt: new Date("2026-03-30T07:28:00.000Z"),
+      durationSecs: 9 * 60,
+      originalStartedAt: new Date("2026-03-30T07:19:00.000Z"),
+      originalEndedAt: new Date("2026-03-30T07:28:00.000Z"),
+    },
+    {
+      ...baseSession,
+      id: "chrome-a",
+      sourceSessionId: "chrome-a",
+      appName: "Google Chrome",
+      windowTitle: "Google Chrome",
+      tags: JSON.stringify(["browser", "reference"]),
+      startedAt: new Date("2026-03-30T07:28:00.000Z"),
+      endedAt: new Date("2026-03-30T07:32:00.000Z"),
+      durationSecs: 4 * 60,
+      originalStartedAt: new Date("2026-03-30T07:28:00.000Z"),
+      originalEndedAt: new Date("2026-03-30T07:32:00.000Z"),
+    },
+    {
+      ...baseSession,
+      id: "devtools-a",
+      sourceSessionId: "devtools-a",
+      appName: "HybridDevtool",
+      windowTitle: "DevTool (electron) (v0.0.72)",
+      tags: JSON.stringify(["debugging"]),
+      startedAt: new Date("2026-03-30T07:33:00.000Z"),
+      endedAt: new Date("2026-03-30T07:38:00.000Z"),
+      durationSecs: 5 * 60,
+      originalStartedAt: new Date("2026-03-30T07:33:00.000Z"),
+      originalEndedAt: new Date("2026-03-30T07:38:00.000Z"),
+    },
+    {
+      ...baseSession,
+      id: "coding-b",
+      sourceSessionId: "coding-b",
+      appName: "Code",
+      windowTitle: "index.tsx — web_monorepo-master",
+      tags: JSON.stringify(["editor", "coding"]),
+      startedAt: new Date("2026-03-30T07:38:00.000Z"),
+      endedAt: new Date("2026-03-30T07:44:00.000Z"),
+      durationSecs: 6 * 60,
+      originalStartedAt: new Date("2026-03-30T07:38:00.000Z"),
+      originalEndedAt: new Date("2026-03-30T07:44:00.000Z"),
+    },
+  ];
+
+  const displaySessions = buildDisplaySessionsFromSlices(slices);
+
+  assert.equal(displaySessions.length, 1);
+  assert.equal(displaySessions[0].displayLabel, "Code");
+  assert.equal(displaySessions[0].rawSessionCount, 4);
+  assert.equal(displaySessions[0].interruptionCount, 2);
+  assert.equal(displaySessions[0].focusedSecs, 15 * 60);
+  assert.equal(displaySessions[0].spanSecs, 25 * 60);
+  assert.deepEqual(displaySessions[0].mergedSourceSessionIds, [
+    "coding-a",
+    "chrome-a",
+    "devtools-a",
+    "coding-b",
+  ]);
+});

@@ -409,21 +409,34 @@ function mergeIntoDisplaySession(
 
 function mergeDisplaySessions(
   base: FocusDisplaySession,
-  transient: FocusDisplaySession,
+  interruptions: FocusDisplaySession[],
   next: FocusDisplaySession
 ): FocusDisplaySession {
+  const interruptionRawSessionCount = interruptions.reduce(
+    (sum, session) => sum + session.rawSessionCount,
+    0
+  );
+  const interruptionCount = interruptions.reduce(
+    (sum, session) => sum + session.interruptionCount,
+    0
+  );
+
   return {
     ...base,
     endedAt: next.endedAt,
     durationSecs: base.focusedSecs + next.focusedSecs,
     spanSecs: Math.floor((next.endedAt.getTime() - base.startedAt.getTime()) / 1000),
     focusedSecs: base.focusedSecs + next.focusedSecs,
-    rawSessionCount: base.rawSessionCount + next.rawSessionCount + 1,
+    rawSessionCount:
+      base.rawSessionCount + next.rawSessionCount + interruptionRawSessionCount,
     interruptionCount:
-      base.interruptionCount + next.interruptionCount + 1,
+      base.interruptionCount +
+      next.interruptionCount +
+      interruptionCount +
+      interruptions.length,
     mergedSourceSessionIds: [
       ...base.mergedSourceSessionIds,
-      ...transient.mergedSourceSessionIds,
+      ...interruptions.flatMap((session) => session.mergedSourceSessionIds),
       ...next.mergedSourceSessionIds,
     ],
   };
@@ -457,38 +470,55 @@ export function buildDisplaySessionsFromSlices(
   }, []);
 
   const merged: FocusDisplaySession[] = [];
+  let anchor = collapsed[0];
+  let pendingInterruptions: FocusDisplaySession[] = [];
 
-  for (let index = 0; index < collapsed.length; index += 1) {
-    const current = collapsed[index];
-    const previous = merged.at(-1);
-    const next = collapsed[index + 1];
+  for (const current of collapsed.slice(1)) {
+    const gapFromAnchorSecs = Math.floor(
+      (current.startedAt.getTime() - anchor.endedAt.getTime()) / 1000
+    );
 
     if (
-      previous &&
-      next &&
-      current.spanSecs <= DISPLAY_REJOIN_GAP_SECS &&
-      sharesDisplayGroup(previous, next)
+      pendingInterruptions.length === 0 &&
+      gapFromAnchorSecs <= DISPLAY_REJOIN_GAP_SECS &&
+      sharesDisplayGroup(anchor, current)
     ) {
-      const previousGap = Math.floor(
-        (current.startedAt.getTime() - previous.endedAt.getTime()) / 1000
-      );
-      const nextGap = Math.floor(
-        (next.startedAt.getTime() - current.endedAt.getTime()) / 1000
-      );
-
-      if (
-        previousGap <= DISPLAY_REJOIN_GAP_SECS &&
-        nextGap <= DISPLAY_REJOIN_GAP_SECS
-      ) {
-        merged[merged.length - 1] = mergeDisplaySessions(previous, current, next);
-        index += 1;
-        continue;
-      }
+      anchor = mergeIntoDisplaySession(anchor, current);
+      continue;
     }
 
-    merged.push(current);
+    if (
+      pendingInterruptions.length > 0 &&
+      gapFromAnchorSecs <= DISPLAY_REJOIN_GAP_SECS &&
+      sharesDisplayGroup(anchor, current)
+    ) {
+      anchor = mergeDisplaySessions(anchor, pendingInterruptions, current);
+      pendingInterruptions = [];
+      continue;
+    }
+
+    const previousInterruption = pendingInterruptions.at(-1);
+    const gapFromPreviousInterruptionSecs = previousInterruption
+      ? Math.floor(
+          (current.startedAt.getTime() - previousInterruption.endedAt.getTime()) / 1000
+        )
+      : gapFromAnchorSecs;
+
+    if (
+      current.spanSecs <= DISPLAY_REJOIN_GAP_SECS &&
+      gapFromAnchorSecs <= DISPLAY_REJOIN_GAP_SECS &&
+      gapFromPreviousInterruptionSecs <= DISPLAY_REJOIN_GAP_SECS
+    ) {
+      pendingInterruptions.push(current);
+      continue;
+    }
+
+    merged.push(anchor, ...pendingInterruptions);
+    anchor = current;
+    pendingInterruptions = [];
   }
 
+  merged.push(anchor, ...pendingInterruptions);
   return merged;
 }
 
