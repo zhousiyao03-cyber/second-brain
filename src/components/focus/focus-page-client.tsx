@@ -201,6 +201,7 @@ export function FocusPageClient() {
         label: nonWorkLabels[reason as keyof typeof nonWorkLabels] ?? reason,
       }));
   }, [dailyStats.data]);
+  const summaryText = summary.data?.aiAnalysis?.trim();
 
   return (
     <div className="space-y-6 xl:space-y-8">
@@ -459,9 +460,9 @@ export function FocusPageClient() {
           <section className="rounded-[28px] border border-stone-200 bg-white/92 p-5 shadow-[0_22px_80px_-58px_rgba(15,23,42,0.55)] dark:border-stone-800 dark:bg-stone-950/88">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Insights</h2>
+                <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Daily summary</h2>
                 <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                  Classify sessions and generate a daily summary for the selected date.
+                  Turn today&apos;s focus blocks into a short recap of what you spent time on.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -472,19 +473,16 @@ export function FocusPageClient() {
                   className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-white disabled:opacity-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
                 >
                   <RefreshCcw className="h-4 w-4" />
-                  {classifySessions.isPending ? "Classifying..." : "Classify sessions"}
+                  {classifySessions.isPending ? "Classifying..." : "Classify blocks"}
                 </button>
                 <button
                   type="button"
-                  onClick={async () => {
-                    await classifySessions.mutateAsync({ date: selectedDate, timeZone });
-                    await generateSummary.mutateAsync({ date: selectedDate, timeZone });
-                  }}
+                  onClick={() => generateSummary.mutate({ date: selectedDate, timeZone })}
                   disabled={generateSummary.isPending || classifySessions.isPending}
                   className="inline-flex items-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-800 transition-colors hover:bg-teal-100 disabled:opacity-50 dark:border-teal-900/70 dark:bg-teal-950/40 dark:text-teal-100 dark:hover:bg-teal-950/60"
                 >
                   <RefreshCcw className="h-4 w-4" />
-                  {generateSummary.isPending ? "Generating..." : "Refresh insights"}
+                  {generateSummary.isPending ? "Generating..." : "Regenerate summary"}
                 </button>
               </div>
             </div>
@@ -499,10 +497,10 @@ export function FocusPageClient() {
                 </span>
               </div>
               <div data-testid="focus-summary-card" className="mt-3 text-sm leading-6 text-stone-700 dark:text-stone-300">
-                {summary.data?.aiAnalysis ? (
-                  summary.data.aiAnalysis
+                {summaryText ? (
+                  summaryText
                 ) : (
-                  "No generated summary yet. Refresh insights to classify the sessions and synthesize a day-level summary."
+                  "No daily summary yet. Regenerate summary to classify the sessions and write a short recap."
                 )}
               </div>
             </div>

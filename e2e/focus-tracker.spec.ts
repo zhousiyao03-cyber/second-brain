@@ -53,6 +53,11 @@ test.describe("Focus Tracker flow", () => {
     await expect(page.getByRole("heading", { name: "Raw activity" })).toHaveCount(0);
 
     await expect(page.getByTestId("focus-summary-card")).toBeVisible();
+    await page.getByRole("button", { name: "Regenerate summary" }).click();
+    await expect(page.getByTestId("focus-summary-card")).not.toContainText(
+      "No daily summary yet."
+    );
+    await expect(page.getByTestId("focus-summary-card")).not.toHaveText(/^\s*$/);
 
     await page.getByRole("button", { name: "Generate pairing code" }).click();
     await expect(page.getByText(/^[A-Z2-9]{10}$/)).toBeVisible();
