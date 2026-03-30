@@ -30,7 +30,7 @@
 - **搜索** — Cmd+K 全局搜索笔记，关键词高亮
 - **Ask AI** — 基于知识库的 chunk 级 hybrid RAG 问答，支持语义检索、关键词召回、邻近段落扩展和可点击引用来源
 - **Token Usage** — 自动读取本机里的 Codex / Claude Code 本地 session（含 Claude subagents，跨工作区聚合），用于展示真实 token 用量；也支持手动补录 OpenAI API / 其他来源，统一在 Dashboard 和独立页面聚合（线上环境默认禁用，本地开发可开启）
-- **Focus Tracker（进行中）** — 服务端 ingestion、Tauri collector、dashboard focus card 和 `/focus` 页面都已落地；当前已能跑通“桌面采样 -> Web 入库 -> 仪表盘/详情页展示”的主路径，剩余是鉴权、重试和 menubar 产品化
+- **Focus Tracker（进行中）** — 服务端 ingestion、Tauri collector、dashboard focus card 和 `/focus` 页面都已落地；当前已完成 V2 的服务端标签系统、富信号 ingest/status API 和 schema 迁移，`/focus` 侧已切到 tags + browser URL 数据模型；桌面端 collector 也已切到 enriched sample / pure-append outbox / server-first metrics，并通过 `cargo test` + `cargo build`，但 AX URL 抓取和多屏窗口识别还缺一次真实桌面手测收口
 - **Dashboard** — 统计概览 + 最近条目 + token usage 聚合概览
 - **暗色模式** — 全局可切换
 

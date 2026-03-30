@@ -9,12 +9,15 @@ pub struct RemoteDisplaySession {
     pub source_session_id: String,
     pub app_name: String,
     pub window_title: Option<String>,
+    pub browser_url: Option<String>,
+    pub tags: Option<Vec<String>>,
     pub started_at: String,
     pub ended_at: String,
     pub duration_secs: i64,
     pub focused_secs: i64,
     pub span_secs: i64,
     pub interruption_count: i64,
+    pub context_apps: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]

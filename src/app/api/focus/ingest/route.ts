@@ -4,11 +4,15 @@ import { auth } from "@/lib/auth";
 import { db } from "@/server/db";
 import { activitySessions, focusDevices } from "@/server/db/schema";
 import { resolveIngestUserId } from "@/server/focus/device-auth";
+import { autoTag } from "@/server/focus/tags";
 
 const sessionSchema = z.object({
   sourceSessionId: z.string().trim().min(1),
   appName: z.string().trim().min(1),
   windowTitle: z.string().trim().nullable().optional(),
+  browserUrl: z.string().trim().nullable().optional(),
+  browserPageTitle: z.string().trim().nullable().optional(),
+  visibleApps: z.array(z.string()).nullable().optional(),
   startedAt: z.coerce.date(),
   endedAt: z.coerce.date(),
 });
@@ -95,6 +99,16 @@ export async function POST(request: Request) {
       1,
       Math.floor((session.endedAt.getTime() - session.startedAt.getTime()) / 1000)
     );
+    const tagsJson = JSON.stringify(
+      autoTag({
+        appName: session.appName,
+        windowTitle: session.windowTitle ?? null,
+        browserUrl: session.browserUrl ?? null,
+      })
+    );
+    const visibleAppsJson = session.visibleApps
+      ? JSON.stringify(session.visibleApps)
+      : null;
     const now = new Date();
 
     const [existing] = await db
@@ -115,6 +129,10 @@ export async function POST(request: Request) {
         .set({
           appName: session.appName,
           windowTitle: session.windowTitle ?? null,
+          browserUrl: session.browserUrl ?? null,
+          browserPageTitle: session.browserPageTitle ?? null,
+          visibleApps: visibleAppsJson,
+          tags: tagsJson,
           startedAt: session.startedAt,
           endedAt: session.endedAt,
           durationSecs,
@@ -130,6 +148,10 @@ export async function POST(request: Request) {
         sourceSessionId: session.sourceSessionId,
         appName: session.appName,
         windowTitle: session.windowTitle ?? null,
+        browserUrl: session.browserUrl ?? null,
+        browserPageTitle: session.browserPageTitle ?? null,
+        visibleApps: visibleAppsJson,
+        tags: tagsJson,
         startedAt: session.startedAt,
         endedAt: session.endedAt,
         durationSecs,

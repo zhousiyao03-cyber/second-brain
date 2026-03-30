@@ -6,6 +6,21 @@ import { activitySessions, focusDevices } from "@/server/db/schema";
 import { getLocalDayRange, buildDailyStats } from "@/server/focus/aggregates";
 import { resolveIngestUserId } from "@/server/focus/device-auth";
 
+function parseJsonStringArray(value: string | null | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 const querySchema = z.object({
   deviceId: z.string().trim().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -102,11 +117,14 @@ export async function GET(request: Request) {
     totalSecs: daily.totalSecs,
     focusedSecs: daily.focusedSecs,
     workHoursSecs: daily.workHoursSecs,
+    tagBreakdown: daily.tagBreakdown,
     sessionCount: daily.sessionCount,
     sessions: daily.sessions.map((session) => ({
       sourceSessionId: session.sourceSessionId,
       appName: session.appName,
       windowTitle: session.windowTitle,
+      browserUrl: session.browserUrl,
+      tags: parseJsonStringArray(session.tags),
       startedAt: session.startedAt.toISOString(),
       endedAt: session.endedAt.toISOString(),
       durationSecs: session.durationSecs,
@@ -115,12 +133,15 @@ export async function GET(request: Request) {
       sourceSessionId: session.sourceSessionId,
       appName: session.appName,
       windowTitle: session.windowTitle,
+      browserUrl: session.browserUrl,
+      tags: parseJsonStringArray(session.tags),
       startedAt: session.startedAt.toISOString(),
       endedAt: session.endedAt.toISOString(),
       durationSecs: session.durationSecs,
       focusedSecs: session.focusedSecs,
       spanSecs: session.spanSecs,
       interruptionCount: session.interruptionCount,
+      contextApps: parseJsonStringArray(session.visibleApps),
     })),
     fetchedAt: new Date().toISOString(),
   });

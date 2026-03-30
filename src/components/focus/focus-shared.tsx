@@ -4,13 +4,15 @@ type FocusSessionSlice = {
   id: string;
   appName: string;
   windowTitle: string | null;
+  browserUrl?: string | null;
   startedAt: string | Date;
   endedAt: string | Date;
   durationSecs: number;
   focusedSecs?: number;
   spanSecs?: number;
-  category: string | null;
+  tags?: string[] | string | null;
   interruptionCount?: number;
+  contextApps?: string[] | string | null;
 };
 
 const DAY_SECS = 24 * 60 * 60;

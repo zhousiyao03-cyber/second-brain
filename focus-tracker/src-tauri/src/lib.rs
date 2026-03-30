@@ -1,3 +1,4 @@
+mod accessibility;
 mod error_state;
 mod outbox;
 mod pairing;
@@ -6,6 +7,7 @@ mod state;
 mod status_sync;
 mod tracker;
 mod uploader;
+mod window_list;
 
 use std::{thread, time::Duration};
 
@@ -28,13 +30,13 @@ use crate::{
         SharedState, TrackerStatus,
     },
     status_sync::fetch_remote_day_status,
-    tracker::{get_active_window_sample, get_idle_seconds, is_user_away},
+    tracker::{get_enriched_sample, get_idle_seconds, is_user_away},
     uploader::upload_sessions,
 };
 
 const DEMO_FIXTURE: &str = include_str!("../../../tools/focus-collector/fixtures/demo-sessions.json");
 const TRAY_ID: &str = "focus-tracker-tray";
-const SAMPLE_IDLE_THRESHOLD_SECS: i64 = 1_800;
+const SAMPLE_IDLE_THRESHOLD_SECS: i64 = 180;
 const COLLECT_GAP_FLUSH_SECS: i64 = 60;
 const STATUS_SYNC_INTERVAL_SECS: i64 = 30;
 const PANEL_EDGE_MARGIN_PX: i32 = 12;
@@ -281,7 +283,7 @@ fn collect_once_inner(state: &SharedState) -> Result<(), String> {
     let sample = if away || idle_secs >= SAMPLE_IDLE_THRESHOLD_SECS {
         None
     } else {
-        get_active_window_sample()
+        get_enriched_sample()
     };
 
     let mut runtime = state

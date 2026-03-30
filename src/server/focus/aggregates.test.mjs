@@ -13,10 +13,13 @@ const baseSession = {
   sourceSessionId: "source-session-1",
   appName: "Visual Studio Code",
   windowTitle: "auth.ts - second-brain",
+  browserUrl: null,
+  browserPageTitle: null,
+  visibleApps: JSON.stringify(["Visual Studio Code"]),
   startedAt: new Date("2026-03-29T23:50:00.000Z"),
   endedAt: new Date("2026-03-30T00:20:00.000Z"),
   durationSecs: 30 * 60,
-  category: "coding",
+  tags: JSON.stringify(["editor", "coding"]),
   aiSummary: "Worked on auth flow",
   ingestionStatus: "processed",
   ingestedAt: new Date("2026-03-30T00:20:05.000Z"),
@@ -48,7 +51,8 @@ test("buildDailyStats counts only overlapped seconds for the selected day", () =
   assert.equal(stats.focusedSecs, 20 * 60);
   assert.equal(stats.spanSecs, 20 * 60);
   assert.equal(stats.workHoursSecs, 20 * 60);
-  assert.equal(stats.categoryBreakdown.coding, 20 * 60);
+  assert.equal(stats.tagBreakdown.coding, 20 * 60);
+  assert.equal(stats.tagBreakdown.editor, 20 * 60);
   assert.equal(stats.appSwitches, 0);
 });
 
@@ -96,7 +100,6 @@ test("buildDisplaySessionsFromSlices merges short interruptions into the surroun
       id: "session-a",
       sourceSessionId: "source-a",
       appName: "Visual Studio Code",
-      category: "coding",
       startedAt: new Date("2026-03-30T01:00:00.000Z"),
       endedAt: new Date("2026-03-30T01:20:00.000Z"),
       durationSecs: 20 * 60,
@@ -108,7 +111,8 @@ test("buildDisplaySessionsFromSlices merges short interruptions into the surroun
       id: "session-b",
       sourceSessionId: "source-b",
       appName: "Google Chrome",
-      category: "research",
+      browserUrl: "https://github.com/openai/openai-node",
+      tags: JSON.stringify(["browser", "git", "coding"]),
       startedAt: new Date("2026-03-30T01:20:10.000Z"),
       endedAt: new Date("2026-03-30T01:20:55.000Z"),
       durationSecs: 45,
@@ -120,7 +124,6 @@ test("buildDisplaySessionsFromSlices merges short interruptions into the surroun
       id: "session-c",
       sourceSessionId: "source-c",
       appName: "Visual Studio Code",
-      category: "coding",
       startedAt: new Date("2026-03-30T01:21:00.000Z"),
       endedAt: new Date("2026-03-30T01:45:00.000Z"),
       durationSecs: 24 * 60,
@@ -133,10 +136,10 @@ test("buildDisplaySessionsFromSlices merges short interruptions into the surroun
 
   assert.equal(displaySessions.length, 1);
   assert.equal(displaySessions[0].rawSessionCount, 3);
-  assert.equal(displaySessions[0].interruptionCount, 1);
-  assert.equal(displaySessions[0].focusedSecs, 44 * 60);
+  assert.equal(displaySessions[0].interruptionCount, 0);
+  assert.equal(displaySessions[0].focusedSecs, 44 * 60 + 45);
   assert.equal(displaySessions[0].spanSecs, 45 * 60);
-  assert.equal(displaySessions[0].durationSecs, 44 * 60);
+  assert.equal(displaySessions[0].durationSecs, 44 * 60 + 45);
 });
 
 test("buildDailyStats exposes merged display sessions for UI consumption", () => {
@@ -158,7 +161,8 @@ test("buildDailyStats exposes merged display sessions for UI consumption", () =>
         id: "session-b",
         sourceSessionId: "source-b",
         appName: "Google Chrome",
-        category: "research",
+        browserUrl: "https://github.com/vercel/next.js",
+        tags: JSON.stringify(["browser", "git", "coding"]),
         startedAt: new Date("2026-03-30T09:40:20.000Z"),
         endedAt: new Date("2026-03-30T09:41:00.000Z"),
         durationSecs: 40,
@@ -177,10 +181,10 @@ test("buildDailyStats exposes merged display sessions for UI consumption", () =>
 
   assert.equal(stats.sessions.length, 3);
   assert.equal(stats.displaySessions.length, 1);
-  assert.equal(stats.displaySessions[0].interruptionCount, 1);
-  assert.equal(stats.focusedSecs, 59 * 60 - 5);
+  assert.equal(stats.displaySessions[0].interruptionCount, 0);
+  assert.equal(stats.focusedSecs, 59 * 60 + 35);
   assert.equal(stats.spanSecs, 60 * 60);
-  assert.equal(stats.workHoursSecs, 59 * 60 - 5);
+  assert.equal(stats.workHoursSecs, 59 * 60 + 35);
 });
 
 test("workHours excludes sessions that resolve to other", () => {
@@ -193,7 +197,6 @@ test("workHours excludes sessions that resolve to other", () => {
         id: "session-a",
         sourceSessionId: "source-a",
         appName: "Visual Studio Code",
-        category: "coding",
         startedAt: new Date("2026-03-30T09:00:00.000Z"),
         endedAt: new Date("2026-03-30T09:30:00.000Z"),
         durationSecs: 30 * 60,
@@ -201,9 +204,10 @@ test("workHours excludes sessions that resolve to other", () => {
       {
         ...baseSession,
         id: "session-b",
-        sourceSessionId: "source-b",
-        appName: "Finder",
-        category: "other",
+        sourceSessionId: "source-b", 
+        appName: "Google Chrome",
+        browserUrl: "https://youtube.com/watch?v=123",
+        tags: JSON.stringify(["browser", "entertainment"]),
         startedAt: new Date("2026-03-30T09:30:00.000Z"),
         endedAt: new Date("2026-03-30T09:35:00.000Z"),
         durationSecs: 5 * 60,

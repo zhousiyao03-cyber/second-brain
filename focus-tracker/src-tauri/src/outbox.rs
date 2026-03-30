@@ -5,8 +5,6 @@ use uuid::Uuid;
 
 use crate::sessionizer::QueuedSession;
 
-const MERGE_GAP_SECS: i64 = 120;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutboxState {
     pub device_id: String,
@@ -30,17 +28,17 @@ const MAX_RECENT_SESSIONS: usize = 2_000;
 
 impl OutboxState {
     pub fn record_session(&mut self, session: QueuedSession) {
-        push_or_merge_session(&mut self.recent_sessions, session.clone());
+        append_dedupe(&mut self.recent_sessions, session.clone());
         if self.recent_sessions.len() > MAX_RECENT_SESSIONS {
             let excess = self.recent_sessions.len() - MAX_RECENT_SESSIONS;
             self.recent_sessions.drain(0..excess);
         }
 
-        push_or_merge_session(&mut self.queued_sessions, session);
+        append_dedupe(&mut self.queued_sessions, session);
     }
 }
 
-fn push_or_merge_session(target: &mut Vec<QueuedSession>, session: QueuedSession) {
+fn append_dedupe(target: &mut Vec<QueuedSession>, session: QueuedSession) {
     if target
         .iter()
         .any(|existing| existing.source_session_id == session.source_session_id)
@@ -48,39 +46,7 @@ fn push_or_merge_session(target: &mut Vec<QueuedSession>, session: QueuedSession
         return;
     }
 
-    if let Some(last) = target.last_mut() {
-        if should_merge_sessions(last, &session) {
-            last.ended_at = last.ended_at.max(session.ended_at);
-            last.duration_secs = (last.ended_at - last.started_at).num_seconds().max(1);
-            if last.window_title.is_none() {
-                last.window_title = session.window_title;
-            }
-            return;
-        }
-    }
-
     target.push(session);
-}
-
-fn should_merge_sessions(left: &QueuedSession, right: &QueuedSession) -> bool {
-    let gap_secs = (right.started_at - left.ended_at).num_seconds();
-    if gap_secs < 0 || gap_secs > MERGE_GAP_SECS {
-        return false;
-    }
-
-    if left.app_name == right.app_name {
-        return true;
-    }
-
-    matches!(
-        (task_group(left), task_group(right)),
-        (Some(left_group), Some(right_group))
-            if left_group == right_group && is_mergeable_task_group(left_group)
-    )
-}
-
-fn is_mergeable_task_group(group: &str) -> bool {
-    matches!(group, "coding" | "research" | "design" | "writing")
 }
 
 pub(crate) fn counts_toward_work_hours(session: &QueuedSession) -> bool {
@@ -92,9 +58,11 @@ pub(crate) fn counts_toward_work_hours(session: &QueuedSession) -> bool {
 
 pub(crate) fn task_group(session: &QueuedSession) -> Option<&'static str> {
     let haystack = format!(
-        "{} {}",
+        "{} {} {} {}",
         session.app_name,
-        session.window_title.clone().unwrap_or_default()
+        session.window_title.clone().unwrap_or_default(),
+        session.browser_url.clone().unwrap_or_default(),
+        session.browser_page_title.clone().unwrap_or_default()
     )
     .to_ascii_lowercase();
 
@@ -117,10 +85,7 @@ pub(crate) fn task_group(session: &QueuedSession) -> Option<&'static str> {
         return Some("coding");
     }
 
-    if haystack.contains("figma")
-        || haystack.contains("sketch")
-        || haystack.contains("framer")
-    {
+    if haystack.contains("figma") || haystack.contains("sketch") || haystack.contains("framer") {
         return Some("design");
     }
 
@@ -143,10 +108,7 @@ pub(crate) fn task_group(session: &QueuedSession) -> Option<&'static str> {
         return Some("communication");
     }
 
-    if haystack.contains("notion")
-        || haystack.contains("draft")
-        || haystack.contains("word")
-    {
+    if haystack.contains("notion") || haystack.contains("draft") || haystack.contains("word") {
         return Some("writing");
     }
 
@@ -204,6 +166,9 @@ mod tests {
             source_session_id: id.into(),
             app_name: app_name.into(),
             window_title: window_title.map(str::to_string),
+            browser_url: None,
+            browser_page_title: None,
+            visible_apps: vec![],
             started_at: started,
             ended_at: ended,
             duration_secs: (ended - started).num_seconds(),
@@ -211,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn merges_adjacent_same_app_sessions() {
+    fn appends_same_app_sessions_without_merging() {
         let mut outbox = OutboxState::default();
         outbox.record_session(session(
             "session-a",
@@ -228,12 +193,11 @@ mod tests {
             "2026-03-29T09:40:00Z",
         ));
 
-        assert_eq!(outbox.queued_sessions.len(), 1);
-        assert_eq!(outbox.queued_sessions[0].duration_secs, 40 * 60);
+        assert_eq!(outbox.queued_sessions.len(), 2);
     }
 
     #[test]
-    fn merges_adjacent_coding_workflow_sessions() {
+    fn appends_different_app_sessions_without_merging() {
         let mut outbox = OutboxState::default();
         outbox.record_session(session(
             "session-a",
@@ -250,9 +214,7 @@ mod tests {
             "2026-03-29T09:35:00Z",
         ));
 
-        assert_eq!(outbox.queued_sessions.len(), 1);
-        assert_eq!(outbox.queued_sessions[0].app_name, "Visual Studio Code");
-        assert_eq!(outbox.queued_sessions[0].duration_secs, 35 * 60);
+        assert_eq!(outbox.queued_sessions.len(), 2);
     }
 
     #[test]
@@ -267,12 +229,33 @@ mod tests {
         ));
         outbox.record_session(session(
             "session-b",
-            "Google Chrome",
-            Some("Next.js docs"),
-            "2026-03-29T09:25:00Z",
-            "2026-03-29T09:35:00Z",
+            "Visual Studio Code",
+            Some("index.ts"),
+            "2026-03-29T10:00:00Z",
+            "2026-03-29T10:15:00Z",
         ));
 
         assert_eq!(outbox.queued_sessions.len(), 2);
+    }
+
+    #[test]
+    fn deduplicates_by_source_session_id() {
+        let mut outbox = OutboxState::default();
+        outbox.record_session(session(
+            "session-a",
+            "Visual Studio Code",
+            Some("index.ts"),
+            "2026-03-29T09:00:00Z",
+            "2026-03-29T09:20:00Z",
+        ));
+        outbox.record_session(session(
+            "session-a",
+            "Visual Studio Code",
+            Some("index.ts"),
+            "2026-03-29T09:00:00Z",
+            "2026-03-29T09:20:00Z",
+        ));
+
+        assert_eq!(outbox.queued_sessions.len(), 1);
     }
 }

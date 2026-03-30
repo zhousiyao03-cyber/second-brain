@@ -244,24 +244,17 @@ fn metrics_for_today(
 fn merged_sessions_for_display(
     state: &RuntimeState,
     current_session: Option<QueuedSession>,
-    now: DateTime<Utc>,
+    _now: DateTime<Utc>,
 ) -> Vec<QueuedSession> {
-    let expected_date = local_date_string(parse_time_zone(&state.time_zone), now);
-    let mut sessions = match &state.server_day_snapshot {
-        Some(snapshot)
-            if snapshot.date == expected_date && snapshot.time_zone == state.time_zone =>
-        {
-            snapshot.sessions.clone()
-        }
-        _ => state.outbox.recent_sessions.clone(),
-    };
-
-    for session in &state.outbox.recent_sessions {
-        merge_session(&mut sessions, session.clone());
-    }
+    let mut sessions = state.outbox.recent_sessions.clone();
 
     if let Some(current_session) = current_session {
-        merge_session(&mut sessions, current_session);
+        if !sessions
+            .iter()
+            .any(|session| session.source_session_id == current_session.source_session_id)
+        {
+            sessions.push(current_session);
+        }
     }
 
     sessions
@@ -310,17 +303,6 @@ fn local_overlay_sessions(
     }
 
     overlay
-}
-
-fn merge_session(sessions: &mut Vec<QueuedSession>, next: QueuedSession) {
-    if let Some(existing) = sessions
-        .iter_mut()
-        .find(|session| session.source_session_id == next.source_session_id)
-    {
-        *existing = next;
-    } else {
-        sessions.push(next);
-    }
 }
 
 fn parse_time_zone(name: &str) -> Tz {
@@ -479,7 +461,7 @@ mod tests {
     };
     use crate::{
         outbox::OutboxState,
-        sessionizer::{FocusSessionizer, QueuedSession, WindowSample},
+        sessionizer::{EnrichedSample, FocusSessionizer, QueuedSession},
         status_sync::RemoteDisplaySession,
     };
 
@@ -489,6 +471,60 @@ mod tests {
             .expect("system clock should be valid")
             .as_nanos();
         std::env::temp_dir().join(format!("focus-tracker-{name}-{nanos}.json"))
+    }
+
+    fn queued_session(
+        source_session_id: &str,
+        app_name: &str,
+        window_title: Option<&str>,
+        started_at: chrono::DateTime<Utc>,
+        ended_at: chrono::DateTime<Utc>,
+    ) -> QueuedSession {
+        QueuedSession {
+            source_session_id: source_session_id.into(),
+            app_name: app_name.into(),
+            window_title: window_title.map(str::to_string),
+            browser_url: None,
+            browser_page_title: None,
+            visible_apps: vec![],
+            started_at,
+            ended_at,
+            duration_secs: (ended_at - started_at).num_seconds(),
+        }
+    }
+
+    fn sample(app_name: &str, window_title: Option<&str>) -> EnrichedSample {
+        EnrichedSample {
+            app_name: app_name.into(),
+            window_title: window_title.map(str::to_string),
+            browser_url: None,
+            browser_page_title: None,
+            visible_apps: vec![],
+        }
+    }
+
+    fn remote_display_session(
+        source_session_id: &str,
+        app_name: &str,
+        window_title: Option<&str>,
+        started_at: chrono::DateTime<Utc>,
+        ended_at: chrono::DateTime<Utc>,
+    ) -> RemoteDisplaySession {
+        let duration_secs = (ended_at - started_at).num_seconds();
+        RemoteDisplaySession {
+            source_session_id: source_session_id.into(),
+            app_name: app_name.into(),
+            window_title: window_title.map(str::to_string),
+            browser_url: None,
+            tags: None,
+            started_at: started_at.to_rfc3339(),
+            ended_at: ended_at.to_rfc3339(),
+            duration_secs,
+            focused_secs: duration_secs,
+            span_secs: duration_secs,
+            interruption_count: 0,
+            context_apps: None,
+        }
     }
 
     #[test]
@@ -525,45 +561,39 @@ mod tests {
         let now = Utc.with_ymd_and_hms(2026, 3, 29, 10, 0, 0).unwrap();
         let outbox = OutboxState {
             device_id: "device-1".into(),
-            recent_sessions: vec![QueuedSession {
-                source_session_id: "session-1".into(),
-                app_name: "Visual Studio Code".into(),
-                window_title: Some("tracker.rs".into()),
-                started_at: Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
-                ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 30, 0).unwrap(),
-                duration_secs: 5400,
-            }, QueuedSession {
-                source_session_id: "queued-session-1".into(),
-                app_name: "Linear".into(),
-                window_title: Some("Focus bug".into()),
-                started_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 31, 0).unwrap(),
-                ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 35, 0).unwrap(),
-                duration_secs: 240,
-            }],
-            queued_sessions: vec![QueuedSession {
-                source_session_id: "queued-session-1".into(),
-                app_name: "Linear".into(),
-                window_title: Some("Focus bug".into()),
-                started_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 31, 0).unwrap(),
-                ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 35, 0).unwrap(),
-                duration_secs: 240,
-            }],
+            recent_sessions: vec![
+                queued_session(
+                    "session-1",
+                    "Visual Studio Code",
+                    Some("tracker.rs"),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 9, 30, 0).unwrap(),
+                ),
+                queued_session(
+                    "queued-session-1",
+                    "Linear",
+                    Some("Focus bug"),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 9, 31, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 9, 35, 0).unwrap(),
+                ),
+            ],
+            queued_sessions: vec![queued_session(
+                "queued-session-1",
+                "Linear",
+                Some("Focus bug"),
+                Utc.with_ymd_and_hms(2026, 3, 29, 9, 31, 0).unwrap(),
+                Utc.with_ymd_and_hms(2026, 3, 29, 9, 35, 0).unwrap(),
+            )],
         };
         let mut sessionizer = FocusSessionizer::new(300);
         let started_at = Utc.with_ymd_and_hms(2026, 3, 29, 9, 40, 0).unwrap();
         sessionizer.observe(
-            Some(WindowSample {
-                app_name: "Google Chrome".into(),
-                window_title: Some("Focus dashboard".into()),
-            }),
+            Some(sample("Google Chrome", Some("Focus dashboard"))),
             started_at,
             0,
         );
         sessionizer.observe(
-            Some(WindowSample {
-                app_name: "Google Chrome".into(),
-                window_title: Some("Focus dashboard".into()),
-            }),
+            Some(sample("Google Chrome", Some("Focus dashboard"))),
             now,
             0,
         );
@@ -600,22 +630,20 @@ mod tests {
             settings_path: unique_temp_file("settings"),
             outbox: OutboxState {
                 device_id: "device-2".into(),
-                recent_sessions: vec![QueuedSession {
-                    source_session_id: "session-2".into(),
-                    app_name: "Notion".into(),
-                    window_title: Some("Daily review".into()),
-                    started_at: Utc.with_ymd_and_hms(2026, 3, 28, 15, 50, 0).unwrap(),
-                    ended_at: Utc.with_ymd_and_hms(2026, 3, 28, 16, 20, 0).unwrap(),
-                    duration_secs: 1800,
-                }],
-                queued_sessions: vec![QueuedSession {
-                    source_session_id: "session-2".into(),
-                    app_name: "Notion".into(),
-                    window_title: Some("Daily review".into()),
-                    started_at: Utc.with_ymd_and_hms(2026, 3, 28, 15, 50, 0).unwrap(),
-                    ended_at: Utc.with_ymd_and_hms(2026, 3, 28, 16, 20, 0).unwrap(),
-                    duration_secs: 1800,
-                }],
+                recent_sessions: vec![queued_session(
+                    "session-2",
+                    "Notion",
+                    Some("Daily review"),
+                    Utc.with_ymd_and_hms(2026, 3, 28, 15, 50, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 28, 16, 20, 0).unwrap(),
+                )],
+                queued_sessions: vec![queued_session(
+                    "session-2",
+                    "Notion",
+                    Some("Daily review"),
+                    Utc.with_ymd_and_hms(2026, 3, 28, 15, 50, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 28, 16, 20, 0).unwrap(),
+                )],
             },
             server_day_snapshot: None,
             base_url: "http://127.0.0.1:3200".into(),
@@ -641,14 +669,13 @@ mod tests {
 
     #[test]
     fn auto_upload_waits_for_batch_window() {
-        let queued_session = QueuedSession {
-            source_session_id: "session-3".into(),
-            app_name: "Google Chrome".into(),
-            window_title: Some("docs".into()),
-            started_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap(),
-            ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 20).unwrap(),
-            duration_secs: 20,
-        };
+        let queued_session = queued_session(
+            "session-3",
+            "Google Chrome",
+            Some("docs"),
+            Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap(),
+            Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 20).unwrap(),
+        );
 
         let mut runtime = RuntimeState {
             sessionizer: FocusSessionizer::new(300),
@@ -699,14 +726,13 @@ mod tests {
             settings_path: unique_temp_file("settings"),
             outbox: OutboxState {
                 device_id: "device-4".into(),
-                recent_sessions: vec![QueuedSession {
-                    source_session_id: "uploaded-1".into(),
-                    app_name: "Google Meet".into(),
-                    window_title: Some("Weekly sync".into()),
-                    started_at: Utc.with_ymd_and_hms(2026, 3, 29, 10, 0, 0).unwrap(),
-                    ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 10, 45, 0).unwrap(),
-                    duration_secs: 2700,
-                }],
+                recent_sessions: vec![queued_session(
+                    "uploaded-1",
+                    "Google Meet",
+                    Some("Weekly sync"),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 10, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 10, 45, 0).unwrap(),
+                )],
                 queued_sessions: Vec::new(),
             },
             server_day_snapshot: None,
@@ -738,14 +764,13 @@ mod tests {
             settings_path: unique_temp_file("settings"),
             outbox: OutboxState {
                 device_id: "device-5".into(),
-                recent_sessions: vec![QueuedSession {
-                    source_session_id: "local-1".into(),
-                    app_name: "Finder".into(),
-                    window_title: None,
-                    started_at: Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
-                    ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 8, 1, 0).unwrap(),
-                    duration_secs: 60,
-                }],
+                recent_sessions: vec![queued_session(
+                    "local-1",
+                    "Finder",
+                    None,
+                    Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 8, 1, 0).unwrap(),
+                )],
                 queued_sessions: Vec::new(),
             },
             server_day_snapshot: Some(ServerDaySnapshot {
@@ -753,31 +778,20 @@ mod tests {
                 time_zone: "Asia/Singapore".into(),
                 focused_secs: 5400,
                 work_hours_secs: 5400,
-                sessions: vec![QueuedSession {
-                    source_session_id: "remote-1".into(),
-                    app_name: "Visual Studio Code".into(),
-                    window_title: Some("focus.ts".into()),
-                    started_at: Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
-                    ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 30, 0).unwrap(),
-                    duration_secs: 5400,
-                }],
-                display_sessions: vec![RemoteDisplaySession {
-                    source_session_id: "display-remote-1".into(),
-                    app_name: "Visual Studio Code".into(),
-                    window_title: Some("focus.ts".into()),
-                    started_at: Utc
-                        .with_ymd_and_hms(2026, 3, 29, 8, 0, 0)
-                        .unwrap()
-                        .to_rfc3339(),
-                    ended_at: Utc
-                        .with_ymd_and_hms(2026, 3, 29, 9, 30, 0)
-                        .unwrap()
-                        .to_rfc3339(),
-                    duration_secs: 5400,
-                    focused_secs: 5400,
-                    span_secs: 5400,
-                    interruption_count: 0,
-                }],
+                sessions: vec![queued_session(
+                    "remote-1",
+                    "Visual Studio Code",
+                    Some("focus.ts"),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 9, 30, 0).unwrap(),
+                )],
+                display_sessions: vec![remote_display_session(
+                    "display-remote-1",
+                    "Visual Studio Code",
+                    Some("focus.ts"),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 9, 30, 0).unwrap(),
+                )],
                 fetched_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 31, 0).unwrap(),
             }),
             base_url: "http://127.0.0.1:3200".into(),
@@ -808,14 +822,13 @@ mod tests {
             settings_path: unique_temp_file("settings"),
             outbox: OutboxState {
                 device_id: "device-6".into(),
-                recent_sessions: vec![QueuedSession {
-                    source_session_id: "local-history-1".into(),
-                    app_name: "WeChat".into(),
-                    window_title: Some("Weixin".into()),
-                    started_at: Utc.with_ymd_and_hms(2026, 3, 29, 12, 0, 0).unwrap(),
-                    ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 14, 0, 0).unwrap(),
-                    duration_secs: 7200,
-                }],
+                recent_sessions: vec![queued_session(
+                    "local-history-1",
+                    "WeChat",
+                    Some("Weixin"),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 12, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 14, 0, 0).unwrap(),
+                )],
                 queued_sessions: Vec::new(),
             },
             server_day_snapshot: Some(ServerDaySnapshot {
@@ -823,31 +836,20 @@ mod tests {
                 time_zone: "Asia/Singapore".into(),
                 focused_secs: 21_138,
                 work_hours_secs: 21_138,
-                sessions: vec![QueuedSession {
-                    source_session_id: "remote-1".into(),
-                    app_name: "Visual Studio Code".into(),
-                    window_title: Some("focus.ts".into()),
-                    started_at: Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
-                    ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 13, 52, 18).unwrap(),
-                    duration_secs: 21_138,
-                }],
-                display_sessions: vec![RemoteDisplaySession {
-                    source_session_id: "display-remote-1".into(),
-                    app_name: "Visual Studio Code".into(),
-                    window_title: Some("focus.ts".into()),
-                    started_at: Utc
-                        .with_ymd_and_hms(2026, 3, 29, 8, 0, 0)
-                        .unwrap()
-                        .to_rfc3339(),
-                    ended_at: Utc
-                        .with_ymd_and_hms(2026, 3, 29, 13, 52, 18)
-                        .unwrap()
-                        .to_rfc3339(),
-                    duration_secs: 21_138,
-                    focused_secs: 21_138,
-                    span_secs: 21_138,
-                    interruption_count: 0,
-                }],
+                sessions: vec![queued_session(
+                    "remote-1",
+                    "Visual Studio Code",
+                    Some("focus.ts"),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 13, 52, 18).unwrap(),
+                )],
+                display_sessions: vec![remote_display_session(
+                    "display-remote-1",
+                    "Visual Studio Code",
+                    Some("focus.ts"),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 8, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2026, 3, 29, 13, 52, 18).unwrap(),
+                )],
                 fetched_at: Utc.with_ymd_and_hms(2026, 3, 29, 14, 0, 0).unwrap(),
             }),
             base_url: "http://127.0.0.1:3200".into(),

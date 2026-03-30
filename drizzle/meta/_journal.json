@@ -57,6 +57,13 @@
       "when": 1774768528951,
       "tag": "0007_lyrical_shriek",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1774796821816,
+      "tag": "0008_absent_thanos",
+      "breakpoints": true
     }
   ]
 }

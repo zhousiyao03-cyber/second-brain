@@ -251,7 +251,7 @@ export const focusRouter = router({
         focusedSecs: daily.focusedSecs,
         spanSecs: daily.spanSecs,
         workHoursSecs: daily.workHoursSecs,
-        categoryBreakdown: daily.categoryBreakdown,
+        tagBreakdown: daily.tagBreakdown,
         longestStreakSecs: daily.longestStreakSecs,
         appSwitches: daily.appSwitches,
         sessionCount: daily.sessionCount,
@@ -309,7 +309,7 @@ export const focusRouter = router({
             gt(activitySessions.endedAt, start),
             or(
               eq(activitySessions.ingestionStatus, "pending"),
-              isNull(activitySessions.category)
+              isNull(activitySessions.aiSummary)
             )
           )
         );
@@ -323,6 +323,8 @@ export const focusRouter = router({
           id: session.id,
           appName: session.appName,
           windowTitle: session.windowTitle,
+          browserUrl: session.browserUrl,
+          tags: session.tags,
           durationSecs: session.durationSecs,
         }))
       );
@@ -331,7 +333,6 @@ export const focusRouter = router({
         await db
           .update(activitySessions)
           .set({
-            category: classification.category,
             aiSummary: classification.summary,
             ingestionStatus: "processed",
             updatedAt: new Date(),
@@ -370,7 +371,7 @@ export const focusRouter = router({
       const summary = await generateDailySummary({
         sessions: daily.sessions,
         totalSecs: daily.totalSecs,
-        categoryBreakdown: daily.categoryBreakdown,
+        tagBreakdown: daily.tagBreakdown,
         longestStreakSecs: daily.longestStreakSecs,
         appSwitches: daily.appSwitches,
         date: input.date,
@@ -401,7 +402,7 @@ export const focusRouter = router({
       const payload = {
         timezone: input.timeZone,
         totalFocusSecs: daily.totalSecs,
-        categoryBreakdown: JSON.stringify(daily.categoryBreakdown),
+        tagBreakdown: JSON.stringify(daily.tagBreakdown),
         aiAnalysis: summary,
         sourceUpdatedAt: sourceUpdated?.value ?? null,
         generatedAt: new Date(),
@@ -455,7 +456,6 @@ export const focusRouter = router({
             gt(activitySessions.endedAt, start),
             or(
               eq(activitySessions.ingestionStatus, "pending"),
-              isNull(activitySessions.category),
               isNull(activitySessions.aiSummary)
             )
           )

@@ -2,15 +2,21 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-const SWITCH_CONFIRMATION_SECS: i64 = 10;
-const MIN_SESSION_SECS: i64 = 30;
-const LOW_PRIORITY_IGNORE_SECS: i64 = 120;
+const SWITCH_CONFIRMATION_SECS: i64 = 3;
+const MIN_SESSION_SECS: i64 = 5;
+const LOW_PRIORITY_IGNORE_SECS: i64 = 30;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct WindowSample {
+pub struct EnrichedSample {
     pub app_name: String,
     pub window_title: Option<String>,
+    #[serde(default)]
+    pub browser_url: Option<String>,
+    #[serde(default)]
+    pub browser_page_title: Option<String>,
+    #[serde(default)]
+    pub visible_apps: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +25,12 @@ pub struct QueuedSession {
     pub source_session_id: String,
     pub app_name: String,
     pub window_title: Option<String>,
+    #[serde(default)]
+    pub browser_url: Option<String>,
+    #[serde(default)]
+    pub browser_page_title: Option<String>,
+    #[serde(default)]
+    pub visible_apps: Vec<String>,
     pub started_at: DateTime<Utc>,
     pub ended_at: DateTime<Utc>,
     pub duration_secs: i64,
@@ -29,13 +41,16 @@ struct ActiveSession {
     source_session_id: String,
     app_name: String,
     window_title: Option<String>,
+    browser_url: Option<String>,
+    browser_page_title: Option<String>,
+    visible_apps: Vec<String>,
     started_at: DateTime<Utc>,
     ended_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone)]
 struct PendingSwitch {
-    sample: WindowSample,
+    sample: EnrichedSample,
     started_at: DateTime<Utc>,
 }
 
@@ -57,7 +72,7 @@ impl FocusSessionizer {
 
     pub fn observe(
         &mut self,
-        sample: Option<WindowSample>,
+        sample: Option<EnrichedSample>,
         observed_at: DateTime<Utc>,
         idle_secs: i64,
     ) -> Option<QueuedSession> {
@@ -78,6 +93,9 @@ impl FocusSessionizer {
             current.app_name == sample.app_name && current.window_title == sample.window_title;
 
         if same_window {
+            current.browser_url = sample.browser_url;
+            current.browser_page_title = sample.browser_page_title;
+            current.visible_apps = sample.visible_apps;
             current.ended_at = observed_at;
             self.pending = None;
             return None;
@@ -100,6 +118,9 @@ impl FocusSessionizer {
             source_session_id: current.source_session_id,
             app_name: current.app_name,
             window_title: current.window_title,
+            browser_url: current.browser_url,
+            browser_page_title: current.browser_page_title,
+            visible_apps: current.visible_apps,
             started_at: current.started_at,
             ended_at,
             duration_secs,
@@ -117,17 +138,16 @@ impl FocusSessionizer {
             source_session_id: current.source_session_id.clone(),
             app_name: current.app_name.clone(),
             window_title: current.window_title.clone(),
+            browser_url: current.browser_url.clone(),
+            browser_page_title: current.browser_page_title.clone(),
+            visible_apps: current.visible_apps.clone(),
             started_at: current.started_at,
             ended_at,
             duration_secs: (ended_at - current.started_at).num_seconds().max(1),
         })
     }
 
-    fn observe_without_active(
-        &mut self,
-        sample: WindowSample,
-        observed_at: DateTime<Utc>,
-    ) {
+    fn observe_without_active(&mut self, sample: EnrichedSample, observed_at: DateTime<Utc>) {
         match &self.pending {
             Some(pending) if pending.sample == sample => {
                 if (observed_at - pending.started_at).num_seconds() >= SWITCH_CONFIRMATION_SECS {
@@ -135,6 +155,9 @@ impl FocusSessionizer {
                         source_session_id: create_source_session_id(&sample, pending.started_at),
                         app_name: sample.app_name,
                         window_title: sample.window_title,
+                        browser_url: sample.browser_url,
+                        browser_page_title: sample.browser_page_title,
+                        visible_apps: sample.visible_apps,
                         started_at: pending.started_at,
                         ended_at: observed_at,
                     });
@@ -152,7 +175,7 @@ impl FocusSessionizer {
 
     fn observe_with_active(
         &mut self,
-        sample: WindowSample,
+        sample: EnrichedSample,
         observed_at: DateTime<Utc>,
     ) -> Option<QueuedSession> {
         match &self.pending {
@@ -166,6 +189,9 @@ impl FocusSessionizer {
                     source_session_id: create_source_session_id(&sample, next_started_at),
                     app_name: sample.app_name,
                     window_title: sample.window_title,
+                    browser_url: sample.browser_url,
+                    browser_page_title: sample.browser_page_title,
+                    visible_apps: sample.visible_apps,
                     started_at: next_started_at,
                     ended_at: observed_at,
                 };
@@ -179,6 +205,9 @@ impl FocusSessionizer {
                     source_session_id: current.source_session_id,
                     app_name: current.app_name,
                     window_title: current.window_title,
+                    browser_url: current.browser_url,
+                    browser_page_title: current.browser_page_title,
+                    visible_apps: current.visible_apps,
                     started_at: current.started_at,
                     ended_at,
                     duration_secs: (ended_at - current.started_at).num_seconds().max(1),
@@ -226,7 +255,7 @@ fn is_low_priority_app(app_name: &str) -> bool {
     )
 }
 
-fn create_source_session_id(sample: &WindowSample, observed_at: DateTime<Utc>) -> String {
+fn create_source_session_id(sample: &EnrichedSample, observed_at: DateTime<Utc>) -> String {
     let slug = format!(
         "{}:{}",
         sample.app_name,
@@ -254,164 +283,122 @@ fn create_source_session_id(sample: &WindowSample, observed_at: DateTime<Utc>) -
 
 #[cfg(test)]
 mod tests {
-    use super::{FocusSessionizer, WindowSample};
+    use super::{EnrichedSample, FocusSessionizer};
     use chrono::{TimeZone, Utc};
+
+    fn sample(app_name: &str, window_title: Option<&str>) -> EnrichedSample {
+        EnrichedSample {
+            app_name: app_name.into(),
+            window_title: window_title.map(str::to_string),
+            browser_url: None,
+            browser_page_title: None,
+            visible_apps: vec![],
+        }
+    }
 
     #[test]
     fn extends_current_session_for_same_window() {
-      let mut sessionizer = FocusSessionizer::new(300);
-      let first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
-      let confirm = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 10).unwrap();
-      let second = Utc.with_ymd_and_hms(2026, 3, 29, 9, 5, 0).unwrap();
-      let end = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 0).unwrap();
+        let mut sessionizer = FocusSessionizer::new(300);
+        let first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
+        let confirm = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 3).unwrap();
+        let second = Utc.with_ymd_and_hms(2026, 3, 29, 9, 5, 0).unwrap();
+        let end = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 0).unwrap();
 
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("auth.ts - second-brain".into()),
-      }), first, 0).is_none());
+        assert!(sessionizer
+            .observe(Some(sample("Visual Studio Code", Some("auth.ts - second-brain"))), first, 0)
+            .is_none());
+        assert!(sessionizer
+            .observe(
+                Some(sample("Visual Studio Code", Some("auth.ts - second-brain"))),
+                confirm,
+                0,
+            )
+            .is_none());
+        assert!(sessionizer
+            .observe(
+                Some(sample("Visual Studio Code", Some("auth.ts - second-brain"))),
+                second,
+                0,
+            )
+            .is_none());
 
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("auth.ts - second-brain".into()),
-      }), confirm, 0).is_none());
-
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("auth.ts - second-brain".into()),
-      }), second, 0).is_none());
-
-      let closed = sessionizer.flush(end).expect("session should flush");
-      assert_eq!(closed.duration_secs, 600);
+        let closed = sessionizer.flush(end).expect("session should flush");
+        assert_eq!(closed.app_name, "Visual Studio Code");
+        assert_eq!(closed.window_title.as_deref(), Some("auth.ts - second-brain"));
+        assert_eq!(closed.duration_secs, 10 * 60);
     }
 
     #[test]
     fn closes_previous_session_on_window_change() {
-      let mut sessionizer = FocusSessionizer::new(300);
-      let first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
-      let confirm_first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 10).unwrap();
-      let second = Utc.with_ymd_and_hms(2026, 3, 29, 9, 7, 0).unwrap();
-      let confirm_second = Utc.with_ymd_and_hms(2026, 3, 29, 9, 7, 10).unwrap();
+        let mut sessionizer = FocusSessionizer::new(300);
+        let first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
+        let confirm = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 3).unwrap();
+        let switch_start = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 0).unwrap();
+        let switch_confirm = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 3).unwrap();
 
-      sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("auth.ts - second-brain".into()),
-      }), first, 0);
-      sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("auth.ts - second-brain".into()),
-      }), confirm_first, 0);
+        sessionizer.observe(Some(sample("Visual Studio Code", Some("auth.ts"))), first, 0);
+        sessionizer.observe(Some(sample("Visual Studio Code", Some("auth.ts"))), confirm, 0);
+        assert!(sessionizer
+            .observe(Some(sample("Google Chrome", Some("Pull request"))), switch_start, 0)
+            .is_none());
 
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Google Chrome".into(),
-        window_title: Some("JWT docs".into()),
-      }), second, 0).is_none());
-      let closed = sessionizer.observe(Some(WindowSample {
-        app_name: "Google Chrome".into(),
-        window_title: Some("JWT docs".into()),
-      }), confirm_second, 0).expect("previous session should close");
-
-      assert_eq!(closed.app_name, "Visual Studio Code");
-      assert_eq!(closed.duration_secs, 420);
+        let closed = sessionizer
+            .observe(
+                Some(sample("Google Chrome", Some("Pull request"))),
+                switch_confirm,
+                0,
+            )
+            .expect("previous session should close");
+        assert_eq!(closed.app_name, "Visual Studio Code");
+        assert_eq!(closed.duration_secs, 10 * 60);
     }
 
     #[test]
     fn ignores_switch_that_returns_before_confirmation_delay() {
-      let mut sessionizer = FocusSessionizer::new(300);
-      let start = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
-      let confirmed = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 10).unwrap();
-      let brief_switch = Utc.with_ymd_and_hms(2026, 3, 29, 9, 5, 0).unwrap();
-      let switch_back = Utc.with_ymd_and_hms(2026, 3, 29, 9, 5, 5).unwrap();
-      let end = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 0).unwrap();
+        let mut sessionizer = FocusSessionizer::new(300);
+        let first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
+        let confirm = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 3).unwrap();
+        let switch_start = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 0).unwrap();
+        let return_at = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 2).unwrap();
+        let end = Utc.with_ymd_and_hms(2026, 3, 29, 9, 20, 0).unwrap();
 
-      sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), start, 0);
-      sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), confirmed, 0);
+        sessionizer.observe(Some(sample("Visual Studio Code", Some("auth.ts"))), first, 0);
+        sessionizer.observe(Some(sample("Visual Studio Code", Some("auth.ts"))), confirm, 0);
+        assert!(sessionizer
+            .observe(Some(sample("Google Chrome", Some("Pull request"))), switch_start, 0)
+            .is_none());
+        assert!(sessionizer
+            .observe(Some(sample("Visual Studio Code", Some("auth.ts"))), return_at, 0)
+            .is_none());
 
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Google Chrome".into(),
-        window_title: Some("Docs".into()),
-      }), brief_switch, 0).is_none());
-
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), switch_back, 0).is_none());
-
-      let closed = sessionizer.flush(end).expect("session should flush");
-      assert_eq!(closed.app_name, "Visual Studio Code");
-      assert_eq!(closed.duration_secs, 600);
+        let closed = sessionizer.flush(end).expect("session should flush");
+        assert_eq!(closed.app_name, "Visual Studio Code");
+        assert_eq!(closed.duration_secs, 20 * 60);
     }
 
     #[test]
     fn ignores_sessions_shorter_than_minimum_duration() {
-      let mut sessionizer = FocusSessionizer::new(300);
-      let start = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
-      let confirm_first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 10).unwrap();
-      let switch = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 20).unwrap();
-      let confirm_switch = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 30).unwrap();
+        let mut sessionizer = FocusSessionizer::new(300);
+        let first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
+        let confirm = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 3).unwrap();
+        let end = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 4).unwrap();
 
-      sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), start, 0);
-      sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), confirm_first, 0);
+        sessionizer.observe(Some(sample("Visual Studio Code", Some("auth.ts"))), first, 0);
+        sessionizer.observe(Some(sample("Visual Studio Code", Some("auth.ts"))), confirm, 0);
 
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Google Chrome".into(),
-        window_title: Some("Docs".into()),
-      }), switch, 0).is_none());
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Google Chrome".into(),
-        window_title: Some("Docs".into()),
-      }), confirm_switch, 0).is_none());
+        assert!(sessionizer.flush(end).is_none());
     }
 
     #[test]
     fn ignores_low_priority_apps_under_two_minutes() {
-      let mut sessionizer = FocusSessionizer::new(300);
-      let start = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
-      let confirm_first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 10).unwrap();
-      let switch = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 0).unwrap();
-      let confirm_switch = Utc.with_ymd_and_hms(2026, 3, 29, 9, 10, 10).unwrap();
-      let switch_back = Utc.with_ymd_and_hms(2026, 3, 29, 9, 11, 0).unwrap();
-      let confirm_back = Utc.with_ymd_and_hms(2026, 3, 29, 9, 11, 10).unwrap();
+        let mut sessionizer = FocusSessionizer::new(300);
+        let first = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap();
+        let confirm = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 3).unwrap();
+        let end = Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 20).unwrap();
 
-      sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), start, 0);
-      sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), confirm_first, 0);
+        sessionizer.observe(Some(sample("Finder", Some("Downloads"))), first, 0);
+        sessionizer.observe(Some(sample("Finder", Some("Downloads"))), confirm, 0);
 
-      let first_closed = sessionizer.observe(Some(WindowSample {
-        app_name: "Finder".into(),
-        window_title: None,
-      }), switch, 0);
-      assert!(first_closed.is_none());
-
-      let closed_main = sessionizer.observe(Some(WindowSample {
-        app_name: "Finder".into(),
-        window_title: None,
-      }), confirm_switch, 0).expect("main session should close");
-      assert_eq!(closed_main.app_name, "Visual Studio Code");
-
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), switch_back, 0).is_none());
-      assert!(sessionizer.observe(Some(WindowSample {
-        app_name: "Visual Studio Code".into(),
-        window_title: Some("index.ts".into()),
-      }), confirm_back, 0).is_none());
+        assert!(sessionizer.flush(end).is_none());
     }
 }

@@ -68,8 +68,11 @@ mod tests {
     fn serializes_sessions_using_camel_case_api_fields() {
         let sessions = vec![QueuedSession {
             source_session_id: "session-1".into(),
-            app_name: "Visual Studio Code".into(),
-            window_title: Some("focus.ts".into()),
+            app_name: "Google Chrome".into(),
+            window_title: Some("Go by Example".into()),
+            browser_url: Some("https://gobyexample.com/goroutines".into()),
+            browser_page_title: Some("Go by Example: Goroutines".into()),
+            visible_apps: vec!["Visual Studio Code".into(), "Ghostty".into()],
             started_at: Utc.with_ymd_and_hms(2026, 3, 29, 9, 0, 0).unwrap(),
             ended_at: Utc.with_ymd_and_hms(2026, 3, 29, 10, 0, 0).unwrap(),
             duration_secs: 3600,
@@ -89,8 +92,11 @@ mod tests {
                 "timeZone": "Asia/Singapore",
                 "sessions": [{
                     "sourceSessionId": "session-1",
-                    "appName": "Visual Studio Code",
-                    "windowTitle": "focus.ts",
+                    "appName": "Google Chrome",
+                    "windowTitle": "Go by Example",
+                    "browserUrl": "https://gobyexample.com/goroutines",
+                    "browserPageTitle": "Go by Example: Goroutines",
+                    "visibleApps": ["Visual Studio Code", "Ghostty"],
                     "startedAt": "2026-03-29T09:00:00Z",
                     "endedAt": "2026-03-29T10:00:00Z",
                     "durationSecs": 3600

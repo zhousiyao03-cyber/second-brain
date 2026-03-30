@@ -1,7 +1,4 @@
-import {
-  FOCUS_WORK_CATEGORIES,
-  resolveFocusCategory,
-} from "./categories.js";
+import { countsTowardWorkHours } from "./tags.js";
 
 export type FocusSessionRecord = {
   id: string;
@@ -10,10 +7,13 @@ export type FocusSessionRecord = {
   sourceSessionId: string;
   appName: string;
   windowTitle: string | null;
+  browserUrl: string | null;
+  browserPageTitle: string | null;
+  visibleApps: string | null;
   startedAt: Date;
   endedAt: Date;
   durationSecs: number;
-  category: string | null;
+  tags: string | null;
   aiSummary: string | null;
   ingestionStatus: string;
   ingestedAt: Date | null;
@@ -149,7 +149,7 @@ export function buildDailyStats({
     .filter((session): session is FocusSessionSlice => Boolean(session))
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
 
-  const categoryBreakdown: Record<string, number> = {};
+  const tagBreakdown: Record<string, number> = {};
   let totalSecs = 0;
   let appSwitches = 0;
   let longestStreakSecs = 0;
@@ -157,8 +157,10 @@ export function buildDailyStats({
 
   for (const [index, slice] of slices.entries()) {
     totalSecs += slice.durationSecs;
-    const category = slice.category ?? "other";
-    categoryBreakdown[category] = (categoryBreakdown[category] ?? 0) + slice.durationSecs;
+    const tags = parseJsonStringArray(slice.tags);
+    for (const tag of tags) {
+      tagBreakdown[tag] = (tagBreakdown[tag] ?? 0) + slice.durationSecs;
+    }
 
     const previous = slices[index - 1];
     if (previous) {
@@ -181,10 +183,8 @@ export function buildDailyStats({
 
   const displaySessions = buildDisplaySessionsFromSlices(slices);
   const workHoursSecs = displaySessions.reduce((sum, session) => {
-    const category = resolveFocusCategory(session);
-    return FOCUS_WORK_CATEGORIES.includes(category as (typeof FOCUS_WORK_CATEGORIES)[number])
-      ? sum + session.focusedSecs
-      : sum;
+    const tags = parseJsonStringArray(session.tags);
+    return countsTowardWorkHours(tags) ? sum + session.focusedSecs : sum;
   }, 0);
 
   return {
@@ -192,7 +192,7 @@ export function buildDailyStats({
     focusedSecs: displaySessions.reduce((sum, session) => sum + session.focusedSecs, 0),
     spanSecs: displaySessions.reduce((sum, session) => sum + session.spanSecs, 0),
     workHoursSecs,
-    categoryBreakdown,
+    tagBreakdown,
     longestStreakSecs,
     appSwitches,
     sessionCount: slices.length,
@@ -202,14 +202,35 @@ export function buildDailyStats({
 }
 
 function sharesDisplayGroup(
-  left: Pick<FocusSessionSlice, "appName" | "category">,
-  right: Pick<FocusSessionSlice, "appName" | "category">
+  left: Pick<FocusSessionSlice, "appName" | "tags">,
+  right: Pick<FocusSessionSlice, "appName" | "tags">
 ) {
-  if (left.category && right.category && left.category === right.category) {
-    return true;
+  const leftTags = parseJsonStringArray(left.tags);
+  const rightTags = parseJsonStringArray(right.tags);
+
+  if (leftTags.length > 0 && rightTags.length > 0) {
+    const shared = leftTags.some((tag) => rightTags.includes(tag));
+    if (shared) {
+      return true;
+    }
   }
 
   return left.appName === right.appName;
+}
+
+function parseJsonStringArray(value: string | null | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function toDisplaySession(slice: FocusSessionSlice): FocusDisplaySession {
@@ -346,7 +367,7 @@ export function buildWeeklyStats({
       totalSecs: daily.totalSecs,
       focusedSecs: daily.focusedSecs,
       workHoursSecs: daily.workHoursSecs,
-      categoryBreakdown: daily.categoryBreakdown,
+      tagBreakdown: daily.tagBreakdown,
     };
   });
 }

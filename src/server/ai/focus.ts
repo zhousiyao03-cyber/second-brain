@@ -1,6 +1,5 @@
 import { z } from "zod/v4";
 import { generateStructuredData } from "./provider";
-import { FOCUS_CATEGORIES, classifySessionFallback } from "../focus/categories.js";
 
 function formatDurationShort(totalSecs: number) {
   const minutes = Math.max(1, Math.round(totalSecs / 60));
@@ -22,11 +21,10 @@ function fallbackSessionSummary(session: SessionForClassification) {
   return `Worked in ${session.appName} for ${formatDurationShort(session.durationSecs)}`;
 }
 
-const sessionClassificationSchema = z.object({
+const sessionSummarySchema = z.object({
   sessions: z.array(
     z.object({
       id: z.string(),
-      category: z.enum(FOCUS_CATEGORIES),
       summary: z.string(),
     })
   ),
@@ -36,16 +34,19 @@ type SessionForClassification = {
   id: string;
   appName: string;
   windowTitle: string | null;
+  browserUrl: string | null;
+  tags: string | null;
   durationSecs: number;
 };
 
 type SessionForSummary = {
   appName: string;
   windowTitle: string | null;
+  browserUrl: string | null;
+  tags: string | null;
   startedAt: Date;
   endedAt: Date;
   durationSecs: number;
-  category: string | null;
   aiSummary: string | null;
 };
 
@@ -64,21 +65,18 @@ export async function classifyActivitySessions(sessions: SessionForClassificatio
   try {
     const result = await generateStructuredData({
       name: "focus_session_classification",
-      description: "Classify focus tracking sessions and summarize work done in one line.",
-      prompt: `Classify each session into exactly one category and generate a short factual summary.
-
-Allowed categories: ${FOCUS_CATEGORIES.join(", ")}.
+      description: "Summarize focus tracking sessions in one short factual line each.",
+      prompt: `Generate one short factual summary per session.
 
 Sessions:
 ${sessionList}`,
-      schema: sessionClassificationSchema,
+      schema: sessionSummarySchema,
     });
 
     return result.sessions;
   } catch {
     return sessions.map((session) => ({
       id: session.id,
-      category: classifySessionFallback(session),
       summary: fallbackSessionSummary(session),
     }));
   }
@@ -87,7 +85,7 @@ ${sessionList}`,
 export async function generateDailySummary(input: {
   sessions: SessionForSummary[];
   totalSecs: number;
-  categoryBreakdown: Record<string, number>;
+  tagBreakdown: Record<string, number>;
   longestStreakSecs: number;
   appSwitches: number;
   date: string;
@@ -100,15 +98,16 @@ export async function generateDailySummary(input: {
     .map((session) => {
       const start = session.startedAt.toISOString();
       const end = session.endedAt.toISOString();
-      const category = session.category ?? "other";
+      const tags = parseTags(session.tags).join(", ") || "untagged";
       const summary = session.aiSummary ?? session.windowTitle ?? session.appName;
-      return `${start} -> ${end} [${category}] ${summary}`;
+      const location = session.browserUrl ? ` (${session.browserUrl})` : "";
+      return `${start} -> ${end} [${tags}] ${summary}${location}`;
     })
     .join("\n");
 
-  const breakdown = Object.entries(input.categoryBreakdown)
+  const breakdown = Object.entries(input.tagBreakdown)
     .sort(([, left], [, right]) => right - left)
-    .map(([category, secs]) => `${category}: ${Math.round(secs / 60)}min`)
+    .map(([tag, secs]) => `${tag}: ${Math.round(secs / 60)}min`)
     .join(", ");
 
   try {
@@ -120,7 +119,7 @@ export async function generateDailySummary(input: {
 Total focus time: ${(input.totalSecs / 3600).toFixed(1)}h
 Longest streak: ${Math.round(input.longestStreakSecs / 60)}min
 App switches: ${input.appSwitches}
-Category breakdown: ${breakdown}
+Tag breakdown: ${breakdown}
 
 Timeline:
 ${timeline}`,
@@ -131,5 +130,20 @@ ${timeline}`,
   } catch {
     const topApps = [...new Set(input.sessions.map((session) => session.appName))].slice(0, 3);
     return `Focused for ${formatDurationShort(input.totalSecs)} on ${input.date}, mostly in ${topApps.join(", ")}. Longest streak was ${formatDurationShort(input.longestStreakSecs)} with ${input.appSwitches} app switches.`;
+  }
+}
+
+function parseTags(tags: string | null | undefined) {
+  if (!tags) {
+    return [] as string[];
+  }
+
+  try {
+    const parsed = JSON.parse(tags);
+    return Array.isArray(parsed)
+      ? parsed.filter((tag): tag is string => typeof tag === "string")
+      : [];
+  } catch {
+    return [];
   }
 }
