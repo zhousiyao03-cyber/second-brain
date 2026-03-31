@@ -4,8 +4,14 @@ type AppSession = {
   durationSecs: number;
   startedAt: string | Date;
   endedAt: string | Date;
-  windowTitle?: string | null;
+  windowTitle: string | null;
   browserHost?: string | null;
+  browserUrl?: string | null;
+  browserPageTitle?: string | null;
+  browserPath?: string | null;
+  browserSearchQuery?: string | null;
+  browserSurfaceType?: string | null;
+  displayLabel?: string | null;
 };
 
 export type FocusAppGroup = {
