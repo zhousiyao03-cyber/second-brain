@@ -49,8 +49,15 @@ test.describe("Focus Tracker flow", () => {
     await expect(page.getByRole("heading", { name: "Focus", exact: true })).toBeVisible();
     await expect(page.getByTestId("focus-total-secs")).toContainText("1h 25m");
     await expect(page.getByTestId("focus-session-count")).toContainText("2");
-    await expect(page.getByTestId("focus-session-list")).toContainText("Visual Studio Code");
-    await expect(page.getByTestId("focus-session-list")).toContainText("Google Chrome");
+    const topAppsSection = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Top apps" }) });
+    await expect(topAppsSection).toContainText("Visual Studio Code");
+    await expect(topAppsSection).toContainText("Google Chrome");
+    await expect(page.getByTestId("focus-selected-app")).toContainText("Visual Studio Code");
+    await expect(page.getByTestId("focus-selected-app-sessions")).toContainText(
+      "focus.ts - second-brain"
+    );
     await expect(page.getByRole("heading", { name: "Filtered out" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Raw activity" })).toHaveCount(0);
 
@@ -110,9 +117,6 @@ test.describe("Focus Tracker flow", () => {
 
     await page.goto("/focus");
     await expect(page.getByRole("heading", { name: "Focus", exact: true })).toBeVisible();
-    await expect(page.getByTestId("focus-session-list")).toContainText("Interrupt Test Code");
-    await expect(page.getByTestId("focus-session-list")).toContainText("Interrupt Test Browser");
-    await expect(page.getByTestId("focus-session-list")).toContainText("Interrupt Test Devtool");
     const topAppsSection = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Top apps" }) });
@@ -123,5 +127,19 @@ test.describe("Focus Tracker flow", () => {
     await expect(topAppsSection).toContainText("10m");
     await expect(topAppsSection).toContainText("Interrupt Test Browser");
     await expect(topAppsSection).toContainText("11m");
+
+    await page.getByRole("button", { name: /Interrupt Test Code/ }).click();
+    await expect(page.getByTestId("focus-selected-app")).toContainText("Interrupt Test Code");
+    await expect(page.getByTestId("focus-selected-app")).toContainText("27m");
+    await expect(page.getByTestId("focus-selected-app-sessions")).toContainText(
+      "index.tsx — web_monorepo-master"
+    );
+
+    await page.getByRole("button", { name: /Interrupt Test Browser/ }).click();
+    await expect(page.getByTestId("focus-selected-app")).toContainText("Interrupt Test Browser");
+    await expect(page.getByTestId("focus-selected-app")).toContainText("11m");
+    await expect(page.getByTestId("focus-selected-app-sessions")).toContainText(
+      "Google Chrome"
+    );
   });
 });

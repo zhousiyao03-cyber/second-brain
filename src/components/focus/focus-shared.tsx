@@ -131,10 +131,12 @@ export function FocusTimeline({
   sessions,
   testId,
   compact = false,
+  selectedAppName,
 }: {
   sessions: FocusSessionSlice[];
   testId?: string;
   compact?: boolean;
+  selectedAppName?: string | null;
 }) {
   return (
     <div data-testid={testId} className="space-y-2">
@@ -164,7 +166,9 @@ export function FocusTimeline({
             <div
               key={session.id}
               title={`${session.appName} • ${formatClockLabel(session.startedAt)}-${formatClockLabel(session.endedAt)}`}
-              className={`absolute inset-y-1 rounded-full ${getSegmentColor(session.appName)}`}
+              className={`absolute inset-y-1 rounded-full ${getSegmentColor(session.appName)} ${
+                selectedAppName && session.appName !== selectedAppName ? "opacity-25" : ""
+              }`}
               style={{
                 left: `${(startOffsetSecs / DAY_SECS) * 100}%`,
                 width: `${Math.max((durationSecs / DAY_SECS) * 100, compact ? 1 : 0.6)}%`,
