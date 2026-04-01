@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { buildPortfolioAnalysisFallback } from "@/lib/portfolio-analysis";
 import {
   Plus,
   Pencil,
@@ -54,6 +55,20 @@ interface EditHoldingDraft {
   costPrice: string;
 }
 
+interface HoldingSnapshot {
+  holding: Holding;
+  priceData: PriceData | undefined;
+  currentPrice: number | null;
+  changePercent: number | null;
+  currentValue: number | null;
+  costValue: number;
+  displayValue: number;
+  pnl: number | null;
+  pnlPercent: number | null;
+  dailyChange: number | null;
+  portfolioWeight: number | null;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function formatUSD(value: number) {
@@ -68,12 +83,6 @@ function formatUSD(value: number) {
 function formatPercent(value: number) {
   const sign = value >= 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
-}
-
-function sentimentLabel(sentiment: Sentiment | null) {
-  if (sentiment === "bullish") return "看涨";
-  if (sentiment === "bearish") return "看跌";
-  return "中性";
 }
 
 function calculateDailyChangeAmount(
@@ -540,66 +549,164 @@ function HoldingCard({
   );
 }
 
-// ── News Panel ─────────────────────────────────────────────────────────────
+function AnalysisBlock({
+  title,
+  lines,
+}: {
+  title: string;
+  lines: string[];
+}) {
+  return (
+    <div className="rounded-xl border border-stone-200/80 bg-stone-50/70 p-4 dark:border-stone-800 dark:bg-stone-900/60">
+      <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">{title}</h3>
+      <div className="mt-3 space-y-2 text-sm text-stone-600 dark:text-stone-300">
+        {lines.map((line, index) => (
+          <div key={`${title}-${index}`} className="flex gap-2">
+            <span className="mt-1 shrink-0 text-stone-300">•</span>
+            <span>{line}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-function NewsPanel({
-  symbol,
-  newsItems,
+function PortfolioAnalysisCard({
+  analysis,
+  totalValue,
+  totalPnl,
+  totalPnlPercent,
+  totalDailyChange,
+  holdingsCount,
+  isAiGenerated,
+}: {
+  analysis: ReturnType<typeof buildPortfolioAnalysisFallback>["portfolio"];
+  totalValue: number;
+  totalPnl: number | null;
+  totalPnlPercent: number | null;
+  totalDailyChange: number | null;
+  holdingsCount: number;
+  isAiGenerated: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="text-xs uppercase tracking-[0.18em] text-stone-400">Portfolio 分析</div>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                isAiGenerated
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                  : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+              )}
+            >
+              {isAiGenerated ? "AI 生成" : "规则兜底"}
+            </span>
+          </div>
+          <h2 className="mt-1 text-lg font-semibold text-stone-900 dark:text-stone-100">
+            组合诊断与建议
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600 dark:text-stone-300">
+            {analysis.overall}
+          </p>
+        </div>
+        <div className="grid min-w-[220px] grid-cols-2 gap-3 text-sm">
+          <div className="rounded-xl border border-stone-200/80 bg-stone-50/80 p-3 dark:border-stone-800 dark:bg-stone-950/70">
+            <div className="text-xs text-stone-400">当前市值</div>
+            <div className="mt-1 font-semibold text-stone-900 dark:text-stone-100">
+              {formatUSD(totalValue)}
+            </div>
+          </div>
+          <div className="rounded-xl border border-stone-200/80 bg-stone-50/80 p-3 dark:border-stone-800 dark:bg-stone-950/70">
+            <div className="text-xs text-stone-400">累计盈亏</div>
+            <div className={cn(
+              "mt-1 font-semibold",
+              totalPnl !== null && totalPnl >= 0 ? "text-emerald-600" : "text-red-500"
+            )}>
+              {totalPnl !== null ? `${totalPnl >= 0 ? "+" : "-"}${formatUSD(Math.abs(totalPnl))}` : "—"}
+              {totalPnlPercent !== null && ` (${formatPercent(totalPnlPercent)})`}
+            </div>
+          </div>
+          <div className="rounded-xl border border-stone-200/80 bg-stone-50/80 p-3 dark:border-stone-800 dark:bg-stone-950/70">
+            <div className="text-xs text-stone-400">今日变化</div>
+            <div className={cn(
+              "mt-1 font-semibold",
+              totalDailyChange !== null && totalDailyChange >= 0 ? "text-emerald-600" : "text-red-500"
+            )}>
+              {totalDailyChange !== null ? `${totalDailyChange >= 0 ? "+" : "-"}${formatUSD(Math.abs(totalDailyChange))}` : "—"}
+            </div>
+          </div>
+          <div className="rounded-xl border border-stone-200/80 bg-stone-50/80 p-3 dark:border-stone-800 dark:bg-stone-950/70">
+            <div className="text-xs text-stone-400">持仓数量</div>
+            <div className="mt-1 font-semibold text-stone-900 dark:text-stone-100">
+              {holdingsCount}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+        <AnalysisBlock title="结构诊断" lines={analysis.diagnostics} />
+        <AnalysisBlock title="关键发现" lines={analysis.findings} />
+      </div>
+
+      <div className="mt-4">
+        <AnalysisBlock title="建议" lines={analysis.suggestions} />
+      </div>
+    </div>
+  );
+}
+
+function HoldingAnalysisCard({
+  snapshot,
+  analysis,
+  news,
   onRefresh,
   isRefreshing,
+  isAiGenerated,
 }: {
-  symbol: string | null;
-  newsItems: NewsItem[];
+  snapshot: HoldingSnapshot | null;
+  analysis: ReturnType<typeof buildPortfolioAnalysisFallback>["holding"];
+  news: NewsItem | null;
   onRefresh: (symbol: string) => void;
   isRefreshing: boolean;
+  isAiGenerated: boolean;
 }) {
-  const news = symbol ? newsItems.find((n) => n.symbol === symbol) : null;
-
-  if (!symbol) {
+  if (!snapshot || !analysis) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-stone-400">
-        点击左侧标的查看新闻
+      <div className="rounded-2xl border border-stone-200 bg-white p-5 text-sm text-stone-400 dark:border-stone-800 dark:bg-stone-900">
+        点击左侧标的查看单标分析。
       </div>
     );
   }
 
+  const { holding } = snapshot;
+
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-mono text-sm font-semibold text-stone-900 dark:text-stone-100">
-            {symbol}
-          </h3>
-          {news && (
-            <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-400">
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-xs font-medium",
-                  news.sentiment === "bullish"
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                    : news.sentiment === "bearish"
-                      ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
-                )}
-              >
-                {sentimentLabel(news.sentiment)}
-              </span>
-              {news.generatedAt && (
-                <span>
-                  更新于{" "}
-                  {new Date(news.generatedAt).toLocaleString("zh-CN", {
-                    month: "numeric",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+          <div className="flex items-center gap-2">
+            <div className="text-xs uppercase tracking-[0.18em] text-stone-400">单标分析</div>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                isAiGenerated
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                  : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
               )}
-            </div>
-          )}
+            >
+              {isAiGenerated ? "AI 生成" : "规则兜底"}
+            </span>
+          </div>
+          <h3 className="mt-1 text-base font-semibold text-stone-900 dark:text-stone-100">
+            {holding.symbol} · {holding.name}
+          </h3>
         </div>
         <button
-          onClick={() => onRefresh(symbol)}
+          onClick={() => onRefresh(holding.symbol)}
           disabled={isRefreshing}
           className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-stone-600 hover:bg-stone-100 disabled:opacity-50 dark:text-stone-400 dark:hover:bg-stone-800"
         >
@@ -608,25 +715,29 @@ function NewsPanel({
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {news ? (
-          <div className="prose prose-sm prose-stone dark:prose-invert max-w-none text-sm">
-            {news.summary.split("\n").map((line, i) => {
-              const stripped = line.replace(/^[-•*]\s*/, "");
-              if (!stripped.trim()) return null;
-              return (
-                <div key={i} className="mb-2 flex gap-2">
-                  <span className="mt-1 shrink-0 text-stone-300">•</span>
-                  <span className="text-stone-700 dark:text-stone-300">{stripped}</span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-stone-400">
-            新闻将在今日 08:00 自动生成，或点击刷新立即获取。
+      <div className="mt-4 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <AnalysisBlock title="持仓诊断" lines={analysis.diagnosis} />
+        <div className="rounded-xl border border-stone-200/80 bg-stone-50/70 p-4 dark:border-stone-800 dark:bg-stone-900/60">
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">建议</h3>
+          <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
+            {analysis.suggestion}
           </p>
-        )}
+          {news && (
+            <div className="mt-4 border-t border-stone-200 pt-4 text-xs text-stone-500 dark:border-stone-800 dark:text-stone-400">
+              <div className="mb-2 font-medium text-stone-700 dark:text-stone-200">新闻线索</div>
+              {news.summary.split("\n").slice(0, 2).map((line, index) => {
+                const stripped = line.replace(/^[-•*]\s*/, "").trim();
+                if (!stripped) return null;
+                return (
+                  <div key={`${holding.symbol}-news-${index}`} className="mb-2 flex gap-2">
+                    <span className="mt-1 shrink-0 text-stone-300">•</span>
+                    <span>{stripped}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -684,7 +795,6 @@ export function PortfolioClient() {
   let totalValue = 0;
   let totalCost = 0;
   let totalDailyChange = 0;
-  let hasAllPrices = symbols.length > 0;
   let hasDailyChange = false;
 
   for (const h of holdings) {
@@ -694,7 +804,7 @@ export function PortfolioClient() {
     if (p?.price != null) {
       totalValue += p.price * h.quantity;
     } else {
-      hasAllPrices = false;
+      totalValue += cost;
     }
 
     const dailyChange = calculateDailyChangeAmount(
@@ -708,12 +818,116 @@ export function PortfolioClient() {
     }
   }
 
-  const totalPnl = hasAllPrices ? totalValue - totalCost : null;
+  const totalPnl = holdings.length > 0 ? totalValue - totalCost : null;
   const totalPnlPercent = totalPnl !== null && totalCost > 0 ? (totalPnl / totalCost) * 100 : null;
   const totalDailyChangeDisplay = hasDailyChange ? totalDailyChange : null;
   const totalPortfolioValueForDisplay = totalValue > 0
     ? totalValue
     : holdings.reduce((sum, holding) => sum + (holding.costPrice * holding.quantity), 0);
+  const selectedHoldingSnapshot = useMemo(() => {
+    const targetSymbol = selectedSymbol ?? sortedHoldings[0]?.symbol ?? null;
+    if (!targetSymbol) {
+      return null;
+    }
+
+    const holding = sortedHoldings.find((item) => item.symbol === targetSymbol);
+    if (!holding) {
+      return null;
+    }
+
+    const priceData = prices[holding.symbol];
+    const currentPrice = priceData?.price ?? null;
+    const changePercent = priceData?.changePercent ?? null;
+    const currentValue = currentPrice !== null ? currentPrice * holding.quantity : null;
+    const costValue = holding.costPrice * holding.quantity;
+    const displayValue = currentValue ?? costValue;
+    const pnl = currentValue !== null ? currentValue - costValue : null;
+    const pnlPercent = pnl !== null ? (pnl / costValue) * 100 : null;
+    const dailyChange = calculateDailyChangeAmount(currentPrice, changePercent, holding.quantity);
+
+    return {
+      holding,
+      priceData,
+      currentPrice,
+      changePercent,
+      currentValue,
+      costValue,
+      displayValue,
+      pnl,
+      pnlPercent,
+      dailyChange,
+      portfolioWeight: totalPortfolioValueForDisplay > 0
+        ? (displayValue / totalPortfolioValueForDisplay) * 100
+        : null,
+    } satisfies HoldingSnapshot;
+  }, [prices, selectedSymbol, sortedHoldings, totalPortfolioValueForDisplay]);
+  const holdingSnapshots = useMemo<HoldingSnapshot[]>(
+    () =>
+      sortedHoldings.map((holding) => {
+        const priceData = prices[holding.symbol];
+        const currentPrice = priceData?.price ?? null;
+        const changePercent = priceData?.changePercent ?? null;
+        const currentValue = currentPrice !== null ? currentPrice * holding.quantity : null;
+        const costValue = holding.costPrice * holding.quantity;
+        const displayValue = currentValue ?? costValue;
+        const pnl = currentValue !== null ? currentValue - costValue : null;
+        const pnlPercent = pnl !== null ? (pnl / costValue) * 100 : null;
+        const dailyChange = calculateDailyChangeAmount(currentPrice, changePercent, holding.quantity);
+
+        return {
+          holding,
+          priceData,
+          currentPrice,
+          changePercent,
+          currentValue,
+          costValue,
+          displayValue,
+          pnl,
+          pnlPercent,
+          dailyChange,
+          portfolioWeight: totalPortfolioValueForDisplay > 0
+            ? (displayValue / totalPortfolioValueForDisplay) * 100
+            : null,
+        };
+      }),
+    [prices, sortedHoldings, totalPortfolioValueForDisplay]
+  );
+  const analysisInput = useMemo(() => ({
+    totalValue,
+    totalPnl,
+    totalPnlPercent,
+    totalDailyChange: totalDailyChangeDisplay,
+    selectedSymbol: selectedHoldingSnapshot?.holding.symbol ?? null,
+    holdings: holdingSnapshots.map((snapshot) => ({
+      symbol: snapshot.holding.symbol,
+      name: snapshot.holding.name,
+      assetType: (snapshot.holding.assetType ?? "stock") as "stock" | "crypto",
+      currentValue: snapshot.displayValue,
+      portfolioWeight: snapshot.portfolioWeight ?? 0,
+      pnl: snapshot.pnl,
+      pnlPercent: snapshot.pnlPercent,
+      dailyChange: snapshot.dailyChange,
+    })),
+  }), [
+    holdingSnapshots,
+    selectedHoldingSnapshot,
+    totalDailyChangeDisplay,
+    totalPnl,
+    totalPnlPercent,
+    totalValue,
+  ]);
+  const fallbackAnalysis = useMemo(
+    () => buildPortfolioAnalysisFallback(analysisInput),
+    [analysisInput]
+  );
+  const analysisQuery = trpc.portfolio.analyze.useQuery(analysisInput, {
+    enabled: holdingSnapshots.length > 0,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+  const portfolioAnalysis = analysisQuery.data?.portfolio ?? fallbackAnalysis.portfolio;
+  const selectedHoldingAnalysis = analysisQuery.data?.holding ?? fallbackAnalysis.holding;
+  const isAiGenerated = analysisQuery.data?.aiGenerated ?? false;
 
   const deleteMutation = trpc.portfolio.deleteHolding.useMutation({
     onSuccess: () => utils.portfolio.getHoldings.invalidate(),
@@ -748,11 +962,11 @@ export function PortfolioClient() {
           {/* 左栏：持仓概览 */}
           <div className="md:w-72 md:shrink-0">
             {/* 汇总卡片 */}
-            {hasAllPrices && totalPnl !== null && (
+            {totalPnl !== null && (
               <div className="mb-4 rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
                 <div className="text-xs text-stone-400">总市值</div>
                 <div className="mt-0.5 text-xl font-semibold text-stone-900 dark:text-stone-100">
-                  {formatUSD(totalValue)}
+                  {formatUSD(totalPortfolioValueForDisplay)}
                 </div>
                 <div
                   className={cn(
@@ -819,13 +1033,28 @@ export function PortfolioClient() {
             </button>
           </div>
 
-          {/* 右栏：新闻面板 */}
-          <div className="min-h-64 flex-1 rounded-xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900 md:min-h-[500px]">
-            <NewsPanel
-              symbol={selectedSymbol ?? (sortedHoldings[0]?.symbol ?? null)}
-              newsItems={newsItems}
+          {/* 右栏：组合分析 + 单标分析 */}
+          <div className="min-h-64 flex-1 space-y-4 md:min-h-[500px]">
+            <PortfolioAnalysisCard
+              analysis={portfolioAnalysis}
+              totalValue={totalValue}
+              totalPnl={totalPnl}
+              totalPnlPercent={totalPnlPercent}
+              totalDailyChange={totalDailyChangeDisplay}
+              holdingsCount={holdingSnapshots.length}
+              isAiGenerated={isAiGenerated}
+            />
+            <HoldingAnalysisCard
+              snapshot={selectedHoldingSnapshot}
+              analysis={selectedHoldingAnalysis}
+              news={
+                selectedHoldingSnapshot
+                  ? newsItems.find((item) => item.symbol === selectedHoldingSnapshot.holding.symbol) ?? null
+                  : null
+              }
               onRefresh={handleRefresh}
               isRefreshing={refreshingSymbol !== null}
+              isAiGenerated={isAiGenerated}
             />
           </div>
         </div>

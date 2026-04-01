@@ -5,6 +5,7 @@ import { and, eq, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { generateStructuredData } from "../ai/provider";
 import { fetchRecentPortfolioNewsArticles } from "../portfolio-news";
+import { buildPortfolioAnalysisFallback } from "@/lib/portfolio-analysis";
 
 const CRYPTO_ID_MAP: Record<string, string> = {
   BTC: "bitcoin",
@@ -27,6 +28,37 @@ const CRYPTO_ID_MAP: Record<string, string> = {
 const newsSummarySchema = z.object({
   summary: z.string(),
   sentiment: z.enum(["bullish", "bearish", "neutral"]),
+});
+
+const portfolioAnalysisInputSchema = z.object({
+  totalValue: z.number().nonnegative(),
+  totalPnl: z.number().nullable(),
+  totalPnlPercent: z.number().nullable(),
+  totalDailyChange: z.number().nullable(),
+  selectedSymbol: z.string().nullable(),
+  holdings: z.array(z.object({
+    symbol: z.string(),
+    name: z.string(),
+    assetType: z.enum(["stock", "crypto"]),
+    currentValue: z.number().nonnegative(),
+    portfolioWeight: z.number().nonnegative(),
+    pnl: z.number().nullable(),
+    pnlPercent: z.number().nullable(),
+    dailyChange: z.number().nullable(),
+  })),
+});
+
+const portfolioAnalysisSchema = z.object({
+  portfolio: z.object({
+    overall: z.string(),
+    diagnostics: z.array(z.string()).min(1).max(4),
+    findings: z.array(z.string()).min(1).max(4),
+    suggestions: z.array(z.string()).min(1).max(4),
+  }),
+  holding: z.object({
+    diagnosis: z.array(z.string()).min(1).max(4),
+    suggestion: z.string(),
+  }).nullable(),
 });
 
 export async function generatePortfolioNews(userId: string, symbol: string) {
@@ -211,6 +243,50 @@ export const portfolioRouter = router({
     .mutation(async ({ input, ctx }) => {
       const result = await generatePortfolioNews(ctx.userId, input.symbol);
       return { success: true, skipped: false, ...result };
+    }),
+
+  analyze: protectedProcedure
+    .input(portfolioAnalysisInputSchema)
+    .query(async ({ input }) => {
+      const fallback = buildPortfolioAnalysisFallback(input);
+
+      if (input.holdings.length === 0) {
+        return { ...fallback, aiGenerated: false };
+      }
+
+      try {
+        const result = await generateStructuredData({
+          name: "portfolio_analysis",
+          description: "Analyze a long-term investment portfolio and return concise Chinese diagnostics and suggestions.",
+          prompt: [
+            "You are analyzing a long-term investment portfolio.",
+            "Be concrete, concise, and evidence-based.",
+            "Do not give day-trading advice.",
+            "Focus on concentration, risk distribution, winners/losers, and practical light suggestions.",
+            "Do not invent missing facts.",
+            "",
+            `Total value: ${input.totalValue}`,
+            `Total pnl: ${input.totalPnl ?? "N/A"}`,
+            `Total pnl percent: ${input.totalPnlPercent ?? "N/A"}`,
+            `Total daily change: ${input.totalDailyChange ?? "N/A"}`,
+            `Selected symbol: ${input.selectedSymbol ?? "N/A"}`,
+            "",
+            "Holdings:",
+            input.holdings
+              .map((holding) => (
+                `- ${holding.symbol} (${holding.name}) | type=${holding.assetType} | value=${holding.currentValue} | weight=${holding.portfolioWeight}% | pnl=${holding.pnl ?? "N/A"} | pnlPercent=${holding.pnlPercent ?? "N/A"} | dailyChange=${holding.dailyChange ?? "N/A"}`
+              ))
+              .join("\n"),
+            "",
+            "Write the response in Chinese. Keep each item short and useful.",
+          ].join("\n"),
+          schema: portfolioAnalysisSchema,
+        });
+
+        return { ...result, aiGenerated: true };
+      } catch {
+        return { ...fallback, aiGenerated: false };
+      }
     }),
 
   // ── 价格（Task 3）──────────────────────────────────────────────
