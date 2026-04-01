@@ -3,6 +3,7 @@ import { db } from "../db";
 import { portfolioHoldings, portfolioNews } from "../db/schema";
 import { and, eq, desc } from "drizzle-orm";
 import { z } from "zod/v4";
+import { generateStructuredData } from "../ai/provider";
 
 const CRYPTO_ID_MAP: Record<string, string> = {
   BTC: "bitcoin",
@@ -21,6 +22,50 @@ const CRYPTO_ID_MAP: Record<string, string> = {
   LTC: "litecoin",
   BCH: "bitcoin-cash",
 };
+
+const newsSummarySchema = z.object({
+  summary: z.string(),
+  sentiment: z.enum(["bullish", "bearish", "neutral"]),
+});
+
+export async function generatePortfolioNews(userId: string, symbol: string) {
+  const today = new Date().toISOString().split("T")[0];
+
+  const result = await generateStructuredData({
+    name: "portfolio_news_summary",
+    description: `Search for recent news about ${symbol} (stock or crypto) and summarize in Traditional Chinese or Simplified Chinese.`,
+    prompt: `Today is ${today}. Search for the latest news and developments about "${symbol}" from the past 24-48 hours. Summarize the key news in 3-5 bullet points in Chinese. Each bullet should be concise (1-2 sentences). End with an overall market sentiment assessment. Return JSON with "summary" (Markdown bullet list in Chinese) and "sentiment" ("bullish", "bearish", or "neutral").`,
+    schema: newsSummarySchema,
+  });
+
+  // upsert：有则覆盖，无则插入
+  const existing = await db
+    .select()
+    .from(portfolioNews)
+    .where(and(eq(portfolioNews.userId, userId), eq(portfolioNews.symbol, symbol)))
+    .limit(1);
+
+  if (existing[0]) {
+    await db
+      .update(portfolioNews)
+      .set({
+        summary: result.summary,
+        sentiment: result.sentiment,
+        generatedAt: new Date(),
+      })
+      .where(and(eq(portfolioNews.userId, userId), eq(portfolioNews.symbol, symbol)));
+  } else {
+    await db.insert(portfolioNews).values({
+      id: crypto.randomUUID(),
+      userId,
+      symbol,
+      summary: result.summary,
+      sentiment: result.sentiment,
+    });
+  }
+
+  return result;
+}
 
 export const portfolioRouter = router({
   // ── 持仓 CRUD ──────────────────────────────────────────────
@@ -102,9 +147,30 @@ export const portfolioRouter = router({
 
   refreshNews: protectedProcedure
     .input(z.object({ symbol: z.string() }))
-    .mutation(async () => {
-      // placeholder — real implementation in Task 4
-      return { success: true };
+    .mutation(async ({ input, ctx }) => {
+      const { symbol } = input;
+
+      // 防抖：同一标的 1 小时内不重复调用
+      const existing = await db
+        .select()
+        .from(portfolioNews)
+        .where(
+          and(
+            eq(portfolioNews.userId, ctx.userId),
+            eq(portfolioNews.symbol, symbol)
+          )
+        )
+        .limit(1);
+
+      if (existing[0]) {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        if (existing[0].generatedAt && existing[0].generatedAt > oneHourAgo) {
+          return { success: true, skipped: true };
+        }
+      }
+
+      const result = await generatePortfolioNews(ctx.userId, symbol);
+      return { success: true, skipped: false, ...result };
     }),
 
   // ── 价格（Task 3）──────────────────────────────────────────────
