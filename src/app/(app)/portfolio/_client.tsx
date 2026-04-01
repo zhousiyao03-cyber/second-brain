@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
@@ -160,8 +160,9 @@ function AddHoldingModal({
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-stone-500">标的代码 *</label>
+              <label htmlFor="symbol" className="mb-1 block text-xs text-stone-500">标的代码 *</label>
               <input
+                id="symbol"
                 className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm uppercase dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 placeholder="AAPL / BTC"
                 value={draft.symbol}
@@ -169,8 +170,9 @@ function AddHoldingModal({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-stone-500">类型 *</label>
+              <label htmlFor="assetType" className="mb-1 block text-xs text-stone-500">类型 *</label>
               <select
+                id="assetType"
                 className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 value={draft.assetType}
                 onChange={(e) =>
@@ -184,8 +186,9 @@ function AddHoldingModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-stone-500">名称 *</label>
+            <label htmlFor="name" className="mb-1 block text-xs text-stone-500">名称 *</label>
             <input
+              id="name"
               className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               placeholder="Apple Inc. / Bitcoin"
               value={draft.name}
@@ -195,8 +198,9 @@ function AddHoldingModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-stone-500">数量 *</label>
+              <label htmlFor="quantity" className="mb-1 block text-xs text-stone-500">数量 *</label>
               <input
+                id="quantity"
                 type="number"
                 min="0"
                 step="any"
@@ -207,8 +211,9 @@ function AddHoldingModal({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-stone-500">成本价 (USD) *</label>
+              <label htmlFor="costPrice" className="mb-1 block text-xs text-stone-500">成本价 (USD) *</label>
               <input
+                id="costPrice"
                 type="number"
                 min="0"
                 step="any"
@@ -250,6 +255,7 @@ function HoldingCard({
   onClick: () => void;
   onDelete: () => void;
 }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const currentPrice = priceData?.price ?? null;
   const changePercent = priceData?.changePercent ?? null;
   const currentValue = currentPrice !== null ? currentPrice * holding.quantity : null;
@@ -313,15 +319,38 @@ function HoldingCard({
         </div>
       )}
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="mt-2 hidden text-xs text-red-400 hover:text-red-600 group-hover:block"
-      >
-        删除
-      </button>
+      {confirmingDelete ? (
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="text-xs text-red-500 hover:text-red-700"
+          >
+            确认删除
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirmingDelete(false);
+            }}
+            className="text-xs text-stone-400 hover:text-stone-600"
+          >
+            取消
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setConfirmingDelete(true);
+          }}
+          className="mt-2 hidden text-xs text-red-400 hover:text-red-600 group-hover:block"
+        >
+          删除
+        </button>
+      )}
     </div>
   );
 }
@@ -433,8 +462,11 @@ export function PortfolioClient() {
   const holdings: Holding[] = holdingsQuery.data ?? [];
   const newsItems: NewsItem[] = newsQuery.data ?? [];
 
-  const symbols = holdings.map((h) => h.symbol);
-  const assetTypes = holdings.map((h) => h.assetType ?? "stock");
+  const symbols = useMemo(() => holdings.map((h) => h.symbol), [holdings]);
+  const assetTypes = useMemo(
+    () => holdings.map((h) => (h.assetType ?? "stock") as "stock" | "crypto"),
+    [holdings]
+  );
 
   const pricesQuery = trpc.portfolio.getPrices.useQuery(
     { symbols, assetTypes },
@@ -476,9 +508,7 @@ export function PortfolioClient() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("确认删除这条持仓记录？")) {
-      deleteMutation.mutate({ id });
-    }
+    deleteMutation.mutate({ id });
   };
 
   return (
@@ -570,6 +600,7 @@ export function PortfolioClient() {
           onClose={() => setShowAddModal(false)}
           onSaved={() => {
             utils.portfolio.getHoldings.invalidate();
+            utils.portfolio.getNews.invalidate();
             pricesQuery.refetch();
           }}
         />
