@@ -685,7 +685,7 @@ export function PortfolioClient() {
   let totalCost = 0;
   let totalDailyChange = 0;
   let hasAllPrices = symbols.length > 0;
-  let hasDailyChange = symbols.length > 0;
+  let hasDailyChange = false;
 
   for (const h of holdings) {
     const p = prices[h.symbol];
@@ -704,8 +704,7 @@ export function PortfolioClient() {
     );
     if (dailyChange !== null) {
       totalDailyChange += dailyChange;
-    } else {
-      hasDailyChange = false;
+      hasDailyChange = true;
     }
   }
 

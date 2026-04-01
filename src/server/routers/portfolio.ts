@@ -251,6 +251,9 @@ export const portfolioRouter = router({
                     postMarketChangePercent?: number;
                     regularMarketPrice?: number;
                     regularMarketChangePercent?: number;
+                    chartPreviousClose?: number;
+                    previousClose?: number;
+                    regularMarketPreviousClose?: number;
                   };
                 }>;
               };
@@ -266,9 +269,18 @@ export const portfolioRouter = router({
               meta?.postMarketChangePercent ??
               meta?.regularMarketChangePercent ??
               null;
+            const previousClose =
+              meta?.chartPreviousClose ??
+              meta?.previousClose ??
+              meta?.regularMarketPreviousClose ??
+              null;
             result[sym] = {
               price,
-              changePercent,
+              changePercent:
+                changePercent ??
+                (price !== null && previousClose !== null && previousClose > 0
+                  ? ((price - previousClose) / previousClose) * 100
+                  : null),
             };
           } catch {
             result[sym] = { price: null, changePercent: null };
