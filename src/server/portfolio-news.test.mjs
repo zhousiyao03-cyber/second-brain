@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   buildPortfolioNewsSearchQueries,
+  fetchRecentPortfolioNewsArticles,
+  parseMarketauxArticles,
   parseGoogleNewsRss,
 } from "./portfolio-news.ts";
 
@@ -55,4 +57,68 @@ test("parseGoogleNewsRss extracts article title, source, link, and published tim
   );
   assert.equal(articles[0].publishedAt, "2026-04-01T10:30:00.000Z");
   assert.match(articles[0].snippet, /expanded delivery coverage/i);
+});
+
+test("parseMarketauxArticles normalizes Marketaux responses", () => {
+  const articles = parseMarketauxArticles({
+    data: [
+      {
+        uuid: "1",
+        title: "JD.com expands logistics coverage",
+        url: "https://example.com/jd-logistics",
+        source: "Reuters",
+        published_at: "2026-04-01T09:30:00.000Z",
+        description: "JD.com announced a new round of same-day delivery expansion.",
+      },
+    ],
+  });
+
+  assert.equal(articles.length, 1);
+  assert.equal(articles[0].title, "JD.com expands logistics coverage");
+  assert.equal(articles[0].link, "https://example.com/jd-logistics");
+  assert.equal(articles[0].source, "Reuters");
+  assert.equal(articles[0].publishedAt, "2026-04-01T09:30:00.000Z");
+  assert.match(articles[0].snippet, /same-day delivery expansion/i);
+});
+
+test("fetchRecentPortfolioNewsArticles prefers Marketaux when api key exists", async () => {
+  const originalApiKey = process.env.MARKETAUX_API_KEY;
+  process.env.MARKETAUX_API_KEY = "test-marketaux-key";
+
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({
+      data: [
+        {
+          uuid: "1",
+          title: "JD.com beats delivery expectations",
+          url: "https://example.com/jd-news",
+          source: "Bloomberg",
+          published_at: "2026-04-01T08:00:00.000Z",
+          description: "JD.com reported stronger than expected delivery performance.",
+        },
+      ],
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  try {
+    const articles = await fetchRecentPortfolioNewsArticles({
+      symbol: "JD",
+      name: "京东",
+      assetType: "stock",
+    }, fetchImpl);
+
+    assert.equal(articles.length, 1);
+    assert.match(calls[0], /api\.marketaux\.com/);
+  } finally {
+    if (originalApiKey === undefined) {
+      delete process.env.MARKETAUX_API_KEY;
+    } else {
+      process.env.MARKETAUX_API_KEY = originalApiKey;
+    }
+  }
 });

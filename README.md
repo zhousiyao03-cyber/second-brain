@@ -96,6 +96,7 @@ AUTH_SECRET=local-dev-secret
 # ── AI ──────────────────────────────────────────────
 AI_PROVIDER=openai           # 线上用 openai
 OPENAI_API_KEY=...           # 线上配置
+# MARKETAUX_API_KEY=...      # Portfolio 新闻源（推荐）
 # 本地开发可继续用 codex：
 # AI_PROVIDER=codex
 
@@ -163,6 +164,8 @@ ollama pull qwen2.5:14b
 ```
 
 聊天模型配置统一通过 `src/server/ai/provider.ts` 读取这些环境变量。现在支持三种模式：`codex`、`openai`、`local`。如果你没有显式设置 `AI_PROVIDER`，运行时会优先尝试复用本机已有的 OpenClaw Codex 登录态。embedding 配置则由 `src/server/ai/embeddings.ts` 独立解析，支持 `EMBEDDING_PROVIDER=openai|local|none`。
+
+`/portfolio` 的新闻面板现在优先使用 `MARKETAUX_API_KEY` 对应的 Marketaux 新闻源，按 ticker + 持仓名称做更可靠的过滤；如果没有配置 `MARKETAUX_API_KEY`，会自动回退到 Google News RSS。建议本地和线上都配置 Marketaux，否则歧义 ticker 的新闻质量会明显变差。
 
 `/usage` 页面还会尝试直接读取本机对应的本地 usage 数据，并默认每 15 秒自动刷新一次：
 - Codex：`~/.codex/state*.sqlite` 里的全局 thread token 统计

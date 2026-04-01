@@ -244,14 +244,31 @@ export const portfolioRouter = router({
             const json = await res.json() as {
               chart?: {
                 result?: Array<{
-                  meta?: { regularMarketPrice?: number; regularMarketChangePercent?: number };
+                  meta?: {
+                    preMarketPrice?: number;
+                    preMarketChangePercent?: number;
+                    postMarketPrice?: number;
+                    postMarketChangePercent?: number;
+                    regularMarketPrice?: number;
+                    regularMarketChangePercent?: number;
+                  };
                 }>;
               };
             };
             const meta = json.chart?.result?.[0]?.meta;
+            const price =
+              meta?.preMarketPrice ??
+              meta?.postMarketPrice ??
+              meta?.regularMarketPrice ??
+              null;
+            const changePercent =
+              meta?.preMarketChangePercent ??
+              meta?.postMarketChangePercent ??
+              meta?.regularMarketChangePercent ??
+              null;
             result[sym] = {
-              price: meta?.regularMarketPrice ?? null,
-              changePercent: meta?.regularMarketChangePercent ?? null,
+              price,
+              changePercent,
             };
           } catch {
             result[sym] = { price: null, changePercent: null };
