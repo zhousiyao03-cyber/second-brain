@@ -746,10 +746,12 @@ function HoldingAnalysisCard({
 // ── Main Component ─────────────────────────────────────────────────────────
 
 export function PortfolioClient() {
+  const defaultVisibleHoldingsCount = 6;
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingHolding, setEditingHolding] = useState<Holding | null>(null);
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [refreshingSymbol, setRefreshingSymbol] = useState<string | null>(null);
+  const [showAllHoldings, setShowAllHoldings] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -928,6 +930,24 @@ export function PortfolioClient() {
   const portfolioAnalysis = analysisQuery.data?.portfolio ?? fallbackAnalysis.portfolio;
   const selectedHoldingAnalysis = analysisQuery.data?.holding ?? fallbackAnalysis.holding;
   const isAiGenerated = analysisQuery.data?.aiGenerated ?? false;
+  const visibleHoldings = useMemo(() => {
+    if (showAllHoldings || sortedHoldings.length <= defaultVisibleHoldingsCount) {
+      return sortedHoldings;
+    }
+
+    const baseHoldings = sortedHoldings.slice(0, defaultVisibleHoldingsCount);
+    const targetSymbol = selectedSymbol ?? sortedHoldings[0]?.symbol ?? null;
+    if (!targetSymbol || baseHoldings.some((holding) => holding.symbol === targetSymbol)) {
+      return baseHoldings;
+    }
+
+    const selectedHolding = sortedHoldings.find((holding) => holding.symbol === targetSymbol);
+    if (!selectedHolding) {
+      return baseHoldings;
+    }
+
+    return [...baseHoldings.slice(0, defaultVisibleHoldingsCount - 1), selectedHolding];
+  }, [selectedSymbol, showAllHoldings, sortedHoldings]);
 
   const deleteMutation = trpc.portfolio.deleteHolding.useMutation({
     onSuccess: () => utils.portfolio.getHoldings.invalidate(),
@@ -1009,7 +1029,7 @@ export function PortfolioClient() {
                   ))}
                 </div>
               ) : (
-                sortedHoldings.map((h) => (
+                visibleHoldings.map((h) => (
                   <HoldingCard
                     key={h.id}
                     holding={h}
@@ -1023,6 +1043,17 @@ export function PortfolioClient() {
                 ))
               )}
             </div>
+
+            {sortedHoldings.length > defaultVisibleHoldingsCount && (
+              <button
+                onClick={() => setShowAllHoldings((current) => !current)}
+                className="mt-3 w-full rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-500 transition-colors hover:border-stone-300 hover:text-stone-700 dark:border-stone-800 dark:text-stone-400 dark:hover:border-stone-700 dark:hover:text-stone-200"
+              >
+                {showAllHoldings
+                  ? "收起持仓列表"
+                  : `显示更多持仓（+${sortedHoldings.length - visibleHoldings.length}）`}
+              </button>
+            )}
 
             <button
               onClick={() => setShowAddModal(true)}

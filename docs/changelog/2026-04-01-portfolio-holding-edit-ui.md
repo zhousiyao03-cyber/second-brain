@@ -28,6 +28,8 @@
 - Wired the Portfolio client to render fallback analysis immediately and replace it with AI-generated analysis when the query succeeds.
 - Removed an unstable loading badge from the analysis cards so the client and server render the same initial markup and avoid hydration mismatch.
 - Changed top-level portfolio totals to use live prices when available and cost basis as fallback, so `总市值` and `累计盈亏` still render even when one holding lacks a fresh quote.
+- Limited the left-side holding list to the first 6 positions by default and added a `显示更多持仓 / 收起持仓列表` toggle so long portfolios do not stretch the page excessively.
+- Kept the currently selected holding visible in the collapsed list even if it would normally fall below the first 6 rows.
 - Updated `AGENTS.md` verification rules to allow skipping dedicated automated tests for very small, low-risk frontend tweaks when the user explicitly treats them as simple.
 
 ## Files Touched
