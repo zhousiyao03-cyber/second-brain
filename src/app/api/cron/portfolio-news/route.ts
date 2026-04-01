@@ -15,16 +15,16 @@ export async function GET(request: NextRequest) {
 
   const holdings = await db.select().from(portfolioHoldings);
 
-  const results: Array<{ userId: string; symbol: string; status: string }> = [];
+  const results: Array<{ symbol: string; status: string }> = [];
 
   for (const holding of holdings) {
     try {
       await generatePortfolioNews(holding.userId, holding.symbol);
-      results.push({ userId: holding.userId, symbol: holding.symbol, status: "ok" });
+      results.push({ symbol: holding.symbol, status: "ok" });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[cron/portfolio-news] Failed for ${holding.symbol}: ${message}`);
-      results.push({ userId: holding.userId, symbol: holding.symbol, status: "error" });
+      results.push({ symbol: holding.symbol, status: "error" });
     }
   }
 

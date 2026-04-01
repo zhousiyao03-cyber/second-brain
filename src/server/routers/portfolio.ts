@@ -136,7 +136,7 @@ export const portfolioRouter = router({
       return { success: true };
     }),
 
-  // ── 新闻（占位，Task 4 补充实现）──────────────────────────────
+  // ── 新闻 ──────────────────────────────────────────────────────
   getNews: protectedProcedure.query(async ({ ctx }) => {
     return db
       .select()
