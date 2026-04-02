@@ -1,298 +1,160 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { BookOpen, Loader2, Plus, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import {
-  GraduationCap,
-  BookOpen,
-  ChevronRight,
-  Loader2,
-  Sparkles,
-  CheckCircle,
-  ArrowLeft,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-
-const categoryLabels: Record<string, string> = {
-  backend: "后端开发",
-  database: "数据库",
-  devops: "DevOps",
-  ai: "AI",
-  "system-design": "系统设计",
-};
-
-const categoryColors: Record<string, string> = {
-  backend: "bg-blue-100 text-blue-700",
-  database: "bg-green-100 text-green-700",
-  devops: "bg-orange-100 text-orange-700",
-  ai: "bg-purple-100 text-purple-700",
-  "system-design": "bg-rose-100 text-rose-700",
-};
 
 export default function LearnPage() {
-  const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
-
+  const router = useRouter();
   const utils = trpc.useUtils();
-  const { data: paths = [], isLoading } = trpc.learning.listPaths.useQuery();
-  const seedPresets = trpc.learning.seedPresets.useMutation({
-    onSuccess: () => utils.learning.listPaths.invalidate(),
-  });
+  const [isCreating, setIsCreating] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState("📘");
 
-  const { data: pathDetail } = trpc.learning.getPath.useQuery(
-    { id: selectedPathId! },
-    { enabled: !!selectedPathId }
-  );
-
-  const { data: lessonDetail } = trpc.learning.getLesson.useQuery(
-    { id: selectedLessonId! },
-    { enabled: !!selectedLessonId }
-  );
-
-  const completeLesson = trpc.learning.completeLesson.useMutation({
-    onSuccess: () => {
-      utils.learning.getPath.invalidate({ id: selectedPathId! });
-      utils.learning.getLesson.invalidate({ id: selectedLessonId! });
+  const { data: topics = [], isLoading } =
+    trpc.learningNotebook.listTopics.useQuery();
+  const createTopic = trpc.learningNotebook.createTopic.useMutation({
+    onSuccess: async (data) => {
+      await utils.learningNotebook.listTopics.invalidate();
+      setIsCreating(false);
+      setTitle("");
+      setDescription("");
+      router.push(`/learn/${data.id}`);
     },
   });
 
-  const handleGenerateLesson = async () => {
-    if (!selectedPathId) return;
-    setGenerating(true);
-    try {
-      const res = await fetch("/api/generate-lesson", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pathId: selectedPathId }),
-      });
-      if (res.ok) {
-        utils.learning.getPath.invalidate({ id: selectedPathId });
-      }
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // Lesson detail view
-  if (selectedLessonId && lessonDetail) {
-    return (
-      <div>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">
+            Learning notebook
+          </h1>
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+            Organize study topics, draft notes with AI, and review your blind spots.
+          </p>
+        </div>
         <button
-          onClick={() => setSelectedLessonId(null)}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 mb-4"
+          type="button"
+          onClick={() => setIsCreating((open) => !open)}
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
-          <ArrowLeft size={14} />
-          返回课程列表
+          <Plus size={16} />
+          New topic
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          {lessonDetail.title}
-        </h1>
-        <div className="flex items-center gap-2 mb-6">
-          {lessonDetail.status === "completed" ? (
-            <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-              <CheckCircle size={12} /> 已完成
-            </span>
-          ) : (
+      </div>
+
+      {isCreating && (
+        <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-950">
+          <div className="grid gap-4 md:grid-cols-[120px,1fr,160px]">
+            <label className="space-y-2 text-sm text-stone-600 dark:text-stone-300">
+              <span className="font-medium">Icon</span>
+              <input
+                aria-label="Icon"
+                value={icon}
+                onChange={(event) => setIcon(event.target.value)}
+                className="w-full rounded-xl border border-stone-200 bg-transparent px-3 py-2 outline-none focus:border-blue-400 dark:border-stone-700"
+              />
+            </label>
+            <label className="space-y-2 text-sm text-stone-600 dark:text-stone-300">
+              <span className="font-medium">Topic title</span>
+              <input
+                aria-label="Topic title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className="w-full rounded-xl border border-stone-200 bg-transparent px-3 py-2 outline-none focus:border-blue-400 dark:border-stone-700"
+              />
+            </label>
+            <label className="space-y-2 text-sm text-stone-600 dark:text-stone-300">
+              <span className="font-medium">Description</span>
+              <input
+                aria-label="Description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                className="w-full rounded-xl border border-stone-200 bg-transparent px-3 py-2 outline-none focus:border-blue-400 dark:border-stone-700"
+              />
+            </label>
+          </div>
+          <div className="mt-4 flex items-center justify-end gap-2">
             <button
+              type="button"
+              onClick={() => setIsCreating(false)}
+              className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={createTopic.isPending || !title.trim()}
               onClick={() =>
-                completeLesson.mutate({
-                  id: selectedLessonId,
-                  pathId: selectedPathId!,
+                createTopic.mutate({
+                  title,
+                  description: description || undefined,
+                  icon: icon || undefined,
                 })
               }
-              className="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-3 py-2 text-sm text-white transition-colors hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-stone-200"
             >
-              标记完成
-            </button>
-          )}
-        </div>
-        <div className="prose prose-sm max-w-none mb-8">
-          <div className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed">
-            {lessonDetail.content}
-          </div>
-        </div>
-        {lessonDetail.quiz && (
-          <div className="border-t pt-6">
-            <h2 className="text-lg font-semibold mb-4">练习题</h2>
-            <div className="space-y-4">
-              {JSON.parse(lessonDetail.quiz).map(
-                (q: { question: string; answer: string }, i: number) => (
-                  <div
-                    key={i}
-                    className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                  >
-                    <p className="font-medium text-sm text-gray-900 mb-2">
-                      {i + 1}. {q.question}
-                    </p>
-                    <details className="text-sm text-gray-600">
-                      <summary className="cursor-pointer text-blue-600 hover:text-blue-700">
-                        查看答案
-                      </summary>
-                      <p className="mt-2 pl-2 border-l-2 border-blue-200">
-                        {q.answer}
-                      </p>
-                    </details>
-                  </div>
-                )
+              {createTopic.isPending ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Sparkles size={14} />
               )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Path detail view
-  if (selectedPathId && pathDetail) {
-    return (
-      <div>
-        <button
-          onClick={() => {
-            setSelectedPathId(null);
-            setSelectedLessonId(null);
-          }}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft size={14} />
-          返回学习路径
-        </button>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {pathDetail.title}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {pathDetail.description}
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-blue-600">
-              {pathDetail.progress ?? 0}%
-            </div>
-            <div className="text-xs text-gray-400">学习进度</div>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full h-2 bg-gray-100 rounded-full mb-6">
-          <div
-            className="h-2 bg-blue-600 rounded-full transition-all"
-            style={{ width: `${pathDetail.progress ?? 0}%` }}
-          />
-        </div>
-
-        {/* Lessons */}
-        <div className="space-y-2 mb-6">
-          {pathDetail.lessonList.map((lesson, i) => (
-            <button
-              key={lesson.id}
-              onClick={() => setSelectedLessonId(lesson.id)}
-              className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
-            >
-              <div
-                className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0",
-                  lesson.status === "completed"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-500"
-                )}
-              >
-                {lesson.status === "completed" ? (
-                  <CheckCircle size={14} />
-                ) : (
-                  i + 1
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">
-                  {lesson.title}
-                </div>
-              </div>
-              <ChevronRight size={14} className="text-gray-400" />
+              Create topic
             </button>
-          ))}
+          </div>
         </div>
-
-        <button
-          onClick={handleGenerateLesson}
-          disabled={generating}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
-        >
-          {generating ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Sparkles size={16} />
-          )}
-          AI 生成下一课
-        </button>
-      </div>
-    );
-  }
-
-  // Path list view
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">学习</h1>
-        {paths.length === 0 && (
-          <button
-            onClick={() => seedPresets.mutate()}
-            disabled={seedPresets.isPending}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {seedPresets.isPending ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Sparkles size={16} />
-            )}
-            初始化推荐路径
-          </button>
-        )}
-      </div>
+      )}
 
       {isLoading ? (
-        <p className="text-gray-500 text-sm">加载中...</p>
-      ) : paths.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <GraduationCap size={48} className="mx-auto mb-3 opacity-50" />
-          <p>还没有学习路径，点击初始化推荐路径开始</p>
+        <div className="py-12 text-sm text-stone-500">Loading topics...</div>
+      ) : topics.length === 0 ? (
+        <div className="rounded-[32px] border border-dashed border-stone-300 bg-white/70 px-6 py-16 text-center text-stone-500 dark:border-stone-700 dark:bg-stone-950/50 dark:text-stone-400">
+          <BookOpen className="mx-auto mb-4 h-10 w-10 opacity-50" />
+          <p className="text-base font-medium">No study topics yet</p>
+          <p className="mt-2 text-sm">
+            Create a topic for Go, databases, distributed systems, or anything else
+            you are learning.
+          </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {paths.map((path) => (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {topics.map((topic) => (
             <button
-              key={path.id}
-              onClick={() => setSelectedPathId(path.id)}
-              className="p-5 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all text-left"
+              key={topic.id}
+              type="button"
+              onClick={() => router.push(`/learn/${topic.id}`)}
+              className="rounded-[28px] border border-stone-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-md dark:border-stone-800 dark:bg-stone-950 dark:hover:border-stone-700"
             >
-              <div className="flex items-start justify-between mb-3">
-                <BookOpen size={20} className="text-blue-600 mt-0.5" />
-                {path.category && (
-                  <span
-                    className={cn(
-                      "text-xs px-2 py-0.5 rounded",
-                      categoryColors[path.category] ?? "bg-gray-100 text-gray-600"
-                    )}
-                  >
-                    {categoryLabels[path.category] ?? path.category}
-                  </span>
-                )}
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">{path.title}</h3>
-              <p className="text-xs text-gray-500 line-clamp-2 mb-3">
-                {path.description}
-              </p>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-1.5 bg-gray-100 rounded-full">
-                  <div
-                    className="h-1.5 bg-blue-600 rounded-full transition-all"
-                    style={{ width: `${path.progress ?? 0}%` }}
-                  />
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl dark:bg-stone-900">
+                  {topic.icon || "📚"}
                 </div>
-                <span className="text-xs text-gray-400">
-                  {path.progress ?? 0}%
+                <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs text-stone-600 dark:bg-stone-900 dark:text-stone-300">
+                  {topic.noteCount} {topic.noteCount === 1 ? "note" : "notes"}
                 </span>
+              </div>
+              <h2 className="mt-4 text-lg font-semibold text-stone-900 dark:text-stone-100">
+                {topic.title}
+              </h2>
+              <p className="mt-2 line-clamp-2 text-sm text-stone-500 dark:text-stone-400">
+                {topic.description || "No description yet."}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {topic.topTags.length > 0 ? (
+                  topic.topTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                    >
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-stone-400">No tags yet</span>
+                )}
               </div>
             </button>
           ))}

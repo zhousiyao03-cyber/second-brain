@@ -382,3 +382,79 @@ export const portfolioNews = sqliteTable("portfolio_news", {
   sentiment: text("sentiment", { enum: ["bullish", "bearish", "neutral"] }).notNull(),
   generatedAt: integer("generated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
+
+// ── Learning Notebook ──────────────────────────────
+
+export const learningTopics = sqliteTable("learning_topics", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  icon: text("icon"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const learningNotes = sqliteTable("learning_notes", {
+  id: text("id").primaryKey(),
+  topicId: text("topic_id")
+    .notNull()
+    .references(() => learningTopics.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content"),
+  plainText: text("plain_text"),
+  tags: text("tags"),
+  aiSummary: text("ai_summary"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const learningReviews = sqliteTable("learning_reviews", {
+  id: text("id").primaryKey(),
+  topicId: text("topic_id")
+    .notNull()
+    .references(() => learningTopics.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  type: text("type", { enum: ["outline", "gap", "quiz"] }).notNull(),
+  content: text("content").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+// ── Open Source Projects ──────────────────────────
+
+export const osProjects = sqliteTable("os_projects", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  repoUrl: text("repo_url"),
+  description: text("description"),
+  language: text("language"),
+  aiSummary: text("ai_summary"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const osProjectNotes = sqliteTable("os_project_notes", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => osProjects.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content"),
+  plainText: text("plain_text"),
+  tags: text("tags"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});

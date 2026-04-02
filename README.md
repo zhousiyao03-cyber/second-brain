@@ -27,6 +27,8 @@
 
 - **认证** — Auth.js v5 + GitHub / Google OAuth + 邮箱密码注册 / 登录，支持在账号设置页修改昵称、邮箱和本地密码，多用户数据完全隔离；补齐了 PWA / iOS Web App metadata，主屏安装后登录态更稳定
 - **笔记** — Notion 风格块编辑器，支持通栏 280px 头图与内置背景图库、轻量类型/标签 metadata 行、行级悬浮插入、324 × 385 分区插入面板、块菜单（上移/下移/复制/删除/转为）、Slash 命令、Todo/列表、Callout / Toggle、图片上传/拖拽/粘贴、自动保存，以及首页和笔记页一键打开今日日报；日报标题现在会写成“日期 + 星期几”，默认带 `今天的 todo / 今日的复盘 / 明日计划` 三块，并可继承最近一篇日报里的未完成明日计划
+- **Learning Notebook** — 以 topic 组织学习内容，支持主题卡片、主题内笔记列表、标签筛选、AI draft 起草、知识大纲 / 盲点分析 / 复习题生成，以及基于主题笔记上下文的 Ask AI
+- **Open Source Projects** — 以项目维度沉淀开源代码阅读笔记，支持 repo 元信息、项目内笔记编辑、标签筛选和长期分析归档
 - **搜索** — Cmd+K 全局搜索笔记，关键词高亮
 - **Ask AI** — 基于知识库的 chunk 级 hybrid RAG 问答，支持语义检索、关键词召回、邻近段落扩展和可点击引用来源
 - **Token Usage** — 自动读取本机里的 Codex / Claude Code 本地 session（含 Claude subagents，跨工作区聚合），用于展示真实 token 用量；也支持手动补录 OpenAI API / 其他来源，统一在 Dashboard 和独立页面聚合（线上环境默认禁用，本地开发可开启）
@@ -40,6 +42,8 @@
 
 - 主页：聚合最近笔记和 token usage，先看全局状态
 - 笔记：以编辑体验为中心，支持快速记录和结构化整理
+- Learning Notebook：围绕某个学习主题持续写、持续问、持续复盘
+- Open Source Projects：按项目保存代码阅读结论和架构摘录
 - Ask AI：对知识库发问，返回答案和引用来源
 - Search：用 `Cmd+K` 快速找回笔记
 
@@ -258,6 +262,14 @@ docs/
   v1-plan.md        V1 收敛执行计划
   changelog/        变更记录
 ```
+
+新增的学习与项目模块主要落在：
+
+- `src/app/(app)/learn/**`
+- `src/app/(app)/projects/**`
+- `src/server/routers/learning-notebook.ts`
+- `src/server/routers/oss-projects.ts`
+- `src/app/api/learn/draft/route.ts`
 
 ## V1 收敛进度
 
