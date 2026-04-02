@@ -1,0 +1,11 @@
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./e2e",
+  fullyParallel: false,
+  reporter: "line",
+  use: {
+    baseURL: "http://127.0.0.1:3300",
+    trace: "on-first-retry",
+  },
+});
