@@ -413,9 +413,9 @@ export function KnowledgeNoteEditor({
         />
       </div>
 
-      {/* TOC sidebar — positioned in the left margin of the content area */}
-      <div className="absolute left-2 top-28 hidden 2xl:block">
-        <div className="sticky top-6">
+      {/* TOC sidebar — fixed in the left margin, independent scroll */}
+      <div className="fixed top-16 bottom-4 hidden 2xl:flex" style={{ left: "calc(16rem + 12px)", width: "13rem" }}>
+        <div className="w-full overflow-y-auto">
           <TocSidebar editor={editorInstance} />
         </div>
       </div>
