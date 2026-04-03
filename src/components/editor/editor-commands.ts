@@ -16,6 +16,7 @@ import {
   PenTool,
   Quote,
   Table,
+  TableOfContents,
   Type,
 } from "lucide-react";
 import {
@@ -32,7 +33,10 @@ export interface EditorCommandItem {
   description: string;
   keywords: string[];
   icon: LucideIcon;
+  /** Markdown input shortcut shown in menu (e.g. "#", "```") */
   shortcutHint?: string;
+  /** Keyboard shortcut shown in menu (e.g. "⌘B", "⌘⇧8") */
+  keyboardShortcut?: string;
   run: (editor: Editor) => void;
   isActive?: (editor: Editor) => boolean;
   tone?: "default" | "danger";
@@ -78,6 +82,7 @@ export function createEditorCommandGroups(
           keywords: ["h1", "heading", "标题", "大标题"],
           icon: Heading1,
           shortcutHint: "#",
+          keyboardShortcut: "⌘⌥1",
           run: (editor) => {
             editor.chain().focus().toggleHeading({ level: 1 }).run();
           },
@@ -90,6 +95,7 @@ export function createEditorCommandGroups(
           keywords: ["h2", "heading", "标题", "章节"],
           icon: Heading2,
           shortcutHint: "##",
+          keyboardShortcut: "⌘⌥2",
           run: (editor) => {
             editor.chain().focus().toggleHeading({ level: 2 }).run();
           },
@@ -102,6 +108,7 @@ export function createEditorCommandGroups(
           keywords: ["h3", "heading", "标题", "小节"],
           icon: Heading3,
           shortcutHint: "###",
+          keyboardShortcut: "⌘⌥3",
           run: (editor) => {
             editor.chain().focus().toggleHeading({ level: 3 }).run();
           },
@@ -120,6 +127,7 @@ export function createEditorCommandGroups(
           keywords: ["list", "bullet", "列表", "无序"],
           icon: List,
           shortcutHint: "-",
+          keyboardShortcut: "⌘⇧8",
           run: (editor) => {
             editor.chain().focus().toggleBulletList().run();
           },
@@ -132,6 +140,7 @@ export function createEditorCommandGroups(
           keywords: ["list", "ordered", "列表", "有序"],
           icon: ListOrdered,
           shortcutHint: "1.",
+          keyboardShortcut: "⌘⇧7",
           run: (editor) => {
             editor.chain().focus().toggleOrderedList().run();
           },
@@ -161,7 +170,8 @@ export function createEditorCommandGroups(
           description: "引用块",
           keywords: ["quote", "blockquote", "引用"],
           icon: Quote,
-          shortcutHint: "\"",
+          shortcutHint: ">",
+          keyboardShortcut: "⌘⇧B",
           run: (editor) => {
             editor.chain().focus().toggleBlockquote().run();
           },
@@ -199,7 +209,8 @@ export function createEditorCommandGroups(
           description: "带语法高亮的代码块",
           keywords: ["code", "代码", "代码块"],
           icon: Code2,
-          shortcutHint: "</>",
+          shortcutHint: "```",
+          keyboardShortcut: "⌘⌥C",
           run: (editor) => {
             editor.chain().focus().toggleCodeBlock().run();
           },
@@ -228,6 +239,17 @@ export function createEditorCommandGroups(
           icon: PenTool,
           run: (editor) => {
             editor.chain().focus().insertContent({ type: "excalidrawBlock" }).run();
+          },
+          transformable: false,
+        },
+        {
+          id: "toc",
+          title: "目录",
+          description: "自动生成文档目录",
+          keywords: ["toc", "table of contents", "目录", "大纲", "outline"],
+          icon: TableOfContents,
+          run: (editor) => {
+            editor.chain().focus().insertContent({ type: "tocBlock" }).run();
           },
           transformable: false,
         },

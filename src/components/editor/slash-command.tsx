@@ -335,10 +335,19 @@ export function SlashCommandMenu({
                         {item.description}
                       </div>
                     </div>
-                    {item.shortcutHint && (
-                      <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-mono text-stone-400 dark:bg-stone-800 dark:text-stone-500">
-                        {item.shortcutHint}
-                      </span>
+                    {(item.shortcutHint || item.keyboardShortcut) && (
+                      <div className="flex shrink-0 items-center gap-1">
+                        {item.shortcutHint && (
+                          <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-mono text-stone-400 dark:bg-stone-800 dark:text-stone-500">
+                            {item.shortcutHint}
+                          </span>
+                        )}
+                        {item.keyboardShortcut && (
+                          <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-mono text-stone-400 dark:bg-stone-800 dark:text-stone-500">
+                            {item.keyboardShortcut}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </button>
                 );

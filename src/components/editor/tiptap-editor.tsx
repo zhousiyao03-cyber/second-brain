@@ -22,7 +22,6 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Typography from "@tiptap/extension-typography";
 import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
@@ -30,7 +29,7 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import Color from "@tiptap/extension-color";
 import { TextStyle } from "@tiptap/extension-text-style";
-import { common, createLowlight } from "lowlight";
+import { CodeBlockWithLang } from "./code-block-with-lang";
 import {
   ArrowDown,
   ArrowUp,
@@ -64,8 +63,8 @@ import {
 } from "./editor-block-ops";
 import { ToggleBlock, createToggleBlockNode } from "./toggle-block";
 import { ExcalidrawBlock } from "./excalidraw-block";
-
-const lowlight = createLowlight(common);
+import { TocBlock } from "./toc-block";
+import { SearchReplace, SearchBar } from "./search-replace";
 
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set([
@@ -79,7 +78,7 @@ const BLOCK_CONTROL_GUTTER_RIGHT_PADDING = 12;
 const BLOCK_CONTROL_BUTTON_SIZE = 24;
 const BLOCK_CONTROL_LEFT_OFFSET = 60;
 const BLOCK_SELECTOR =
-  "p, h1, h2, h3, ul, ol, blockquote, pre, hr, img, table, [data-callout-block='true'], [data-toggle-block='true'], [data-excalidraw-block='true']";
+  "p, h1, h2, h3, ul, ol, blockquote, pre, hr, img, table, [data-callout-block='true'], [data-toggle-block='true'], [data-excalidraw-block='true'], [data-toc-block='true']";
 
 interface TiptapEditorProps {
   content?: string;
@@ -259,6 +258,7 @@ export function TiptapEditor({
   const [blockActionMenuState, setBlockActionMenuState] =
     useState<BlockActionMenuState | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TiptapEditorInstance | null>(null);
   const editorSurfaceRef = useRef<HTMLDivElement>(null);
@@ -560,7 +560,7 @@ export function TiptapEditor({
           alwaysPreserveAspectRatio: true,
         },
       }),
-      CodeBlockLowlight.configure({ lowlight }),
+      CodeBlockWithLang,
       Typography,
       Table.configure({ resizable: true }),
       TableRow,
@@ -571,6 +571,10 @@ export function TiptapEditor({
       CalloutBlock,
       ToggleBlock,
       ExcalidrawBlock,
+      TocBlock,
+      SearchReplace.configure({
+        onOpen: () => setSearchOpen(true),
+      }),
       slashCommandExtension,
     ],
     content: parseEditorContent(content),
@@ -737,6 +741,20 @@ export function TiptapEditor({
         return;
       }
 
+      if (item.id === "toc") {
+        const tocNodeType = currentEditor.state.schema.nodes.tocBlock;
+        if (!tocNodeType) return;
+
+        const node = tocNodeType.create();
+        insertNodeRelativeToBlock(
+          currentEditor,
+          insertMenuState.targetPos,
+          insertMenuState.direction,
+          node
+        );
+        return;
+      }
+
       const insertedPosition = insertParagraphRelativeToBlock(
         currentEditor,
         insertMenuState.targetPos,
@@ -817,6 +835,7 @@ export function TiptapEditor({
       "calloutBlock",
       "toggleBlock",
       "excalidrawBlock",
+      "tocBlock",
     ].includes(block.node.type.name);
 
     if (transformable) {
@@ -882,6 +901,13 @@ export function TiptapEditor({
 
   return (
     <div className="relative">
+      {editable && (
+        <SearchBar
+          editor={editor}
+          isOpen={searchOpen}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
       {editable && <BubbleToolbar editor={editor} />}
       {editable && <TableToolbar editor={editor} />}
 
