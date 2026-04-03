@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 import { ChevronsLeft, ChevronsRight, List } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,26 +36,29 @@ export function TocSidebar({ editor }: TocSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [headings, setHeadings] = useState<TocEntry[]>([]);
   const [activePos, setActivePos] = useState<number | null>(null);
+  const headingsRef = useRef(headings);
+  headingsRef.current = headings;
 
   const updateHeadings = useCallback(() => {
     if (!editor) return;
     setHeadings(scanHeadings(editor));
   }, [editor]);
 
-  // Track which heading is closest to viewport top
+  // Track which heading is closest to cursor — reads headings via ref to
+  // avoid re-creating this callback (and re-running the effect) on every
+  // headings change, which previously caused an infinite render loop.
   const updateActiveHeading = useCallback(() => {
-    if (!editor || !headings.length) return;
+    if (!editor || !headingsRef.current.length) return;
 
     const { from } = editor.state.selection;
-    // Find the heading that's at or before the cursor
     let closest: TocEntry | null = null;
-    for (const h of headings) {
+    for (const h of headingsRef.current) {
       if (h.pos <= from) {
         closest = h;
       }
     }
     setActivePos(closest?.pos ?? null);
-  }, [editor, headings]);
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
