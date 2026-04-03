@@ -4,7 +4,22 @@ import { use, useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, ImagePlus, Tag, X } from "lucide-react";
-import { TiptapEditor } from "@/components/editor/tiptap-editor";
+import dynamic from "next/dynamic";
+
+const TiptapEditor = dynamic(
+  () =>
+    import("@/components/editor/tiptap-editor").then((m) => m.TiptapEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-3 py-4">
+        <div className="h-4 w-full animate-pulse rounded bg-stone-200/40 dark:bg-stone-800/40" />
+        <div className="h-4 w-5/6 animate-pulse rounded bg-stone-200/40 dark:bg-stone-800/40" />
+        <div className="h-4 w-4/6 animate-pulse rounded bg-stone-200/40 dark:bg-stone-800/40" />
+      </div>
+    ),
+  }
+);
 import { useToast } from "@/components/ui/toast";
 import { trpc } from "@/lib/trpc";
 import { cn, formatDate } from "@/lib/utils";

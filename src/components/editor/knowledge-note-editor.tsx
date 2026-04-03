@@ -4,7 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Tag, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Editor } from "@tiptap/react";
-import { TiptapEditor } from "@/components/editor/tiptap-editor";
+import dynamic from "next/dynamic";
+
+const TiptapEditor = dynamic(
+  () =>
+    import("@/components/editor/tiptap-editor").then((m) => m.TiptapEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-3 py-4">
+        <div className="h-4 w-full animate-pulse rounded bg-stone-200/40 dark:bg-stone-800/40" />
+        <div className="h-4 w-5/6 animate-pulse rounded bg-stone-200/40 dark:bg-stone-800/40" />
+        <div className="h-4 w-4/6 animate-pulse rounded bg-stone-200/40 dark:bg-stone-800/40" />
+      </div>
+    ),
+  }
+);
 import { TocSidebar } from "@/components/editor/toc-sidebar";
 import { cn, formatDate } from "@/lib/utils";
 
