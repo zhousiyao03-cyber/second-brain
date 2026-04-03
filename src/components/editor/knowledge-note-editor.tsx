@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Tag, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type { Editor } from "@tiptap/react";
 import { TiptapEditor } from "@/components/editor/tiptap-editor";
+import { TocSidebar } from "@/components/editor/toc-sidebar";
 import { cn, formatDate } from "@/lib/utils";
 
 const DRAFT_PREFIX = "note-draft:";
@@ -110,6 +112,7 @@ export function KnowledgeNoteEditor({
   const titleRef = useRef(note.title);
   const tagsRef = useRef<string[]>(parseTags(note.tags));
   const [draftRecovery, setDraftRecovery] = useState<DraftData | null>(null);
+  const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
 
   // Keep refs in sync with state
   useEffect(() => { titleRef.current = title; }, [title]);
@@ -373,14 +376,22 @@ export function KnowledgeNoteEditor({
           />
         </div>
 
-        <TiptapEditor
-          content={note.content ?? undefined}
-          placeholder={emptyMessage}
-          onChange={(content, plainText) => {
-            contentRef.current = { content, plainText };
-            scheduleAutoSave();
-          }}
-        />
+        <div className="flex gap-6">
+          <div className="hidden lg:block">
+            <TocSidebar editor={editorInstance} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <TiptapEditor
+              content={note.content ?? undefined}
+              placeholder={emptyMessage}
+              onEditorReady={setEditorInstance}
+              onChange={(content, plainText) => {
+                contentRef.current = { content, plainText };
+                scheduleAutoSave();
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

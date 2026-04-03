@@ -3,6 +3,7 @@
 import {
   useState,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   type ChangeEvent,
@@ -84,6 +85,7 @@ interface TiptapEditorProps {
   content?: string;
   onChange?: (content: string, plainText: string) => void;
   onError?: (message: string) => void;
+  onEditorReady?: (editor: TiptapEditorInstance) => void;
   editable?: boolean;
   placeholder?: string;
 }
@@ -243,6 +245,7 @@ export function TiptapEditor({
   content,
   onChange,
   onError,
+  onEditorReady,
   editable = true,
   placeholder = "输入 / 以插入命令...",
 }: TiptapEditorProps) {
@@ -652,6 +655,12 @@ export function TiptapEditor({
     },
   });
   editorRef.current = editor;
+
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   const commandGroups = useMemo(
     () =>
