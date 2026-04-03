@@ -129,8 +129,8 @@ export default function LearnPage() {
               className="rounded-[28px] border border-stone-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-md dark:border-stone-800 dark:bg-stone-950 dark:hover:border-stone-700"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl dark:bg-stone-900">
-                  {topic.icon || "📚"}
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-stone-100 text-2xl dark:bg-stone-900">
+                  <span className="truncate leading-none">{topic.icon || "📚"}</span>
                 </div>
                 <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs text-stone-600 dark:bg-stone-900 dark:text-stone-300">
                   {topic.noteCount} {topic.noteCount === 1 ? "note" : "notes"}
