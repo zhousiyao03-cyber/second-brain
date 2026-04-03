@@ -123,7 +123,25 @@ advice_style: "leadership"
 
 用户可编辑预置模板，也可创建自定义模板。
 
-### 6.3 触发机制
+### 6.3 会议参考文档
+
+会议前可上传参考文档，为 LLM 提供背景上下文，使建议更精准：
+
+**支持格式：** Markdown、PDF、纯文本
+
+**使用场景：**
+- 技术评审会 → 上传技术方案文档，LLM 能基于方案细节发现问题
+- Review 会 → 上传 PR diff 或设计文档
+- 项目同步会 → 上传项目计划或 roadmap
+
+**处理方式：**
+- 文档内容作为 LLM prompt 的 context 前缀，与转录文本一起发送
+- 超长文档做 chunking，取与当前讨论最相关的片段（基于关键词匹配）放入 context
+- 每次会议可关联 1-N 个文档
+
+**UI：** 控制栏旁增加"📎 文档"按钮，点击打开文档管理面板（添加/移除/预览）
+
+### 6.4 触发机制
 
 不是每句转录都调用 LLM，按策略触发：
 
@@ -135,7 +153,7 @@ advice_style: "leadership"
    - 技术讨论中出现可质疑的点
 3. **规则命中后调 LLM** — 发送上下文 + 模板 system_prompt，生成具体建议
 
-### 6.4 LLM Provider 配置
+### 6.5 LLM Provider 配置
 
 - 支持 OpenAI 兼容 API 格式（`base_url` + `api_key` + `model`）
 - 默认走本地 Ollama（`http://localhost:11434/v1`）
@@ -252,6 +270,8 @@ meeting-assistant/
 │   │   │   └── templates.rs    # 模板加载与管理
 │   │   ├── transcript/
 │   │   │   └── store.rs        # 转录文本存储
+│   │   ├── documents/
+│   │   │   └── loader.rs       # 文档加载与 chunking（Markdown/PDF/纯文本）
 │   │   └── storage/
 │   │       ├── config.rs       # 配置读写
 │   │       └── history.rs      # 会议记录持久化
@@ -262,6 +282,7 @@ meeting-assistant/
 │   │   ├── ControlBar.tsx      # 顶部控制栏
 │   │   ├── SummaryPanel.tsx    # 会议摘要面板
 │   │   ├── AdvicePanel.tsx     # 发言建议面板
+│   │   ├── DocumentPanel.tsx   # 文档管理面板
 │   │   ├── SettingsDialog.tsx  # 设置弹窗
 │   │   └── SetupGuide.tsx      # 首次使用引导
 │   ├── hooks/
