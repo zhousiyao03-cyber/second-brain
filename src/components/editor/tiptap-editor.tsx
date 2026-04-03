@@ -15,6 +15,7 @@ import {
   type Editor as TiptapEditorInstance,
 } from "@tiptap/react";
 import type { EditorView } from "@tiptap/pm/view";
+import { NodeSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
@@ -43,6 +44,7 @@ import {
   SlashCommandMenu,
 } from "./slash-command";
 import { BubbleToolbar } from "./bubble-toolbar";
+import { TableToolbar } from "./table-toolbar";
 import { CalloutBlock, createCalloutBlockNode } from "./callout-block";
 import {
   createEditorCommandGroups,
@@ -61,6 +63,7 @@ import {
   type BlockInsertDirection,
 } from "./editor-block-ops";
 import { ToggleBlock, createToggleBlockNode } from "./toggle-block";
+import { ExcalidrawBlock } from "./excalidraw-block";
 
 const lowlight = createLowlight(common);
 
@@ -76,7 +79,7 @@ const BLOCK_CONTROL_GUTTER_RIGHT_PADDING = 12;
 const BLOCK_CONTROL_BUTTON_SIZE = 24;
 const BLOCK_CONTROL_LEFT_OFFSET = 60;
 const BLOCK_SELECTOR =
-  "p, h1, h2, h3, ul, ol, blockquote, pre, hr, img, table, [data-callout-block='true'], [data-toggle-block='true']";
+  "p, h1, h2, h3, ul, ol, blockquote, pre, hr, img, table, [data-callout-block='true'], [data-toggle-block='true'], [data-excalidraw-block='true']";
 
 interface TiptapEditorProps {
   content?: string;
@@ -255,6 +258,7 @@ export function TiptapEditor({
   );
   const [blockActionMenuState, setBlockActionMenuState] =
     useState<BlockActionMenuState | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TiptapEditorInstance | null>(null);
   const editorSurfaceRef = useRef<HTMLDivElement>(null);
@@ -355,6 +359,48 @@ export function TiptapEditor({
       targetPos: hoveredBlock.pos,
     });
   }, [hoveredBlock]);
+
+  /** Start a ProseMirror-native drag for the hovered block. */
+  const handleGripDragStart = useCallback(
+    (event: React.DragEvent<HTMLButtonElement>) => {
+      const currentEditor = editorRef.current;
+      if (!currentEditor || !hoveredBlock) return;
+
+      const blockContext = getTopLevelBlockContext(
+        currentEditor,
+        hoveredBlock.pos
+      );
+      if (!blockContext) return;
+
+      const { tr } = currentEditor.state;
+      const nodeSelection = NodeSelection.create(tr.doc, blockContext.pos);
+      currentEditor.view.dispatch(tr.setSelection(nodeSelection));
+
+      currentEditor.view.dragging = {
+        slice: nodeSelection.content(),
+        move: true,
+      };
+
+      const dragImage = document.createElement("img");
+      dragImage.src =
+        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+      document.body.appendChild(dragImage);
+      event.dataTransfer.setDragImage(dragImage, 0, 0);
+      requestAnimationFrame(() => dragImage.remove());
+
+      event.dataTransfer.effectAllowed = "move";
+
+      setIsDragging(true);
+      setInsertMenuState(null);
+      setBlockActionMenuState(null);
+      setSlashCoords(null);
+    },
+    [hoveredBlock]
+  );
+
+  const handleGripDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
 
   const updateHoveredBlock = useCallback(
     (target: EventTarget | null) => {
@@ -524,6 +570,7 @@ export function TiptapEditor({
       Color,
       CalloutBlock,
       ToggleBlock,
+      ExcalidrawBlock,
       slashCommandExtension,
     ],
     content: parseEditorContent(content),
@@ -675,6 +722,21 @@ export function TiptapEditor({
         return;
       }
 
+      if (item.id === "excalidraw") {
+        const excalidrawNodeType =
+          currentEditor.state.schema.nodes.excalidrawBlock;
+        if (!excalidrawNodeType) return;
+
+        const node = excalidrawNodeType.create();
+        insertNodeRelativeToBlock(
+          currentEditor,
+          insertMenuState.targetPos,
+          insertMenuState.direction,
+          node
+        );
+        return;
+      }
+
       const insertedPosition = insertParagraphRelativeToBlock(
         currentEditor,
         insertMenuState.targetPos,
@@ -754,6 +816,7 @@ export function TiptapEditor({
       "horizontalRule",
       "calloutBlock",
       "toggleBlock",
+      "excalidrawBlock",
     ].includes(block.node.type.name);
 
     if (transformable) {
@@ -820,6 +883,7 @@ export function TiptapEditor({
   return (
     <div className="relative">
       {editable && <BubbleToolbar editor={editor} />}
+      {editable && <TableToolbar editor={editor} />}
 
       <div
         ref={editorSurfaceRef}
@@ -863,13 +927,16 @@ export function TiptapEditor({
               </button>
               <button
                 type="button"
+                draggable="true"
                 aria-label="块菜单"
-                title="块菜单"
+                title="拖拽移动块 / 点击打开菜单"
                 data-testid="editor-block-menu-trigger"
                 onClick={() => {
                   handleOpenBlockActionMenu();
                 }}
-                className="flex h-6 w-6 items-center justify-center rounded-md text-stone-400 transition-colors hover:bg-stone-100/80 hover:text-stone-700 dark:text-stone-500 dark:hover:bg-stone-900/80 dark:hover:text-stone-200"
+                onDragStart={handleGripDragStart}
+                onDragEnd={handleGripDragEnd}
+                className="flex h-6 w-6 cursor-grab items-center justify-center rounded-md text-stone-400 transition-colors hover:bg-stone-100/80 hover:text-stone-700 dark:text-stone-500 dark:hover:bg-stone-900/80 dark:hover:text-stone-200"
               >
                 <GripVertical size={16} strokeWidth={1.75} />
               </button>

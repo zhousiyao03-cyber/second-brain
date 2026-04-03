@@ -13,6 +13,7 @@ import {
   ListTree,
   ListOrdered,
   Minus,
+  PenTool,
   Quote,
   Table,
   Type,
@@ -216,6 +217,17 @@ export function createEditorCommandGroups(
               .focus()
               .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
               .run();
+          },
+          transformable: false,
+        },
+        {
+          id: "excalidraw",
+          title: "画板",
+          description: "插入画板（流程图/思维导图/架构图）",
+          keywords: ["draw", "excalidraw", "diagram", "画板", "画图", "流程图", "思维导图", "架构图"],
+          icon: PenTool,
+          run: (editor) => {
+            editor.chain().focus().insertContent({ type: "excalidrawBlock" }).run();
           },
           transformable: false,
         },

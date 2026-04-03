@@ -388,6 +388,17 @@ body {
   min-height: 1.5rem;
 }
 
+/* Drag-and-drop: dim the source block while dragging */
+.ProseMirror-hideselection .notion-editor [dragging="true"] {
+  opacity: 0.4;
+}
+
+.ProseMirror .ProseMirror-selectednode {
+  outline: 2px solid rgba(35, 131, 226, 0.35);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* ========== Table Styles ========== */
 
 .notion-editor table {
@@ -439,6 +450,41 @@ body {
 
 .notion-editor .resize-cursor {
   cursor: col-resize;
+}
+
+/* ========== Excalidraw Block ========== */
+
+.excalidraw-block-container {
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0.75rem 0;
+  background: white;
+}
+
+.excalidraw-block-container:hover {
+  border-color: #d6d3d1;
+}
+
+.excalidraw-block-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 200px;
+  color: #a8a29e;
+  cursor: pointer;
+  transition: background-color 120ms;
+}
+
+.excalidraw-block-placeholder:hover {
+  background: #fafaf9;
+}
+
+.excalidraw-block-preview {
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain;
 }
 
 /* ========== Dark Mode Editor Overrides ========== */
@@ -537,6 +583,23 @@ body {
 
 .dark .notion-toggle-summary::placeholder {
   color: #78716c;
+}
+
+.dark .excalidraw-block-container {
+  border-color: #3a3a3a;
+  background: #1c1917;
+}
+
+.dark .excalidraw-block-container:hover {
+  border-color: #525252;
+}
+
+.dark .excalidraw-block-placeholder {
+  color: #78716c;
+}
+
+.dark .excalidraw-block-placeholder:hover {
+  background: #292524;
 }
 
 .dark .notion-editor th,
