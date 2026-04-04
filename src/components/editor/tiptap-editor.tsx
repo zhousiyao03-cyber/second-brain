@@ -34,6 +34,7 @@ import { CodeBlockWithLang } from "./code-block-with-lang";
 import {
   ArrowDown,
   ArrowUp,
+  Columns2,
   Copy,
   GripVertical,
   Plus,
@@ -68,7 +69,6 @@ import { ImageRowBlock } from "./image-row-block";
 import { MermaidBlock } from "./mermaid-block";
 import { TocBlock } from "./toc-block";
 import { SearchReplace, SearchBar } from "./search-replace";
-import { ImageMergeDrop } from "./image-merge-drop";
 import { MarkdownTablePaste } from "./markdown-table-paste";
 
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
@@ -587,7 +587,6 @@ export function TiptapEditor({
       ImageRowBlock,
       MermaidBlock,
       TocBlock,
-      ImageMergeDrop,
       MarkdownTablePaste,
       SearchReplace.configure({
         onOpen: () => setSearchOpen(true),
@@ -829,6 +828,116 @@ export function TiptapEditor({
           moveTopLevelBlock(editor, state.targetPos, "down");
         },
       });
+    }
+
+    // "Merge into row" action for image blocks when an adjacent block is also an image or imageRowBlock
+    if (block.node.type.name === "image" || block.node.type.name === "imageRowBlock") {
+      const doc = currentEditor.state.doc;
+      // Check next sibling
+      if (block.index < doc.childCount - 1) {
+        let nextPos = state.targetPos + block.node.nodeSize;
+        const nextNode = doc.nodeAt(nextPos);
+        if (nextNode && (nextNode.type.name === "image" || nextNode.type.name === "imageRowBlock")) {
+          items.push({
+            id: "merge-with-next",
+            title: "与下方图片并排",
+            description: "合并为并排图片行",
+            keywords: ["merge", "row", "并排"],
+            icon: Columns2,
+            run: (editor) => {
+              const curBlock = getTopLevelBlockContext(editor, state.targetPos);
+              if (!curBlock) return;
+              const curNode = curBlock.node;
+              const curEnd = state.targetPos + curNode.nodeSize;
+              const nNode = editor.state.doc.nodeAt(curEnd);
+              if (!nNode) return;
+
+              // Collect images from both blocks
+              const imgs: { src: string; width?: number }[] = [];
+              const collectFromNode = (n: typeof curNode) => {
+                if (n.type.name === "image") {
+                  const src = n.attrs.src as string;
+                  if (src) imgs.push({ src });
+                } else if (n.type.name === "imageRowBlock") {
+                  try {
+                    const parsed = JSON.parse(n.attrs.images as string);
+                    if (Array.isArray(parsed)) imgs.push(...parsed);
+                  } catch { /* empty */ }
+                }
+              };
+              collectFromNode(curNode);
+              collectFromNode(nNode);
+
+              const rowType = editor.state.schema.nodes.imageRowBlock;
+              if (!rowType || imgs.length === 0) return;
+              const newNode = rowType.create({ images: JSON.stringify(imgs) });
+              const { tr } = editor.state;
+              tr.replaceWith(state.targetPos, curEnd + nNode.nodeSize, newNode);
+              editor.view.dispatch(tr);
+            },
+          });
+        }
+      }
+      // Check previous sibling
+      if (block.index > 0) {
+        let prevPos = 0;
+        let prevNode = null as typeof block.node | null;
+        let idx = 0;
+        doc.forEach((node, offset) => {
+          if (idx === block.index - 1) {
+            prevPos = offset;
+            prevNode = node;
+          }
+          idx++;
+        });
+        if (prevNode && (prevNode.type.name === "image" || prevNode.type.name === "imageRowBlock")) {
+          items.push({
+            id: "merge-with-prev",
+            title: "与上方图片并排",
+            description: "合并为并排图片行",
+            keywords: ["merge", "row", "并排"],
+            icon: Columns2,
+            run: (editor) => {
+              // Re-find prev block at run time
+              const curBlock2 = getTopLevelBlockContext(editor, state.targetPos);
+              if (!curBlock2 || curBlock2.index === 0) return;
+              let pPos = 0;
+              let pNode = null as typeof block.node | null;
+              let i2 = 0;
+              editor.state.doc.forEach((node, offset) => {
+                if (i2 === curBlock2.index - 1) {
+                  pPos = offset;
+                  pNode = node;
+                }
+                i2++;
+              });
+              if (!pNode) return;
+
+              const imgs: { src: string; width?: number }[] = [];
+              const collectFromNode = (n: typeof block.node) => {
+                if (n.type.name === "image") {
+                  const src = n.attrs.src as string;
+                  if (src) imgs.push({ src });
+                } else if (n.type.name === "imageRowBlock") {
+                  try {
+                    const parsed = JSON.parse(n.attrs.images as string);
+                    if (Array.isArray(parsed)) imgs.push(...parsed);
+                  } catch { /* empty */ }
+                }
+              };
+              collectFromNode(pNode);
+              collectFromNode(curBlock2.node);
+
+              const rowType = editor.state.schema.nodes.imageRowBlock;
+              if (!rowType || imgs.length === 0) return;
+              const newNode = rowType.create({ images: JSON.stringify(imgs) });
+              const { tr } = editor.state;
+              tr.replaceWith(pPos, state.targetPos + curBlock2.node.nodeSize, newNode);
+              editor.view.dispatch(tr);
+            },
+          });
+        }
+      }
     }
 
     items.push(
