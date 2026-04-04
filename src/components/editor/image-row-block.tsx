@@ -250,7 +250,7 @@ function ImageRowNodeView({ node, updateAttributes, editor, getPos }: NodeViewPr
           </div>
         ))}
 
-        {isEditable && (
+        {isEditable && images.length === 0 && (
           <button
             type="button"
             className="image-row-add-btn"
@@ -265,7 +265,7 @@ function ImageRowNodeView({ node, updateAttributes, editor, getPos }: NodeViewPr
             }}
           >
             <ImagePlus size={20} />
-            <span>{images.length === 0 ? "添加图片" : "添加"}</span>
+            <span>添加图片</span>
           </button>
         )}
       </div>
