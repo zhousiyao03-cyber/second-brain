@@ -10,17 +10,22 @@ import {
 } from "@tiptap/react";
 import { GitBranch } from "lucide-react";
 
+let mermaidInitialized = false;
+
 /**
  * Render a Mermaid diagram string into an SVG string.
  * Uses dynamic import so mermaid is only loaded client-side.
  */
 async function renderMermaid(code: string): Promise<string> {
   const { default: mermaid } = await import("mermaid");
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: "default",
-    securityLevel: "loose",
-  });
+  if (!mermaidInitialized) {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "default",
+      securityLevel: "strict",
+    });
+    mermaidInitialized = true;
+  }
   const id = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const { svg } = await mermaid.render(id, code);
   return svg;
@@ -35,9 +40,8 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
 
   const code = (node.attrs.code as string) || "";
 
-  // Render the mermaid diagram whenever code changes and we're not editing
+  // Render the mermaid diagram whenever code changes (debounced during editing)
   useEffect(() => {
-    if (editing) return;
     if (!code.trim()) {
       setSvgHtml(null);
       setError(null);
@@ -45,22 +49,27 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
     }
 
     let cancelled = false;
-    renderMermaid(code)
-      .then((svg) => {
-        if (!cancelled) {
-          setSvgHtml(svg);
-          setError(null);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setSvgHtml(null);
-          setError(err instanceof Error ? err.message : "Mermaid 渲染失败");
-        }
-      });
+    const delay = editing ? 500 : 0;
+
+    const timer = setTimeout(() => {
+      renderMermaid(code)
+        .then((svg) => {
+          if (!cancelled) {
+            setSvgHtml(svg);
+            setError(null);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setSvgHtml(null);
+            setError(err instanceof Error ? err.message : "Mermaid 渲染失败");
+          }
+        });
+    }, delay);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [code, editing]);
 

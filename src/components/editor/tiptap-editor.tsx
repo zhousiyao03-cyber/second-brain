@@ -606,6 +606,9 @@ export function TiptapEditor({
         class:
           "notion-editor focus:outline-none min-h-[60vh] px-1 py-2 data-[placeholder]:text-stone-400",
       },
+      // Paste priority: image files (here) > markdown structures (MarkdownTablePaste plugin).
+      // This handler only fires for clipboard items with image/* files.
+      // Text-only paste (markdown tables, mermaid) falls through to the plugin.
       handlePaste(view, event) {
         const files = Array.from(event.clipboardData?.files ?? []).filter(
           (file) => file.type.startsWith("image/")

@@ -113,7 +113,8 @@ export const ImageMergeDrop = Extension.create({
             // Don't merge with self
             if (!isTargetImageRow && !targetSrc) return false;
 
-            // Find the dragged node's original position to delete it
+            // The drag source position is captured by ProseMirror as a NodeSelection
+            // before the drop. Use it to locate the exact dragged node.
             const { state } = view;
             const dragSelection = state.selection;
             let dragFrom = -1;
@@ -122,23 +123,10 @@ export const ImageMergeDrop = Extension.create({
             if (dragSelection instanceof NodeSelection) {
               dragFrom = dragSelection.from;
               dragTo = dragSelection.to;
-            } else {
-              // Try to find the dragged node in the document
-              state.doc.forEach((node, offset) => {
-                if (draggedSrc && getImageSrc(node) === draggedSrc && dragFrom === -1) {
-                  dragFrom = offset;
-                  dragTo = offset + node.nodeSize;
-                } else if (isDraggedImageRow && node.type.name === "imageRowBlock" && dragFrom === -1) {
-                  const nodeImages = parseRowImages(node);
-                  const draggedImages = parseRowImages(draggedNode);
-                  if (JSON.stringify(nodeImages) === JSON.stringify(draggedImages)) {
-                    dragFrom = offset;
-                    dragTo = offset + node.nodeSize;
-                  }
-                }
-              });
             }
 
+            // NodeSelection is the reliable source — if we don't have it, bail
+            // rather than guessing by content match (which fails for duplicate images)
             if (dragFrom < 0) return false;
 
             // Don't merge with itself
@@ -170,7 +158,8 @@ export const ImageMergeDrop = Extension.create({
               return false;
             }
 
-            // Apply the transaction: delete dragged node, replace target with imageRowBlock
+            // Apply the transaction: replace target with imageRowBlock, then delete dragged node.
+            // Use tr.mapping to safely track position shifts between steps.
             const { tr } = state;
             const schema = state.schema;
             const imageRowType = schema.nodes.imageRowBlock;
@@ -180,18 +169,13 @@ export const ImageMergeDrop = Extension.create({
               images: JSON.stringify(mergedImages),
             });
 
-            // Delete the dragged node first, then replace target
-            // Need to handle position shifts carefully
-            if (dragFrom < targetPos) {
-              // Dragged node is before target
-              const shift = dragTo - dragFrom;
-              tr.delete(dragFrom, dragTo);
-              tr.replaceWith(targetPos - shift, targetPos - shift + targetNode.nodeSize, newNode);
-            } else {
-              // Dragged node is after target
-              tr.replaceWith(targetPos, targetPos + targetNode.nodeSize, newNode);
-              tr.delete(dragFrom + (newNode.nodeSize - targetNode.nodeSize), dragTo + (newNode.nodeSize - targetNode.nodeSize));
-            }
+            // Step 1: Replace the target node with the merged imageRowBlock
+            tr.replaceWith(targetPos, targetPos + targetNode.nodeSize, newNode);
+
+            // Step 2: Delete the dragged node using mapped positions
+            const mappedFrom = tr.mapping.map(dragFrom);
+            const mappedTo = tr.mapping.map(dragTo);
+            tr.delete(mappedFrom, mappedTo);
 
             view.dispatch(tr);
             event.preventDefault();

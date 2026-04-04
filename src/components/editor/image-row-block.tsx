@@ -45,7 +45,7 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dragSourceIndex, setDragSourceIndex] = useState<number | null>(null);
-  const [, setResizing] = useState<{ index: number; startX: number; startWidth: number } | null>(null);
+  const [resizePreview, setResizePreview] = useState<{ index: number; width: number } | null>(null);
 
   const updateImages = useCallback(
     (newImages: GalleryImage[]) => {
@@ -121,18 +121,21 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
       e.preventDefault();
       const startX = e.clientX;
       const startWidth = currentWidth;
-      setResizing({ index, startX, startWidth });
 
       const onMove = (ev: MouseEvent) => {
         const delta = ev.clientX - startX;
         const newWidth = Math.max(80, startWidth + delta);
-        const next = [...images];
-        next[index] = { ...next[index], width: newWidth };
-        updateImages(next);
+        setResizePreview({ index, width: newWidth });
       };
 
-      const onUp = () => {
-        setResizing(null);
+      const onUp = (ev: MouseEvent) => {
+        // Commit final width to node attributes only on mouseup
+        const delta = ev.clientX - startX;
+        const finalWidth = Math.max(80, startWidth + delta);
+        const next = [...images];
+        next[index] = { ...next[index], width: finalWidth };
+        updateImages(next);
+        setResizePreview(null);
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
       };
@@ -154,7 +157,7 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
           <div
             key={i}
             className={`image-row-item ${dragOverIndex === i ? "image-row-item-dragover" : ""}`}
-            style={img.width ? { width: img.width, flexShrink: 0 } : undefined}
+            style={(resizePreview?.index === i ? resizePreview.width : img.width) ? { width: resizePreview?.index === i ? resizePreview.width : img.width, flexShrink: 0 } : undefined}
             onDragOver={(e) => {
               e.preventDefault();
               setDragOverIndex(i);
