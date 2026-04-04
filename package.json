@@ -10,8 +10,8 @@
     "lint": "mkdir -p test-results && eslint",
     "test:e2e": "playwright test",
     "focus:collector": "node tools/focus-collector/collector.mjs",
-    "usage:report": "node tools/usage-reporter/report.mjs",
-    "usage:daemon": "node tools/usage-reporter/report.mjs --daemon",
+    "usage:report": "node tools/usage-reporter/report.mjs --once",
+    "usage:daemon": "node tools/usage-reporter/report.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
@@ -50,6 +50,7 @@
     "@trpc/react-query": "^11.14.1",
     "@trpc/server": "^11.14.1",
     "ai": "^6.0.134",
+    "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",

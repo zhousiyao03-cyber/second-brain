@@ -3,19 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/server/db";
 import { usageRecords } from "@/server/db/schema";
 
-const USAGE_SECRET = process.env.USAGE_REPORT_SECRET;
-
 export async function POST(request: NextRequest) {
-  // Simple token auth
-  if (!USAGE_SECRET) {
-    return NextResponse.json({ error: "USAGE_REPORT_SECRET not configured" }, { status: 500 });
-  }
-
-  const auth = request.headers.get("authorization");
-  if (auth !== `Bearer ${USAGE_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const body = (await request.json()) as {
     entries?: Array<{
       date: string;
