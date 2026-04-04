@@ -413,7 +413,8 @@ export function TiptapEditor({
       handleKeyDown(view, event) {
         if (event.key !== "Backspace") return false;
         const { from, empty } = view.state.selection;
-        if (empty && from === 0 && onFocusTitleRef.current) {
+        // pos 0 = doc open tag, pos 1 = first child (paragraph) start
+        if (empty && from <= 1 && onFocusTitleRef.current) {
           onFocusTitleRef.current();
           return true;
         }
