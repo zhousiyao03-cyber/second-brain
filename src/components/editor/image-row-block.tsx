@@ -8,7 +8,7 @@ import {
   mergeAttributes,
   type NodeViewProps,
 } from "@tiptap/react";
-import { ImagePlus, Trash2, GripVertical } from "lucide-react";
+import { ImagePlus, GripVertical } from "lucide-react";
 
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set([
@@ -32,7 +32,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
+function ImageRowNodeView({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const isEditable = editor.isEditable;
   const images: GalleryImage[] = (() => {
     try {
@@ -43,6 +43,7 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
     }
   })();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dragSourceIndex, setDragSourceIndex] = useState<number | null>(null);
   const [resizePreview, setResizePreview] = useState<{ index: number; width: number } | null>(null);
@@ -82,12 +83,43 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
     [addImages]
   );
 
-  const handleRemove = useCallback(
+  /** Extract an image from the row into a standalone image block below. */
+  const extractImage = useCallback(
     (index: number) => {
-      const next = images.filter((_, i) => i !== index);
-      updateImages(next);
+      const pos = getPos();
+      if (pos === undefined) return;
+
+      const img = images[index];
+      if (!img) return;
+
+      const remaining = images.filter((_, i) => i !== index);
+      const { tr } = editor.state;
+      const endOfRow = pos + node.nodeSize;
+
+      const imageType = editor.state.schema.nodes.image;
+      if (!imageType) return;
+      const imageNode = imageType.create({ src: img.src });
+      tr.insert(endOfRow, imageNode);
+
+      if (remaining.length <= 1) {
+        // 0 or 1 image left — replace row with standalone image(s)
+        if (remaining.length === 1) {
+          const lastImg = remaining[0];
+          const singleNode = imageType.create({ src: lastImg.src });
+          tr.replaceWith(pos, pos + node.nodeSize, singleNode);
+        } else {
+          tr.delete(pos, pos + node.nodeSize);
+        }
+      } else {
+        tr.setNodeMarkup(pos, undefined, {
+          ...node.attrs,
+          images: JSON.stringify(remaining),
+        });
+      }
+
+      editor.view.dispatch(tr);
     },
-    [images, updateImages]
+    [images, editor, node, getPos]
   );
 
   const handleDrop = useCallback(
@@ -116,6 +148,34 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
     [dragSourceIndex, images, updateImages, addImages]
   );
 
+  /**
+   * When a drag ends, check if the drop landed outside the row container.
+   * If so, extract the image into a standalone block.
+   */
+  const handleDragEnd = useCallback(
+    (e: React.DragEvent, index: number) => {
+      setDragSourceIndex(null);
+
+      // Check if the drop target is outside this row container
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const { clientX, clientY } = e;
+
+      const isOutside =
+        clientX < rect.left ||
+        clientX > rect.right ||
+        clientY < rect.top ||
+        clientY > rect.bottom;
+
+      if (isOutside) {
+        extractImage(index);
+      }
+    },
+    [extractImage]
+  );
+
   const handleResizeStart = useCallback(
     (e: React.MouseEvent, index: number, currentWidth: number) => {
       e.preventDefault();
@@ -129,7 +189,6 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
       };
 
       const onUp = (ev: MouseEvent) => {
-        // Commit final width to node attributes only on mouseup
         const delta = ev.clientX - startX;
         const finalWidth = Math.max(80, startWidth + delta);
         const next = [...images];
@@ -152,7 +211,7 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
       data-image-row="true"
       data-editor-block="true"
     >
-      <div contentEditable={false} className="image-row-gallery">
+      <div ref={containerRef} contentEditable={false} className="image-row-gallery">
         {images.map((img, i) => (
           <div
             key={i}
@@ -172,17 +231,10 @@ function ImageRowNodeView({ node, updateAttributes, editor }: NodeViewProps) {
                   className="image-row-drag-handle"
                   draggable
                   onDragStart={() => setDragSourceIndex(i)}
-                  onDragEnd={() => setDragSourceIndex(null)}
+                  onDragEnd={(e) => handleDragEnd(e, i)}
                 >
                   <GripVertical size={14} />
                 </div>
-                <button
-                  type="button"
-                  className="image-row-remove-btn"
-                  onClick={() => handleRemove(i)}
-                >
-                  <Trash2 size={14} />
-                </button>
                 <div
                   className="image-row-resize-handle"
                   onMouseDown={(e) =>

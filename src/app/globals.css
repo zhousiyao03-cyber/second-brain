@@ -679,29 +679,6 @@ body {
   opacity: 1;
 }
 
-.image-row-remove-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 4px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.85);
-  color: #dc2626;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 150ms, background-color 120ms;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-.image-row-item:hover .image-row-remove-btn {
-  opacity: 1;
-}
-
-.image-row-remove-btn:hover {
-  background: rgba(255, 255, 255, 0.95);
-}
-
 .image-row-resize-handle {
   position: absolute;
   top: 0;
@@ -762,15 +739,6 @@ body {
 .dark .image-row-drag-handle {
   background: rgba(28, 25, 23, 0.85);
   color: #a8a29e;
-}
-
-.dark .image-row-remove-btn {
-  background: rgba(28, 25, 23, 0.85);
-  color: #f87171;
-}
-
-.dark .image-row-remove-btn:hover {
-  background: rgba(28, 25, 23, 0.95);
 }
 
 .dark .image-row-add-btn {
