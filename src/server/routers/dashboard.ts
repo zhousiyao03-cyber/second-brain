@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { router, protectedProcedure } from "../trpc";
 import { db } from "../db";
-import { notes, bookmarks, todos } from "../db/schema";
+import { notes, bookmarks, todos, learningNotes, learningTopics, osProjectNotes, osProjects } from "../db/schema";
 import { and, asc, count, desc, eq, gte, like, lt, or } from "drizzle-orm";
 import { normalizeJournalTitlesForUser } from "../notes/journal-titles";
 
@@ -55,6 +55,37 @@ export const dashboardRouter = router({
       .orderBy(asc(todos.dueDate), desc(todos.updatedAt))
       .limit(5);
 
+    // Recent learning notes (across all topics)
+    const recentLearnNotes = await db
+      .select({
+        id: learningNotes.id,
+        title: learningNotes.title,
+        topicId: learningNotes.topicId,
+        topicTitle: learningTopics.title,
+        topicIcon: learningTopics.icon,
+        updatedAt: learningNotes.updatedAt,
+      })
+      .from(learningNotes)
+      .innerJoin(learningTopics, eq(learningNotes.topicId, learningTopics.id))
+      .where(eq(learningTopics.userId, ctx.userId))
+      .orderBy(desc(learningNotes.updatedAt))
+      .limit(5);
+
+    // Recent project notes (across all projects)
+    const recentProjectNotes = await db
+      .select({
+        id: osProjectNotes.id,
+        title: osProjectNotes.title,
+        projectId: osProjectNotes.projectId,
+        projectName: osProjects.name,
+        updatedAt: osProjectNotes.updatedAt,
+      })
+      .from(osProjectNotes)
+      .innerJoin(osProjects, eq(osProjectNotes.projectId, osProjects.id))
+      .where(eq(osProjects.userId, ctx.userId))
+      .orderBy(desc(osProjectNotes.updatedAt))
+      .limit(5);
+
     return {
       counts: {
         notes: noteCount.count,
@@ -62,6 +93,8 @@ export const dashboardRouter = router({
         todosDone: doneCount.count,
       },
       recentNotes,
+      recentLearnNotes,
+      recentProjectNotes,
       pendingTodos,
       todayTodos,
     };
