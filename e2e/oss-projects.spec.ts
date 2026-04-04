@@ -52,7 +52,7 @@ test.describe("OSS projects", () => {
       await page.getByRole("button", { name: "Discover" }).click();
 
       // Should see trending section
-      await expect(page.getByText("Trending")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Trending on GitHub" })).toBeVisible();
 
       // Should see time range toggles
       await expect(page.getByRole("button", { name: "Today" })).toBeVisible();
@@ -65,7 +65,7 @@ test.describe("OSS projects", () => {
 
       // Should see URL input
       await expect(
-        page.getByPlaceholder(/Paste a GitHub repo URL/)
+        page.getByPlaceholder(/github\.com/)
       ).toBeVisible();
     });
 
@@ -76,7 +76,7 @@ test.describe("OSS projects", () => {
 
       // Switch to Discover
       await page.getByRole("button", { name: "Discover" }).click();
-      await expect(page.getByText("Trending")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Trending on GitHub" })).toBeVisible();
 
       // Switch back to My Projects
       await page.getByRole("button", { name: "My Projects" }).click();
