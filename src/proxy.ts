@@ -20,6 +20,7 @@ export default auth((req) => {
     pathname.startsWith("/api/focus/ingest") ||
     pathname.startsWith("/api/focus/status") ||
     pathname.startsWith("/api/focus/pair") ||
+    pathname.startsWith("/api/usage") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 
