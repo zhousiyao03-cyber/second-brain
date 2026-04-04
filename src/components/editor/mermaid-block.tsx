@@ -8,14 +8,10 @@ import {
   mergeAttributes,
   type NodeViewProps,
 } from "@tiptap/react";
-import { GitBranch } from "lucide-react";
+import { GitBranch, Pencil, X, Maximize2 } from "lucide-react";
 
 let mermaidInitialized = false;
 
-/**
- * Render a Mermaid diagram string into an SVG string.
- * Uses dynamic import so mermaid is only loaded client-side.
- */
 async function renderMermaid(code: string): Promise<string> {
   const { default: mermaid } = await import("mermaid");
   if (!mermaidInitialized) {
@@ -33,6 +29,7 @@ async function renderMermaid(code: string): Promise<string> {
 
 function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
   const [editing, setEditing] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [svgHtml, setSvgHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -40,7 +37,6 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
 
   const code = (node.attrs.code as string) || "";
 
-  // Render the mermaid diagram whenever code changes (debounced during editing)
   useEffect(() => {
     if (!code.trim()) {
       setSvgHtml(null);
@@ -76,6 +72,7 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
   const handleStartEditing = useCallback(() => {
     if (!isEditable) return;
     setEditing(true);
+    setFullscreen(false);
   }, [isEditable]);
 
   const handleStopEditing = useCallback(() => {
@@ -89,12 +86,21 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
     [updateAttributes]
   );
 
-  // Auto-focus textarea when entering edit mode
   useEffect(() => {
     if (editing && textareaRef.current) {
       textareaRef.current.focus();
     }
   }, [editing]);
+
+  // Close fullscreen on Escape
+  useEffect(() => {
+    if (!fullscreen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [fullscreen]);
 
   return (
     <NodeViewWrapper
@@ -103,6 +109,7 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
       data-editor-block="true"
     >
       {editing ? (
+        /* ── Edit Mode ── */
         <div contentEditable={false} className="mermaid-block-editor">
           <div className="mermaid-block-editor-header">
             <span className="mermaid-block-editor-label">
@@ -126,7 +133,6 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
             rows={8}
             spellCheck={false}
           />
-          {/* Live preview below the editor */}
           {code.trim() && (
             <div className="mermaid-block-live-preview">
               {error ? (
@@ -138,39 +144,82 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
           )}
         </div>
       ) : (
-        <div
-          contentEditable={false}
-          className="mermaid-block-placeholder"
-          onClick={handleStartEditing}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") handleStartEditing();
-          }}
-        >
+        /* ── View Mode ── */
+        <div contentEditable={false} className="mermaid-block-view">
           {error ? (
             <div className="mermaid-block-error">{error}</div>
           ) : svgHtml ? (
-            <div
-              className="mermaid-block-rendered"
-              dangerouslySetInnerHTML={{ __html: svgHtml }}
-            />
-          ) : (
             <>
+              <div
+                className="mermaid-block-rendered"
+                onClick={() => setFullscreen(true)}
+                dangerouslySetInnerHTML={{ __html: svgHtml }}
+              />
+              {/* Toolbar: top-right corner on hover */}
+              <div className="mermaid-block-toolbar">
+                <button
+                  type="button"
+                  onClick={() => setFullscreen(true)}
+                  title="放大查看"
+                >
+                  <Maximize2 size={14} />
+                </button>
+                {isEditable && (
+                  <button
+                    type="button"
+                    onClick={handleStartEditing}
+                    title="编辑代码"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div
+              className="mermaid-block-empty"
+              onClick={handleStartEditing}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") handleStartEditing();
+              }}
+            >
               <GitBranch size={20} />
               <span>点击编辑 Mermaid 图表</span>
-            </>
+            </div>
           )}
+        </div>
+      )}
+
+      {/* ── Fullscreen Overlay ── */}
+      {fullscreen && svgHtml && (
+        <div
+          className="mermaid-fullscreen-overlay"
+          onClick={() => setFullscreen(false)}
+        >
+          <div
+            className="mermaid-fullscreen-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="mermaid-fullscreen-close"
+              onClick={() => setFullscreen(false)}
+            >
+              <X size={20} />
+            </button>
+            <div
+              className="mermaid-fullscreen-svg"
+              dangerouslySetInnerHTML={{ __html: svgHtml }}
+            />
+          </div>
         </div>
       )}
     </NodeViewWrapper>
   );
 }
 
-/**
- * Tiptap node extension for embedding Mermaid diagrams.
- * The mermaid source code is stored in the `code` attribute.
- */
 export const MermaidBlock = Node.create({
   name: "mermaidBlock",
 
