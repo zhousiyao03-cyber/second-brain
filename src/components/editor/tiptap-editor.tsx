@@ -81,6 +81,9 @@ const ACCEPTED_IMAGE_TYPES = new Set([
 const BLOCK_CONTROL_GUTTER_WIDTH = 96;
 const BLOCK_CONTROL_GUTTER_RIGHT_PADDING = 12;
 const BLOCK_CONTROL_BUTTON_SIZE = 24;
+/** Tracks the position of a block being dragged via the grip handle. */
+let gripDragSource: { pos: number; typeName: string; attrs: Record<string, unknown>; nodeSize: number } | null = null;
+
 const BLOCK_CONTROL_LEFT_OFFSET = 60;
 const BLOCK_SELECTOR =
   "p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, hr, img, table, [data-callout-block='true'], [data-toggle-block='true'], [data-excalidraw-block='true'], [data-image-row='true'], [data-mermaid-block='true'], [data-toc-block='true']";
@@ -403,6 +406,14 @@ export function TiptapEditor({
 
       event.dataTransfer.effectAllowed = "move";
 
+      // Track drag source for image merge detection in handleDrop
+      gripDragSource = {
+        pos: blockContext.pos,
+        typeName: blockContext.node.type.name,
+        attrs: blockContext.node.attrs,
+        nodeSize: blockContext.node.nodeSize,
+      };
+
       setIsDragging(true);
       setInsertMenuState(null);
       setBlockActionMenuState(null);
@@ -412,6 +423,7 @@ export function TiptapEditor({
   );
 
   const handleGripDragEnd = useCallback(() => {
+    gripDragSource = null;
     setIsDragging(false);
   }, []);
 
@@ -636,72 +648,64 @@ export function TiptapEditor({
         return true;
       },
       handleDrop(view, event) {
-        // Image merge: when dragging an image block onto another image block
-        const dragging = view.dragging;
-        if (dragging?.move && dragging.slice.content.childCount === 1) {
-          const draggedNode = dragging.slice.content.firstChild!;
-          if (draggedNode.type.name === "image" || draggedNode.type.name === "imageRowBlock") {
-            const dropCoords = view.posAtCoords({ left: event.clientX, top: event.clientY });
-            if (dropCoords) {
-              // Find the target block at the drop position
-              const doc = view.state.doc;
-              let targetPos = -1;
-              let targetNodeSize = 0;
-              let targetTypeName = "";
-              let targetAttrs: Record<string, unknown> = {};
-              doc.forEach((node, offset) => {
-                if (targetPos >= 0) return;
+        // Image merge: dragging an image/imageRow via grip handle onto another image/imageRow
+        if (gripDragSource && (gripDragSource.typeName === "image" || gripDragSource.typeName === "imageRowBlock")) {
+          const dropCoords = view.posAtCoords({ left: event.clientX, top: event.clientY });
+          if (dropCoords) {
+            const doc = view.state.doc;
+            let targetPos = -1;
+            let targetNodeSize = 0;
+            let targetTypeName = "";
+            let targetAttrs: Record<string, unknown> = {};
+            doc.forEach((node, offset) => {
+              if (targetPos >= 0) return;
+              if (node.type.name === "image" || node.type.name === "imageRowBlock") {
                 const nodeEnd = offset + node.nodeSize;
                 if (dropCoords.pos >= offset && dropCoords.pos <= nodeEnd) {
-                  if (node.type.name === "image" || node.type.name === "imageRowBlock") {
-                    targetPos = offset;
-                    targetNodeSize = node.nodeSize;
-                    targetTypeName = node.type.name;
-                    targetAttrs = node.attrs;
-                  }
+                  targetPos = offset;
+                  targetNodeSize = node.nodeSize;
+                  targetTypeName = node.type.name;
+                  targetAttrs = node.attrs;
                 }
-              });
+              }
+            });
 
-              if (targetPos >= 0 && targetTypeName) {
-                // Get drag source position from the selection
-                const sel = view.state.selection;
-                if (sel instanceof NodeSelection && sel.from !== targetPos) {
-                  const dragFrom = sel.from;
-                  const dragTo = sel.to;
+            if (targetPos >= 0 && targetTypeName && targetPos !== gripDragSource.pos) {
+              const collectImgs = (name: string, attrs: Record<string, unknown>): { src: string }[] => {
+                if (name === "image") {
+                  const src = attrs.src as string;
+                  return src ? [{ src }] : [];
+                }
+                if (name === "imageRowBlock") {
+                  try {
+                    const parsed = JSON.parse(attrs.images as string);
+                    return Array.isArray(parsed) ? parsed : [];
+                  } catch { return []; }
+                }
+                return [];
+              };
 
-                  // Collect images from both nodes
-                  const collectFromAttrs = (name: string, attrs: Record<string, unknown>): { src: string }[] => {
-                    if (name === "image") {
-                      const src = attrs.src as string;
-                      return src ? [{ src }] : [];
-                    }
-                    if (name === "imageRowBlock") {
-                      try {
-                        const parsed = JSON.parse(attrs.images as string);
-                        return Array.isArray(parsed) ? parsed : [];
-                      } catch { return []; }
-                    }
-                    return [];
-                  };
+              const targetImages = collectImgs(targetTypeName, targetAttrs);
+              const draggedImages = collectImgs(gripDragSource.typeName, gripDragSource.attrs);
 
-                  const targetImages = collectFromAttrs(targetTypeName, targetAttrs);
-                  const draggedImages = collectFromAttrs(draggedNode.type.name, draggedNode.attrs);
-                  if (targetImages.length && draggedImages.length) {
-                    const merged = [...targetImages, ...draggedImages];
-                    const schema = view.state.schema;
-                    const rowType = schema.nodes.imageRowBlock;
-                    if (rowType) {
-                      const newNode = rowType.create({ images: JSON.stringify(merged) });
-                      const { tr } = view.state;
-                      tr.replaceWith(targetPos, targetPos + targetNodeSize, newNode);
-                      const mappedFrom = tr.mapping.map(dragFrom);
-                      const mappedTo = tr.mapping.map(dragTo);
-                      tr.delete(mappedFrom, mappedTo);
-                      view.dispatch(tr);
-                      event.preventDefault();
-                      return true;
-                    }
-                  }
+              if (targetImages.length && draggedImages.length) {
+                const merged = [...targetImages, ...draggedImages];
+                const rowType = view.state.schema.nodes.imageRowBlock;
+                if (rowType) {
+                  const newNode = rowType.create({ images: JSON.stringify(merged) });
+                  const { tr } = view.state;
+                  const srcPos = gripDragSource.pos;
+                  const srcSize = gripDragSource.nodeSize;
+
+                  // Replace target first, then delete source using mapping
+                  tr.replaceWith(targetPos, targetPos + targetNodeSize, newNode);
+                  const mappedSrcPos = tr.mapping.map(srcPos);
+                  tr.delete(mappedSrcPos, mappedSrcPos + srcSize);
+
+                  view.dispatch(tr);
+                  gripDragSource = null;
+                  event.preventDefault();
+                  return true;
                 }
               }
             }
