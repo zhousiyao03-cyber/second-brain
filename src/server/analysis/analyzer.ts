@@ -47,6 +47,12 @@ export async function startAnalysis(
   userId: string
 ): Promise<{ status: "analyzing" | "pending" }> {
   if (runningCount < MAX_CONCURRENT) {
+    // Set status BEFORE firing off the background job so the frontend sees it immediately.
+    await db
+      .update(osProjects)
+      .set({ analysisStatus: "analyzing", updatedAt: new Date() })
+      .where(and(eq(osProjects.id, projectId), eq(osProjects.userId, userId)));
+
     // Fire-and-forget — do not await so the caller gets an immediate response.
     runAnalysis(projectId, repoUrl, userId).catch((err) => {
       console.error(`[analyzer] runAnalysis failed for ${projectId}:`, err);
@@ -114,11 +120,8 @@ async function runAnalysis(
   runningCount++;
 
   try {
-    // Mark as actively analysing.
-    await db
-      .update(osProjects)
-      .set({ analysisStatus: "analyzing", updatedAt: new Date() })
-      .where(and(eq(osProjects.id, projectId), eq(osProjects.userId, userId)));
+    // analysisStatus is already set to "analyzing" by startAnalysis() before
+    // this function is called, so no need to set it again here.
 
     // Clean up expired clones before potentially cloning a new one.
     cleanupExpired();
