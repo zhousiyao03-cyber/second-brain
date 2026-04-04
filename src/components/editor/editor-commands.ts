@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   CheckSquare,
   Code2,
+  Columns2,
   GitBranch,
   Heading1,
   Heading2,
@@ -343,6 +344,17 @@ export function createEditorCommandGroups(
           run: () => {
             callbacks.onRequestImageUrl();
           },
+        },
+        {
+          id: "image-row",
+          title: "并排图片",
+          description: "多张图片并排展示，可调整大小",
+          keywords: ["image", "gallery", "row", "并排", "图片行", "多图", "横排", "gallery"],
+          icon: Columns2,
+          run: (editor) => {
+            editor.chain().focus().insertContent({ type: "imageRowBlock" }).run();
+          },
+          transformable: false,
         },
       ],
     },

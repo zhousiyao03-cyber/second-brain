@@ -64,6 +64,7 @@ import {
 } from "./editor-block-ops";
 import { ToggleBlock, createToggleBlockNode } from "./toggle-block";
 import { ExcalidrawBlock } from "./excalidraw-block";
+import { ImageRowBlock } from "./image-row-block";
 import { MermaidBlock } from "./mermaid-block";
 import { TocBlock } from "./toc-block";
 import { SearchReplace, SearchBar } from "./search-replace";
@@ -81,7 +82,7 @@ const BLOCK_CONTROL_GUTTER_RIGHT_PADDING = 12;
 const BLOCK_CONTROL_BUTTON_SIZE = 24;
 const BLOCK_CONTROL_LEFT_OFFSET = 60;
 const BLOCK_SELECTOR =
-  "p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, hr, img, table, [data-callout-block='true'], [data-toggle-block='true'], [data-excalidraw-block='true'], [data-mermaid-block='true'], [data-toc-block='true']";
+  "p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, hr, img, table, [data-callout-block='true'], [data-toggle-block='true'], [data-excalidraw-block='true'], [data-image-row='true'], [data-mermaid-block='true'], [data-toc-block='true']";
 
 interface TiptapEditorProps {
   content?: string;
@@ -582,6 +583,7 @@ export function TiptapEditor({
       CalloutBlock,
       ToggleBlock,
       ExcalidrawBlock,
+      ImageRowBlock,
       MermaidBlock,
       TocBlock,
       MarkdownTablePaste,
@@ -854,6 +856,8 @@ export function TiptapEditor({
       "calloutBlock",
       "toggleBlock",
       "excalidrawBlock",
+      "imageRowBlock",
+      "mermaidBlock",
       "tocBlock",
     ].includes(block.node.type.name);
 
