@@ -209,6 +209,31 @@ export const tokenUsageEntries = sqliteTable("token_usage_entries", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
+export const usageRecords = sqliteTable(
+  "usage_records",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    date: text("date").notNull(), // "YYYY-MM-DD"
+    provider: text("provider").notNull(), // "claude-code" | "codex"
+    model: text("model").notNull().default(""),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+    cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("usage_records_date_provider_model_idx").on(
+      table.date,
+      table.provider,
+      table.model,
+    ),
+  ],
+);
+
 export const activitySessions = sqliteTable(
   "activity_sessions",
   {
