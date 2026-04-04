@@ -636,6 +636,78 @@ export function TiptapEditor({
         return true;
       },
       handleDrop(view, event) {
+        // Image merge: when dragging an image block onto another image block
+        const dragging = view.dragging;
+        if (dragging?.move && dragging.slice.content.childCount === 1) {
+          const draggedNode = dragging.slice.content.firstChild!;
+          if (draggedNode.type.name === "image" || draggedNode.type.name === "imageRowBlock") {
+            const dropCoords = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (dropCoords) {
+              // Find the target block at the drop position
+              const doc = view.state.doc;
+              let targetPos = -1;
+              let targetNodeSize = 0;
+              let targetTypeName = "";
+              let targetAttrs: Record<string, unknown> = {};
+              doc.forEach((node, offset) => {
+                if (targetPos >= 0) return;
+                const nodeEnd = offset + node.nodeSize;
+                if (dropCoords.pos >= offset && dropCoords.pos <= nodeEnd) {
+                  if (node.type.name === "image" || node.type.name === "imageRowBlock") {
+                    targetPos = offset;
+                    targetNodeSize = node.nodeSize;
+                    targetTypeName = node.type.name;
+                    targetAttrs = node.attrs;
+                  }
+                }
+              });
+
+              if (targetPos >= 0 && targetTypeName) {
+                // Get drag source position from the selection
+                const sel = view.state.selection;
+                if (sel instanceof NodeSelection && sel.from !== targetPos) {
+                  const dragFrom = sel.from;
+                  const dragTo = sel.to;
+
+                  // Collect images from both nodes
+                  const collectFromAttrs = (name: string, attrs: Record<string, unknown>): { src: string }[] => {
+                    if (name === "image") {
+                      const src = attrs.src as string;
+                      return src ? [{ src }] : [];
+                    }
+                    if (name === "imageRowBlock") {
+                      try {
+                        const parsed = JSON.parse(attrs.images as string);
+                        return Array.isArray(parsed) ? parsed : [];
+                      } catch { return []; }
+                    }
+                    return [];
+                  };
+
+                  const targetImages = collectFromAttrs(targetTypeName, targetAttrs);
+                  const draggedImages = collectFromAttrs(draggedNode.type.name, draggedNode.attrs);
+                  if (targetImages.length && draggedImages.length) {
+                    const merged = [...targetImages, ...draggedImages];
+                    const schema = view.state.schema;
+                    const rowType = schema.nodes.imageRowBlock;
+                    if (rowType) {
+                      const newNode = rowType.create({ images: JSON.stringify(merged) });
+                      const { tr } = view.state;
+                      tr.replaceWith(targetPos, targetPos + targetNodeSize, newNode);
+                      const mappedFrom = tr.mapping.map(dragFrom);
+                      const mappedTo = tr.mapping.map(dragTo);
+                      tr.delete(mappedFrom, mappedTo);
+                      view.dispatch(tr);
+                      event.preventDefault();
+                      return true;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
         const files = Array.from(event.dataTransfer?.files ?? []).filter(
           (file) => file.type.startsWith("image/")
         );
