@@ -68,6 +68,7 @@ import { ImageRowBlock } from "./image-row-block";
 import { MermaidBlock } from "./mermaid-block";
 import { TocBlock } from "./toc-block";
 import { SearchReplace, SearchBar } from "./search-replace";
+import { ImageMergeDrop } from "./image-merge-drop";
 import { MarkdownTablePaste } from "./markdown-table-paste";
 
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
@@ -586,6 +587,7 @@ export function TiptapEditor({
       ImageRowBlock,
       MermaidBlock,
       TocBlock,
+      ImageMergeDrop,
       MarkdownTablePaste,
       SearchReplace.configure({
         onOpen: () => setSearchOpen(true),
