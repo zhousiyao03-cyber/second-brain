@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, FolderGit2 } from "lucide-react";
+import { useMemo } from "react";
+import { Activity, ArrowRight, BookOpen, FolderGit2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import { useWorkspaceIdentity } from "@/components/layout/workspace-identity-provider";
+import {
+  formatFocusDuration,
+  getLocalDateString,
+} from "@/components/focus/focus-shared";
 
 function getGreetingLabel(hour: number) {
   if (hour < 6) return "Late night";
@@ -29,9 +34,15 @@ export default function DashboardPage() {
   const router = useRouter();
   const identity = useWorkspaceIdentity();
   const { data, isLoading } = trpc.dashboard.stats.useQuery();
+  const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
+  const today = useMemo(() => getLocalDateString(), []);
+  const focusStats = trpc.focus.dailyStats.useQuery({ date: today, timeZone });
   const utils = trpc.useUtils();
   const greetingLabel = getGreetingLabel(new Date().getHours());
   const displayName = getUserDisplayName(identity.name, identity.email);
+  const focusGoalPct = focusStats.data
+    ? Math.min(100, Math.round((focusStats.data.totalSecs / (8 * 3600)) * 100))
+    : 0;
   const openTodayJournal = trpc.notes.openTodayJournal.useMutation({
     onSuccess: (result) => {
       void utils.dashboard.stats.invalidate();
@@ -72,6 +83,32 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {/* Focus Tracking */}
+      <Link
+        href="/focus"
+        className="flex items-center gap-4 rounded-2xl border border-sky-200 bg-sky-50/80 px-5 py-4 transition-colors hover:border-sky-300 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/20 dark:hover:border-sky-800 dark:hover:bg-sky-950/30"
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 text-sky-600 shadow-sm dark:bg-stone-900 dark:text-sky-300">
+          <Activity className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-3">
+            <span className="text-lg font-semibold text-stone-900 dark:text-stone-50">
+              {focusStats.data ? formatFocusDuration(focusStats.data.totalSecs) : "--"}
+            </span>
+            <span className="text-xs text-stone-500 dark:text-stone-400">今日专注</span>
+          </div>
+          <div className="mt-1.5 h-1.5 rounded-full bg-white/80 dark:bg-stone-800">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-teal-400 to-sky-400 transition-all"
+              style={{ width: `${Math.max(4, focusGoalPct)}%` }}
+            />
+          </div>
+        </div>
+        <span className="shrink-0 text-xs text-stone-400 dark:text-stone-500">{focusGoalPct}% / 8h</span>
+        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-stone-400" />
+      </Link>
 
       {/* Main Grid: Recent Notes + Learn + Projects */}
       <div className="grid gap-6 lg:grid-cols-2">
