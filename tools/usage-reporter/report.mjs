@@ -197,18 +197,74 @@ function cloneRepo(repoUrl) {
   return dest;
 }
 
-function spawnClaude(prompt, cwd) {
+function getToolSummary(tool, input) {
+  if (!input) return tool;
+  if (tool === "Read" || tool === "Edit" || tool === "Write") {
+    const fp = input.file_path || input.path || "";
+    const parts = fp.split("/");
+    return parts.slice(-3).join("/");
+  }
+  if (tool === "Grep") {
+    const pattern = input.pattern || "";
+    const path = input.path || "";
+    const shortPath = path.split("/").slice(-2).join("/");
+    return `"${pattern.slice(0, 60)}" in ${shortPath || "."}`;
+  }
+  if (tool === "Glob") return input.pattern || tool;
+  if (tool === "Bash") return input.description || (input.command || "").slice(0, 80);
+  return tool;
+}
+
+function spawnClaude(prompt, cwd, onMessage) {
   return new Promise((resolve, reject) => {
     const child = cpSpawn(
       "claude",
-      ["-p", prompt, "--allowedTools", "Read,Grep,Glob,Bash", "--output-format", "text"],
+      ["-p", prompt, "--allowedTools", "Read,Grep,Glob,Bash", "--output-format", "stream-json", "--verbose"],
       { cwd, detached: true, stdio: ["ignore", "pipe", "pipe"] }
     );
 
-    const stdoutChunks = [];
     const stderrChunks = [];
+    let finalResult = "";
+    let lineBuf = "";
 
-    child.stdout.on("data", (chunk) => stdoutChunks.push(chunk));
+    child.stdout.on("data", (chunk) => {
+      lineBuf += chunk.toString("utf8");
+      const lines = lineBuf.split("\n");
+      lineBuf = lines.pop(); // keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const event = JSON.parse(line);
+
+          // Extract tool_use messages
+          if (event.type === "assistant" && event.message?.content) {
+            for (const block of event.message.content) {
+              if (block.type === "tool_use") {
+                onMessage({
+                  type: "tool_use",
+                  tool: block.name,
+                  summary: getToolSummary(block.name, block.input),
+                });
+              } else if (block.type === "text" && block.text) {
+                onMessage({
+                  type: "text",
+                  summary: block.text.slice(0, 120),
+                });
+              }
+            }
+          }
+
+          // Extract final result
+          if (event.type === "result" && event.result) {
+            finalResult = event.result;
+          }
+        } catch {
+          // skip unparseable lines
+        }
+      }
+    });
+
     child.stderr.on("data", (chunk) => stderrChunks.push(chunk));
 
     child.on("error", (err) => reject(err));
@@ -218,7 +274,7 @@ function spawnClaude(prompt, cwd) {
         reject(new Error(`claude exited with code ${code}${stderr ? `: ${stderr}` : ""}`));
         return;
       }
-      resolve(Buffer.concat(stdoutChunks).toString("utf8"));
+      resolve(finalResult);
     });
   });
 }
@@ -336,7 +392,44 @@ async function handleAnalysisTask(task) {
         ? buildAnalysisPrompt(task.repoUrl)
         : buildFollowupPrompt(task.originalAnalysis || "", task.question || "");
 
-    const result = await spawnClaude(prompt, repoDir);
+    // Collect messages and flush periodically
+    let seq = 0;
+    const pendingMessages = [];
+    let flushTimer = null;
+
+    async function flushMessages() {
+      if (pendingMessages.length === 0) return;
+      const batch = pendingMessages.splice(0);
+      try {
+        await fetch(`${SERVER_URL}/api/analysis/progress`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId: task.id, messages: batch }),
+        });
+      } catch {
+        // skip — non-critical
+      }
+    }
+
+    function onMessage(msg) {
+      seq++;
+      pendingMessages.push({ seq, ...msg });
+      // Flush every 5 messages or schedule a timer
+      if (pendingMessages.length >= 5) {
+        flushMessages();
+      } else if (!flushTimer) {
+        flushTimer = setTimeout(() => {
+          flushTimer = null;
+          flushMessages();
+        }, 2000);
+      }
+    }
+
+    const result = await spawnClaude(prompt, repoDir, onMessage);
+
+    // Final flush
+    if (flushTimer) clearTimeout(flushTimer);
+    await flushMessages();
 
     // Report success
     const res = await fetch(`${SERVER_URL}/api/analysis/complete`, {
@@ -353,7 +446,6 @@ async function handleAnalysisTask(task) {
   } catch (err) {
     console.error(`[${timestamp()}] ❌ 分析失败: ${task.repoUrl}`, err.message);
 
-    // Report failure
     await fetch(`${SERVER_URL}/api/analysis/complete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
