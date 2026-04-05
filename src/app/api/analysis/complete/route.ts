@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
     noteTitle = (task.question ?? "Follow-up").slice(0, 100);
   }
 
-  const tiptapDoc = markdownToTiptap(body.result ?? "");
+  // Strip the first h1 line from content since it's already stored as noteTitle
+  const contentMd = (body.result ?? "").replace(/^#\s+.+\n?/, "");
+  const tiptapDoc = markdownToTiptap(contentMd);
 
   await db.insert(osProjectNotes).values({
     id: crypto.randomUUID(),

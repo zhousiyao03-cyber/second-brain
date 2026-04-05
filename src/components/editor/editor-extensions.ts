@@ -40,7 +40,7 @@ export function createEditorExtensions({
       link: {
         openOnClick: false,
         HTMLAttributes: {
-          class: "cursor-pointer underline underline-offset-4 decoration-stone-300",
+          class: "cursor-pointer underline underline-offset-4 decoration-stone-300 hover:decoration-blue-400",
         },
       },
     }),

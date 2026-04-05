@@ -110,6 +110,8 @@ export function TiptapEditor({
     useState<BlockActionMenuState | null>(null);
   const [, setIsDragging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [linkTooltip, setLinkTooltip] = useState<{ href: string; top: number; left: number } | null>(null);
+  const linkTooltipTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TiptapEditorInstance | null>(null);
   const editorSurfaceRef = useRef<HTMLDivElement>(null);
@@ -409,6 +411,19 @@ export function TiptapEditor({
       attributes: {
         class:
           "notion-editor focus:outline-none min-h-[60vh] px-1 py-2 data-[placeholder]:text-stone-400",
+      },
+      handleClick(view, _pos, event) {
+        // Cmd/Ctrl+Click to open links in a new tab
+        if (!(event.metaKey || event.ctrlKey)) return false;
+        const target = event.target as HTMLElement;
+        const anchor = target.closest("a");
+        if (!anchor) return false;
+        const href = anchor.getAttribute("href");
+        if (href) {
+          window.open(href, "_blank", "noopener,noreferrer");
+          return true;
+        }
+        return false;
       },
       handleKeyDown(view, event) {
         if (event.key !== "Backspace") return false;
@@ -732,6 +747,32 @@ export function TiptapEditor({
         className="relative"
         onMouseMove={editable ? handleSurfaceMouseMove : undefined}
         onMouseLeave={editable ? handleSurfaceMouseLeave : undefined}
+        onMouseOver={(e) => {
+          const target = e.target as HTMLElement;
+          const anchor = target.closest("a");
+          if (anchor) {
+            const href = anchor.getAttribute("href");
+            if (href) {
+              if (linkTooltipTimerRef.current) clearTimeout(linkTooltipTimerRef.current);
+              const rect = anchor.getBoundingClientRect();
+              const containerRect = editorSurfaceRef.current?.getBoundingClientRect();
+              if (containerRect) {
+                setLinkTooltip({
+                  href,
+                  top: rect.bottom - containerRect.top + 4,
+                  left: rect.left - containerRect.left,
+                });
+              }
+            }
+          }
+        }}
+        onMouseOut={(e) => {
+          const target = e.target as HTMLElement;
+          const related = e.relatedTarget as HTMLElement | null;
+          if (target.closest("a") && !related?.closest?.("[data-link-tooltip]")) {
+            linkTooltipTimerRef.current = setTimeout(() => setLinkTooltip(null), 200);
+          }
+        }}
       >
         {editable && (
           <div
@@ -790,6 +831,30 @@ export function TiptapEditor({
           <EditorContent editor={editor} />
         </div>
       </div>
+
+      {linkTooltip && (
+        <div
+          data-link-tooltip
+          className="absolute z-50 flex max-w-sm items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm shadow-lg dark:border-stone-700 dark:bg-stone-800"
+          style={{ top: linkTooltip.top, left: linkTooltip.left }}
+          onMouseEnter={() => {
+            if (linkTooltipTimerRef.current) clearTimeout(linkTooltipTimerRef.current);
+          }}
+          onMouseLeave={() => setLinkTooltip(null)}
+        >
+          <span className="truncate text-stone-500 dark:text-stone-400">{linkTooltip.href}</span>
+          <button
+            type="button"
+            onClick={() => {
+              window.open(linkTooltip.href, "_blank", "noopener,noreferrer");
+              setLinkTooltip(null);
+            }}
+            className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+          >
+            打开
+          </button>
+        </div>
+      )}
 
       {slashCoords && (
         <SlashCommandMenu
