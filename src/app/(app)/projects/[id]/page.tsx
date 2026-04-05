@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Plus, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Send, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatDate } from "@/lib/utils";
 
@@ -121,6 +121,18 @@ export default function ProjectDetailPage({
   const askFollowup = trpc.ossProjects.askFollowup.useMutation({
     onSuccess: async () => {
       setFollowupQuestion("");
+      await utils.ossProjects.listNotes.invalidate({ projectId: id });
+    },
+  });
+
+  const deleteProject = trpc.ossProjects.deleteProject.useMutation({
+    onSuccess: () => {
+      router.push("/projects");
+    },
+  });
+
+  const deleteNote = trpc.ossProjects.deleteNote.useMutation({
+    onSuccess: async () => {
       await utils.ossProjects.listNotes.invalidate({ projectId: id });
     },
   });
@@ -255,6 +267,18 @@ export default function ProjectDetailPage({
           >
             <Plus size={16} />
             Add note
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("Delete this project and all its notes?")) {
+                deleteProject.mutate({ id });
+              }
+            }}
+            disabled={deleteProject.isPending}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+          >
+            <Trash2 size={14} />
           </button>
         </div>
       </div>
@@ -418,7 +442,7 @@ export default function ProjectDetailPage({
                     onClick={() =>
                       router.push(`/projects/${id}/notes/${note.id}`)
                     }
-                    className="w-full rounded-[20px] border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:hover:bg-stone-900"
+                    className="group w-full rounded-[20px] border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:hover:bg-stone-900"
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div>
@@ -429,9 +453,23 @@ export default function ProjectDetailPage({
                           {note.plainText || "Empty note"}
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs text-stone-400">
-                        {formatDate(note.updatedAt)}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-xs text-stone-400">
+                          {formatDate(note.updatedAt)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("Delete this note?")) {
+                              deleteNote.mutate({ id: note.id, projectId: id });
+                            }
+                          }}
+                          className="rounded-lg p-1 text-stone-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:hover:bg-red-950"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -463,7 +501,7 @@ export default function ProjectDetailPage({
                       onClick={() =>
                         router.push(`/projects/${id}/notes/${note.id}`)
                       }
-                      className="w-full rounded-[20px] border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:hover:bg-stone-900"
+                      className="group w-full rounded-[20px] border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:hover:bg-stone-900"
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div>
