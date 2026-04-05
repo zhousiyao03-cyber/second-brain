@@ -1,8 +1,9 @@
 "use client";
 
 import { use, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Send } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatDate } from "@/lib/utils";
 
@@ -178,6 +179,15 @@ export default function ProjectDetailPage({
 
   return (
     <div className="space-y-6">
+      {/* ── Back link ─────────────────────────────────────────────────────── */}
+      <Link
+        href="/projects"
+        className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        All Projects
+      </Link>
+
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
