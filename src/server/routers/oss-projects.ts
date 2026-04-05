@@ -317,13 +317,14 @@ export const ossProjectsRouter = router({
         .from(osProjects)
         .where(and(eq(osProjects.id, input.projectId), eq(osProjects.userId, ctx.userId)));
 
-      if (!project) return { analysisStatus: null, analysisError: null, activeTaskId: null };
+      if (!project) return { analysisStatus: null, analysisError: null, activeTaskId: null, activeProvider: null };
 
-      // Find the active task ID for message polling
+      // Find the active task ID and provider for message polling
       let activeTaskId: string | null = null;
+      let activeProvider: string | null = null;
       if (project.analysisStatus === "queued" || project.analysisStatus === "running") {
         const [task] = await db
-          .select({ id: analysisTasks.id })
+          .select({ id: analysisTasks.id, provider: analysisTasks.provider })
           .from(analysisTasks)
           .where(
             and(
@@ -334,9 +335,10 @@ export const ossProjectsRouter = router({
           .orderBy(analysisTasks.createdAt)
           .limit(1);
         activeTaskId = task?.id ?? null;
+        activeProvider = task?.provider ?? null;
       }
 
-      return { ...project, activeTaskId };
+      return { ...project, activeTaskId, activeProvider };
     }),
 
   askFollowup: protectedProcedure

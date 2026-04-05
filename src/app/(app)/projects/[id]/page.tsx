@@ -50,6 +50,7 @@ export default function ProjectDetailPage({
   const analysisStatus = analysisInfo?.analysisStatus ?? null;
   const analysisError = analysisInfo?.analysisError ?? null;
   const activeTaskId = analysisInfo?.activeTaskId ?? null;
+  const activeProvider = analysisInfo?.activeProvider ?? "claude";
   const [messages, setMessages] = useState<Array<{ seq: number; type: string; tool?: string; summary?: string }>>([]);
   const lastSeqRef = useRef(0);
   const timelineEndRef = useRef<HTMLDivElement | null>(null);
@@ -292,7 +293,7 @@ export default function ProjectDetailPage({
             <span className="grow">
               {analysisStatus === "queued"
                 ? "Analysis queued — waiting for local daemon…"
-                : "Analysing repository with Claude…"}
+                : `Analysing repository with ${activeProvider === "codex" ? "Codex" : "Claude"}…`}
             </span>
           </div>
 
