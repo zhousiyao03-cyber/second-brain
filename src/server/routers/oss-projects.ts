@@ -315,7 +315,26 @@ export const ossProjectsRouter = router({
         .from(osProjects)
         .where(and(eq(osProjects.id, input.projectId), eq(osProjects.userId, ctx.userId)));
 
-      return project ?? { analysisStatus: null, analysisError: null };
+      if (!project) return { analysisStatus: null, analysisError: null, activeTaskId: null };
+
+      // Find the active task ID for message polling
+      let activeTaskId: string | null = null;
+      if (project.analysisStatus === "queued" || project.analysisStatus === "running") {
+        const [task] = await db
+          .select({ id: analysisTasks.id })
+          .from(analysisTasks)
+          .where(
+            and(
+              eq(analysisTasks.projectId, input.projectId),
+              eq(analysisTasks.status, project.analysisStatus === "queued" ? "queued" : "running")
+            )
+          )
+          .orderBy(analysisTasks.createdAt)
+          .limit(1);
+        activeTaskId = task?.id ?? null;
+      }
+
+      return { ...project, activeTaskId };
     }),
 
   askFollowup: protectedProcedure
