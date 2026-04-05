@@ -511,3 +511,15 @@ export const analysisTasks = sqliteTable("analysis_tasks", {
   startedAt: integer("started_at", { mode: "timestamp" }),
   completedAt: integer("completed_at", { mode: "timestamp" }),
 });
+
+export const analysisMessages = sqliteTable("analysis_messages", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  taskId: text("task_id")
+    .notNull()
+    .references(() => analysisTasks.id, { onDelete: "cascade" }),
+  seq: integer("seq").notNull(),
+  type: text("type", { enum: ["tool_use", "tool_result", "text", "error"] }).notNull(),
+  tool: text("tool"),
+  summary: text("summary"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
