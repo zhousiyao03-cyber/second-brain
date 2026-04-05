@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
-import { analysisTasks } from "@/server/db/schema";
+import { analysisTasks, osProjects } from "@/server/db/schema";
 
 export async function POST() {
   // Find the oldest queued task
@@ -21,6 +21,12 @@ export async function POST() {
     .update(analysisTasks)
     .set({ status: "running", startedAt: new Date() })
     .where(eq(analysisTasks.id, task.id));
+
+  // Sync project status so frontend sees "running"
+  await db
+    .update(osProjects)
+    .set({ analysisStatus: "running", updatedAt: new Date() })
+    .where(eq(osProjects.id, task.projectId));
 
   return NextResponse.json({
     task: {
