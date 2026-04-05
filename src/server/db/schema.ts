@@ -489,3 +489,25 @@ export const osProjectNotes = sqliteTable("os_project_notes", {
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
+
+export const analysisTasks = sqliteTable("analysis_tasks", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => osProjects.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  taskType: text("task_type", { enum: ["analysis", "followup"] }).notNull(),
+  status: text("status", { enum: ["queued", "running", "completed", "failed"] })
+    .notNull()
+    .default("queued"),
+  repoUrl: text("repo_url").notNull(),
+  question: text("question"),
+  originalAnalysis: text("original_analysis"),
+  result: text("result"),
+  error: text("error"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  startedAt: integer("started_at", { mode: "timestamp" }),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+});

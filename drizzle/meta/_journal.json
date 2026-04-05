@@ -99,6 +99,13 @@
       "when": 1775309521555,
       "tag": "0013_deep_inertia",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1775353351677,
+      "tag": "0014_typical_sway",
+      "breakpoints": true
     }
   ]
 }
