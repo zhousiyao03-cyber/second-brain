@@ -3,7 +3,7 @@
 import { use, useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ImagePlus, Tag, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, ImagePlus, Link, Share2, Tag, X } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const TiptapEditor = dynamic(
@@ -37,6 +37,7 @@ interface NoteData {
   icon: string | null;
   cover: string | null;
   tags: string | null;
+  shareToken: string | null;
   updatedAt: Date | null;
 }
 
@@ -127,6 +128,117 @@ function CoverPicker({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function SharePopover({ noteId, shareToken }: { noteId: string; shareToken: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const utils = trpc.useUtils();
+  const enableShare = trpc.notes.enableShare.useMutation({
+    onSuccess: () => utils.notes.get.invalidate({ id: noteId }),
+  });
+  const disableShare = trpc.notes.disableShare.useMutation({
+    onSuccess: () => utils.notes.get.invalidate({ id: noteId }),
+  });
+
+  const shareUrl = shareToken
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareToken}`
+    : null;
+
+  const handleCopy = async () => {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (popoverRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={popoverRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        data-testid="note-share-button"
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium shadow-sm transition-colors",
+          shareToken
+            ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-900/80 dark:bg-blue-950/50 dark:text-blue-200 dark:hover:bg-blue-900/60"
+            : "border-stone-200 bg-white/80 text-stone-500 hover:bg-stone-100 hover:text-stone-700 dark:border-stone-800 dark:bg-stone-950/80 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-200"
+        )}
+      >
+        <Share2 size={13} />
+        {shareToken ? "Shared" : "Share"}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-40 mt-2 w-[340px] rounded-2xl border border-stone-200/90 bg-white/96 p-4 shadow-[0_22px_64px_rgba(15,23,42,0.18)] backdrop-blur dark:border-stone-800 dark:bg-stone-950/96">
+          {shareToken ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-stone-700 dark:text-stone-200">
+                <Link size={14} className="text-blue-500" />
+                Link sharing is on
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={shareUrl ?? ""}
+                  className="flex-1 truncate rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs text-stone-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
+                >
+                  {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { disableShare.mutate({ id: noteId }); setOpen(false); }}
+                disabled={disableShare.isPending}
+                className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/80 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/60"
+              >
+                Disable sharing
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-sm text-stone-500 dark:text-stone-400">
+                Anyone with the link can view this note (read-only).
+              </div>
+              <button
+                type="button"
+                onClick={() => enableShare.mutate({ id: noteId })}
+                disabled={enableShare.isPending}
+                className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
+              >
+                {enableShare.isPending ? "Enabling..." : "Enable link sharing"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -331,6 +443,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
                 ? "Saving..."
                 : "Editing"}
           </span>
+          <SharePopover noteId={id} shareToken={note.shareToken} />
         </div>
       </div>
 

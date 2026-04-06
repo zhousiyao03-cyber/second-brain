@@ -120,6 +120,13 @@
       "when": 1775360390043,
       "tag": "0016_useful_madripoor",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1775396235489,
+      "tag": "0017_hesitant_crystal",
+      "breakpoints": true
     }
   ]
 }

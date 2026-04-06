@@ -54,6 +54,8 @@ export const notes = sqliteTable("notes", {
   icon: text("icon"),
   cover: text("cover"),
   tags: text("tags"), // JSON array
+  shareToken: text("share_token").unique(),
+  sharedAt: integer("shared_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });

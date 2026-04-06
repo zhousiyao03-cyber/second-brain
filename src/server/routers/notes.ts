@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from "../trpc";
+import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "../db";
 import { notes } from "../db/schema";
 import { and, desc, eq, ne, or } from "drizzle-orm";
@@ -145,5 +145,48 @@ export const notesRouter = router({
       await db.delete(notes).where(and(eq(notes.id, input.id), eq(notes.userId, ctx.userId)));
       void removeKnowledgeSourceIndex("note", input.id).catch(() => undefined);
       return { success: true };
+    }),
+
+  enableShare: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const [note] = await db.select({ shareToken: notes.shareToken }).from(notes)
+        .where(and(eq(notes.id, input.id), eq(notes.userId, ctx.userId)));
+      if (!note) throw new Error("Note not found");
+      if (note.shareToken) return { shareToken: note.shareToken };
+
+      const shareToken = crypto.randomUUID();
+      await db.update(notes)
+        .set({ shareToken, sharedAt: new Date() })
+        .where(and(eq(notes.id, input.id), eq(notes.userId, ctx.userId)));
+      return { shareToken };
+    }),
+
+  disableShare: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await db.update(notes)
+        .set({ shareToken: null, sharedAt: null })
+        .where(and(eq(notes.id, input.id), eq(notes.userId, ctx.userId)));
+      return { success: true };
+    }),
+
+  getShared: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      const [note] = await db
+        .select({
+          title: notes.title,
+          content: notes.content,
+          cover: notes.cover,
+          icon: notes.icon,
+          tags: notes.tags,
+          type: notes.type,
+          sharedAt: notes.sharedAt,
+          updatedAt: notes.updatedAt,
+        })
+        .from(notes)
+        .where(eq(notes.shareToken, input.token));
+      return note ?? null;
     }),
 });
