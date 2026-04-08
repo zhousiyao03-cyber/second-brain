@@ -26,7 +26,7 @@ export default function ProjectNotePage({
         <p>Note not found.</p>
         <button
           type="button"
-          onClick={() => router.push(`/projects/${id}`)}
+          onClick={() => router.push(`/projects/${id}?view=overview`)}
           className="mt-4 text-blue-600 hover:underline"
         >
           Back to project
@@ -39,7 +39,7 @@ export default function ProjectNotePage({
     <KnowledgeNoteEditor
       noteId={noteId}
       note={note}
-      backHref={`/projects/${id}`}
+      backHref={`/projects/${id}?view=overview`}
       backLabel="Back to project"
       onSave={async (payload) => {
         await updateNote.mutateAsync({

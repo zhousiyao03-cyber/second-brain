@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { db } from "../db";
 import { analysisPrompts, osProjectNotes, osProjects, analysisTasks } from "../db/schema";
@@ -79,6 +79,78 @@ export const ossProjectsRouter = router({
       }))
     );
   }),
+
+  listProjectsPaged: protectedProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(20),
+        q: z.string().trim().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { page, pageSize, q } = input;
+      const offset = (page - 1) * pageSize;
+
+      const conditions = [eq(osProjects.userId, ctx.userId)];
+      if (q) {
+        const needle = `%${q.toLowerCase()}%`;
+        // Case-insensitive LIKE via lower(col) LIKE lower(needle)
+        conditions.push(
+          or(
+            like(sql`lower(${osProjects.name})`, needle),
+            like(sql`lower(${osProjects.description})`, needle),
+            like(sql`lower(${osProjects.repoUrl})`, needle)
+          )!
+        );
+      }
+      const whereExpr = and(...conditions);
+
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(osProjects)
+        .where(whereExpr);
+
+      const rows = await db
+        .select()
+        .from(osProjects)
+        .where(whereExpr)
+        .orderBy(desc(osProjects.updatedAt))
+        .limit(pageSize)
+        .offset(offset);
+
+      const items = await Promise.all(
+        rows.map(async (project) => ({
+          ...project,
+          ...(await collectProjectMeta(project.id)),
+        }))
+      );
+
+      return {
+        items,
+        total: Number(count ?? 0),
+        page,
+        pageSize,
+        totalPages: Math.max(1, Math.ceil(Number(count ?? 0) / pageSize)),
+      };
+    }),
+
+  firstNoteId: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const [note] = await db
+        .select({ id: osProjectNotes.id })
+        .from(osProjectNotes)
+        .where(
+          and(
+            eq(osProjectNotes.projectId, input.projectId),
+            eq(osProjectNotes.userId, ctx.userId)
+          )
+        )
+        .orderBy(desc(osProjectNotes.updatedAt))
+        .limit(1);
+      return note?.id ?? null;
+    }),
 
   getProject: protectedProcedure
     .input(z.object({ id: z.string() }))

@@ -2,7 +2,7 @@
 
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, GitCommit, Loader2, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatDate } from "@/lib/utils";
@@ -24,6 +24,8 @@ export default function ProjectDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const forceOverview = searchParams.get("view") === "overview";
   const utils = trpc.useUtils();
   const [selectedTag, setSelectedTag] = useState<string | undefined>();
   const [followupQuestion, setFollowupQuestion] = useState("");
@@ -35,6 +37,19 @@ export default function ProjectDetailPage({
 
   const { data: notes = [], isLoading: notesLoading } =
     trpc.ossProjects.listNotes.useQuery({ projectId: id, tag: selectedTag });
+
+  // Auto-jump to the most recently updated note unless user explicitly requested
+  // the project overview via ?view=overview.
+  useEffect(() => {
+    if (forceOverview) return;
+    if (notesLoading) return;
+    if (selectedTag) return; // tag filter means user is actively browsing
+    if (notes.length === 0) return;
+    const firstNoteId = notes[0]?.id;
+    if (firstNoteId) {
+      router.replace(`/projects/${id}/notes/${firstNoteId}`);
+    }
+  }, [forceOverview, notes, notesLoading, selectedTag, id, router]);
 
   // Poll every 5 s while status is "analyzing" or "pending"
   const { data: analysisInfo } = trpc.ossProjects.analysisStatus.useQuery(
