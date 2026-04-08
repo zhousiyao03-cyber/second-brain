@@ -23,6 +23,11 @@ const IS_ONCE = process.argv.includes("--once");
 const ANALYSIS_POLL_INTERVAL_MS = 10 * 1000; // 10 seconds
 const MAX_CONCURRENT_ANALYSIS = 5;
 let analysisRunning = 0;
+
+const CHAT_POLL_INTERVAL_MS = 3 * 1000; // 3 seconds
+const MAX_CONCURRENT_CHAT = 3;
+const HEARTBEAT_INTERVAL_MS = 30 * 1000; // 30 seconds
+let chatRunning = 0;
 const ANALYSIS_BASE_DIR = join(tmpdir(), "source-readings");
 const ANALYSIS_PROVIDER = process.env.ANALYSIS_PROVIDER || "claude"; // "claude" | "codex"
 
@@ -321,6 +326,75 @@ function spawnClaudeCli(prompt, cwd, onMessage) {
   });
 }
 
+function spawnClaudeForChat({ prompt, systemPrompt, model, onText }) {
+  return new Promise((resolve, reject) => {
+    const claudeBin = process.env.CLAUDE_BIN || "claude";
+    const args = [
+      "-p",
+      prompt,
+      "--append-system-prompt",
+      systemPrompt,
+      "--output-format",
+      "stream-json",
+      "--verbose",
+    ];
+    if (model) {
+      args.push("--model", model);
+    }
+    // Intentionally no --allowedTools → Claude gets no tools, pure chat.
+
+    const child = cpSpawn(claudeBin, args, {
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    const stderrChunks = [];
+    let finalResult = "";
+    let lineBuf = "";
+
+    child.stdout.on("data", (chunk) => {
+      lineBuf += chunk.toString("utf8");
+      const lines = lineBuf.split("\n");
+      lineBuf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const event = JSON.parse(line);
+
+          if (event.type === "assistant" && event.message?.content) {
+            for (const block of event.message.content) {
+              if (block.type === "text" && typeof block.text === "string") {
+                // CLI emits each assistant text block as a full string.
+                // Treat it as the current cumulative text — the frontend
+                // will overwrite rather than concatenate.
+                onText(block.text);
+              }
+            }
+          }
+
+          if (event.type === "result" && typeof event.result === "string") {
+            finalResult = event.result;
+          }
+        } catch {
+          // skip unparseable lines
+        }
+      }
+    });
+
+    child.stderr.on("data", (chunk) => stderrChunks.push(chunk));
+    child.on("error", (err) => reject(err));
+    child.on("close", (code) => {
+      if (code !== 0) {
+        const stderr = Buffer.concat(stderrChunks).toString("utf8");
+        reject(new Error(`claude exited with code ${code}${stderr ? `: ${stderr}` : ""}`));
+        return;
+      }
+      resolve(finalResult);
+    });
+  });
+}
+
 function spawnCodex(prompt, cwd, onMessage) {
   return new Promise((resolve, reject) => {
     const codexBin = process.env.CODEX_BIN || "codex";
@@ -480,6 +554,56 @@ ${originalAnalysis}
 }
 
 // ---------------------------------------------------------------------------
+// Chat — Helpers
+// ---------------------------------------------------------------------------
+
+function getMessageText(content) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .filter((part) => part && part.type === "text")
+    .map((part) => part.text ?? "")
+    .join("");
+}
+
+function flattenMessagesToPrompt(messages) {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return "";
+  }
+
+  let lastUserIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]?.role === "user") {
+      lastUserIdx = i;
+      break;
+    }
+  }
+
+  if (lastUserIdx === -1) {
+    return "";
+  }
+
+  const history = messages.slice(0, lastUserIdx);
+  const lastUser = messages[lastUserIdx];
+  const currentQuestion = getMessageText(lastUser.content).trim();
+
+  if (history.length === 0) {
+    return currentQuestion;
+  }
+
+  const historyBlock = history
+    .map((m) => {
+      const role = m.role === "user" ? "用户" : "助手";
+      const text = getMessageText(m.content).trim();
+      return text ? `**${role}：** ${text}` : "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+
+  return `## 之前的对话历史\n\n${historyBlock}\n\n---\n\n## 当前问题\n\n${currentQuestion}`;
+}
+
+// ---------------------------------------------------------------------------
 // Analysis — Task handler
 // ---------------------------------------------------------------------------
 
@@ -580,6 +704,89 @@ async function handleAnalysisTask(task) {
 }
 
 // ---------------------------------------------------------------------------
+// Chat — Task handler
+// ---------------------------------------------------------------------------
+
+async function handleChatTask(task) {
+  console.log(`[${timestamp()}] 🗨️  chat task claim: ${task.id} (${task.model})`);
+
+  let seq = 0;
+  const pending = [];
+  let flushTimer = null;
+
+  async function flushMessages() {
+    if (pending.length === 0) return;
+    const batch = pending.splice(0);
+    try {
+      await fetch(`${SERVER_URL}/api/chat/progress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: task.id, messages: batch }),
+      });
+    } catch {
+      // non-critical; the next flush or complete will carry forward
+    }
+  }
+
+  function onText(snapshot) {
+    seq++;
+    pending.push({ seq, type: "text_delta", delta: snapshot });
+    if (pending.length >= 8) {
+      flushMessages();
+    } else if (!flushTimer) {
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        flushMessages();
+      }, 150);
+    }
+  }
+
+  try {
+    const prompt = flattenMessagesToPrompt(task.messages);
+    if (!prompt) {
+      throw new Error("Empty prompt from chat task messages");
+    }
+
+    const totalText = await spawnClaudeForChat({
+      prompt,
+      systemPrompt: task.systemPrompt || "",
+      model: task.model,
+      onText,
+    });
+
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    // Emit final-text marker so the frontend has a clean stop signal
+    seq++;
+    pending.push({ seq, type: "text_final", delta: totalText });
+    await flushMessages();
+
+    const res = await fetch(`${SERVER_URL}/api/chat/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: task.id, totalText }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Complete API ${res.status}: ${await res.text()}`);
+    }
+
+    console.log(`[${timestamp()}] ✅ chat task done: ${task.id}`);
+  } catch (err) {
+    console.error(`[${timestamp()}] ❌ chat task failed: ${task.id}`, err.message);
+    await fetch(`${SERVER_URL}/api/chat/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: task.id, error: err.message }),
+    }).catch(() => {});
+  } finally {
+    chatRunning--;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Analysis — Poll loop
 // ---------------------------------------------------------------------------
 
@@ -606,6 +813,47 @@ async function pollAnalysisTasks() {
 }
 
 // ---------------------------------------------------------------------------
+// Chat — Poll loop
+// ---------------------------------------------------------------------------
+
+async function pollChatTasks() {
+  if (chatRunning >= MAX_CONCURRENT_CHAT) return;
+
+  try {
+    const res = await fetch(`${SERVER_URL}/api/chat/claim`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (!data.task) return;
+
+    chatRunning++;
+    handleChatTask(data.task).catch(() => {});
+  } catch {
+    // server unreachable — silently skip
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Heartbeat
+// ---------------------------------------------------------------------------
+
+async function heartbeat(kind) {
+  try {
+    await fetch(`${SERVER_URL}/api/daemon/ping`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, version: "usage-reporter" }),
+    });
+  } catch {
+    // non-critical
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -623,6 +871,8 @@ if (IS_ONCE) {
   console.log(`   同步间隔: ${SCAN_INTERVAL_MS / 1000}s`);
   console.log(`   分析任务轮询间隔: ${ANALYSIS_POLL_INTERVAL_MS / 1000}s`);
   console.log(`   分析 Provider: ${ANALYSIS_PROVIDER}`);
+  console.log(`   Chat 任务轮询间隔: ${CHAT_POLL_INTERVAL_MS / 1000}s`);
+  console.log(`   Heartbeat 间隔: ${HEARTBEAT_INTERVAL_MS / 1000}s`);
   console.log("");
 
   // Initial sync
@@ -637,6 +887,17 @@ if (IS_ONCE) {
   setInterval(async () => {
     await pollAnalysisTasks();
   }, ANALYSIS_POLL_INTERVAL_MS);
+
+  // Chat task polling
+  setInterval(async () => {
+    await pollChatTasks();
+  }, CHAT_POLL_INTERVAL_MS);
+
+  // Heartbeat loop
+  await heartbeat("chat");
+  setInterval(() => {
+    heartbeat("chat").catch(() => {});
+  }, HEARTBEAT_INTERVAL_MS);
 
   // Graceful shutdown
   for (const sig of ["SIGINT", "SIGTERM"]) {
