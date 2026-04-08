@@ -8,7 +8,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod/v4";
 
-type AIProviderMode = "local" | "openai" | "codex";
+type AIProviderMode = "local" | "openai" | "codex" | "claude-code-daemon";
 type GenerationKind = "chat" | "task";
 
 type CodexProfile = {
@@ -175,6 +175,9 @@ function hasCodexAuthProfile() {
 
 function getProviderMode(): AIProviderMode {
   const explicitMode = process.env.AI_PROVIDER?.trim().toLowerCase();
+  if (explicitMode === "claude-code-daemon") {
+    return "claude-code-daemon";
+  }
   if (explicitMode === "codex" || explicitMode === "openai-codex") {
     return "codex";
   }
@@ -728,6 +731,13 @@ export async function streamChatResponse({
 }: StreamChatOptions) {
   const mode = getProviderMode();
 
+  if (mode === "claude-code-daemon") {
+    throw new Error(
+      "streamChatResponse must not be called when AI_PROVIDER=claude-code-daemon. " +
+        "The chat route should have taken the daemon enqueue branch."
+    );
+  }
+
   if (mode !== "codex") {
     const provider = createAiSdkProvider(mode);
     const result = streamText({
@@ -755,6 +765,21 @@ export async function streamChatResponse({
   return createCodexTextStreamResponse(response);
 }
 
+/**
+ * When the primary mode is "claude-code-daemon", generateStructuredData
+ * cannot use the daemon queue (it's synchronous background work). Fall
+ * back to the same auto-detect order used when AI_PROVIDER is unset.
+ */
+function resolveStructuredDataMode(): Exclude<AIProviderMode, "claude-code-daemon"> {
+  if (hasCodexAuthProfile()) {
+    return "codex";
+  }
+  if (resolveValue(process.env.OPENAI_API_KEY)) {
+    return "openai";
+  }
+  return "local";
+}
+
 export async function generateStructuredData<TSchema extends z.ZodType>({
   description,
   name,
@@ -762,7 +787,11 @@ export async function generateStructuredData<TSchema extends z.ZodType>({
   schema,
   signal,
 }: GenerateStructuredDataOptions<TSchema>): Promise<z.infer<TSchema>> {
-  const mode = getProviderMode();
+  const primaryMode = getProviderMode();
+  const mode: Exclude<AIProviderMode, "claude-code-daemon"> =
+    primaryMode === "claude-code-daemon"
+      ? resolveStructuredDataMode()
+      : primaryMode;
 
   if (mode === "codex") {
     return generateStructuredDataWithCodex({
@@ -792,6 +821,10 @@ export async function generateStructuredData<TSchema extends z.ZodType>({
 export function getAISetupHint() {
   const mode = getProviderMode();
 
+  if (mode === "claude-code-daemon") {
+    return "请确认本机 Claude CLI 已登录（claude login），并在本机运行 pnpm usage:daemon 以启动 Ask AI daemon 队列。";
+  }
+
   if (mode === "codex") {
     return `请确认 OpenClaw 已完成 Codex OAuth 登录，并检查 ${resolveCodexAuthStorePath()} 中的 ${resolveCodexProfileId()} profile 是否有效。`;
   }
@@ -805,6 +838,11 @@ export function getAISetupHint() {
 
 export function getChatAssistantIdentity() {
   const mode = getProviderMode();
+
+  if (mode === "claude-code-daemon") {
+    const modelId = process.env.CLAUDE_CODE_CHAT_MODEL?.trim() || "opus";
+    return `你是 Second Brain 的 AI 助手，当前运行在用户本机的 Claude Code daemon（${modelId}）上。只有当用户询问你的身份、模型或运行方式时，才明确说明当前模型。`;
+  }
 
   if (mode === "codex") {
     const modelId = resolveCodexModelId("chat");
