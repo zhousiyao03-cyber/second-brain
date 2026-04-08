@@ -16,6 +16,8 @@ import {
 } from "@/server/ai/chat-system-prompt";
 import { auth } from "@/lib/auth";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
+import { enqueueChatTask } from "@/server/ai/chat-enqueue";
+import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
 
 export const maxDuration = 30;
 
@@ -56,6 +58,29 @@ export async function POST(req: Request) {
       await normalizeMessages(parsed.data.messages)
     );
     const sourceScope = parsed.data.sourceScope ?? "all";
+
+    // ─── Daemon branch ─────────────────────────────────────────────
+    if (shouldUseDaemonForChat()) {
+      if (!userId) {
+        // AUTH_BYPASS=true path: the queue requires a userId, so reject
+        // daemon mode entirely in E2E/bypass environments. Tests should
+        // run with AI_PROVIDER=codex instead.
+        return Response.json(
+          { error: "Daemon chat mode is not available in AUTH_BYPASS environments" },
+          { status: 400 }
+        );
+      }
+      const { taskId } = await enqueueChatTask({
+        userId,
+        messages,
+        sourceScope,
+      });
+      if (process.env.AUTH_BYPASS !== "true") {
+        void recordAiUsage(userId).catch(() => undefined);
+      }
+      return Response.json({ taskId, mode: "daemon" });
+    }
+    // ────────────────────────────────────────────────────────────────
 
     const lastUserMessage = [...messages]
       .reverse()
