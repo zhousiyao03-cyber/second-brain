@@ -553,3 +553,59 @@ export const analysisMessages = sqliteTable("analysis_messages", {
   summary: text("summary"),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
+
+// ── Ask AI Daemon Queue ────────────────────────────
+
+export const chatTasks = sqliteTable(
+  "chat_tasks",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status", {
+      enum: ["queued", "running", "completed", "failed", "cancelled"],
+    })
+      .notNull()
+      .default("queued"),
+    sourceScope: text("source_scope").notNull().default("all"),
+    messages: text("messages").notNull(), // JSON-encoded ModelMessage[]
+    systemPrompt: text("system_prompt").notNull(),
+    model: text("model").notNull().default("opus"),
+    totalText: text("total_text"),
+    error: text("error"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    startedAt: integer("started_at", { mode: "timestamp" }),
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => ({
+    statusCreatedAtIdx: uniqueIndex("chat_tasks_status_created_idx").on(
+      table.status,
+      table.createdAt,
+      table.id
+    ),
+  })
+);
+
+export const daemonChatMessages = sqliteTable(
+  "daemon_chat_messages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => chatTasks.id, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+    type: text("type", { enum: ["text_delta", "text_final", "error"] }).notNull(),
+    delta: text("delta"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    taskSeqIdx: uniqueIndex("daemon_chat_messages_task_seq_idx").on(table.taskId, table.seq),
+  })
+);
+
+export const daemonHeartbeats = sqliteTable("daemon_heartbeats", {
+  kind: text("kind").primaryKey(), // "chat" | "analysis" | "usage"
+  lastSeenAt: integer("last_seen_at", { mode: "timestamp" }).notNull(),
+  version: text("version"),
+});
