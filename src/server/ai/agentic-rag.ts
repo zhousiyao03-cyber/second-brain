@@ -2,10 +2,8 @@ import { eq, inArray } from "drizzle-orm";
 import type { AskAiSourceScope } from "@/lib/ask-ai";
 import { db } from "../db";
 import {
-  bookmarks,
   knowledgeChunkEmbeddings,
   knowledgeChunks,
-  notes,
 } from "../db/schema";
 import { dotProduct, embedTexts, vectorBufferToArray } from "./embeddings";
 import { ensureKnowledgeBaseSeeded } from "./indexer";
@@ -260,38 +258,21 @@ export async function retrieveAgenticContext(
   options: { scope?: AskAiSourceScope; userId?: string | null } = {}
 ) {
   // Fail-closed: without a userId we cannot scope results safely.
-  // `knowledge_chunks` currently lacks a user_id column, so we derive
-  // ownership by joining against notes/bookmarks and intersecting chunk
-  // source ids with the set owned by this user.
   if (!options.userId) {
     return [] satisfies AgenticRetrievalResult[];
   }
 
   await ensureKnowledgeBaseSeeded();
 
-  // Gather the note / bookmark ids that belong to this user so we can
-  // restrict chunks to only those sources.
-  const [userNoteIds, userBookmarkIds] = await Promise.all([
-    db
-      .select({ id: notes.id })
-      .from(notes)
-      .where(eq(notes.userId, options.userId))
-      .then((rows) => new Set(rows.map((row) => row.id))),
-    db
-      .select({ id: bookmarks.id })
-      .from(bookmarks)
-      .where(eq(bookmarks.userId, options.userId))
-      .then((rows) => new Set(rows.map((row) => row.id))),
-  ]);
-
   const profile = buildQueryProfile(query);
-  const allChunks = await db.select().from(knowledgeChunks);
-  const ownedChunks = allChunks.filter((chunk) =>
-    chunk.sourceType === "note"
-      ? userNoteIds.has(chunk.sourceId)
-      : userBookmarkIds.has(chunk.sourceId)
-  );
-  const scopedChunks = ownedChunks.filter((chunk) =>
+  // Scope at the SQL layer using the indexed user_id column. Rows written
+  // before the rollout have user_id backfilled by the rollout script and
+  // indexer.ts now always sets it on insert.
+  const allChunks = await db
+    .select()
+    .from(knowledgeChunks)
+    .where(eq(knowledgeChunks.userId, options.userId));
+  const scopedChunks = allChunks.filter((chunk) =>
     matchesScope(chunk.sourceType, options.scope)
   );
 

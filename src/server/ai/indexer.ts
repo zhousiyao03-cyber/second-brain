@@ -112,6 +112,7 @@ async function syncSourceIndex({
   sourceType,
   sourceUpdatedAt,
   summary,
+  userId,
 }: {
   content?: string | null;
   plainText?: string | null;
@@ -121,6 +122,7 @@ async function syncSourceIndex({
   sourceType: KnowledgeSourceType;
   sourceUpdatedAt?: Date | null;
   summary?: string | null;
+  userId: string;
 }) {
   const jobId = await startIndexJob(sourceType, sourceId, reason);
 
@@ -171,6 +173,7 @@ async function syncSourceIndex({
 
     const insertedChunks = nextChunks.map((chunk) => ({
       id: crypto.randomUUID(),
+      userId,
       sourceType,
       sourceId,
       sourceTitle,
@@ -221,6 +224,7 @@ export async function syncNoteKnowledgeIndex(
     sourceTitle: note.title,
     sourceType: "note",
     sourceUpdatedAt: note.updatedAt,
+    userId: note.userId,
   });
 }
 
@@ -236,6 +240,7 @@ export async function syncBookmarkKnowledgeIndex(
     sourceType: "bookmark",
     sourceUpdatedAt: bookmark.updatedAt,
     summary: bookmark.summary,
+    userId: bookmark.userId,
   });
 }
 

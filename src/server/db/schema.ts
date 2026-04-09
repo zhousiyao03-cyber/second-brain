@@ -102,21 +102,37 @@ export const chatMessages = sqliteTable("chat_messages", {
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-export const knowledgeChunks = sqliteTable("knowledge_chunks", {
-  id: text("id").primaryKey(),
-  sourceType: text("source_type", { enum: ["note", "bookmark"] }).notNull(),
-  sourceId: text("source_id").notNull(),
-  sourceTitle: text("source_title").notNull(),
-  sourceUpdatedAt: integer("source_updated_at", { mode: "timestamp" }),
-  chunkIndex: integer("chunk_index").notNull(),
-  sectionPath: text("section_path"), // JSON array
-  blockType: text("block_type"),
-  text: text("text").notNull(),
-  textHash: text("text_hash").notNull(),
-  tokenCount: integer("token_count"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const knowledgeChunks = sqliteTable(
+  "knowledge_chunks",
+  {
+    id: text("id").primaryKey(),
+    // Nullable for backward compat with rows written before the security
+    // rollout; a one-shot backfill script copies userId from the owning
+    // note/bookmark. New writes always set this.
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    sourceType: text("source_type", { enum: ["note", "bookmark"] }).notNull(),
+    sourceId: text("source_id").notNull(),
+    sourceTitle: text("source_title").notNull(),
+    sourceUpdatedAt: integer("source_updated_at", { mode: "timestamp" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    sectionPath: text("section_path"), // JSON array
+    blockType: text("block_type"),
+    text: text("text").notNull(),
+    textHash: text("text_hash").notNull(),
+    tokenCount: integer("token_count"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(
+      () => new Date()
+    ),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(
+      () => new Date()
+    ),
+  },
+  (table) => [
+    index("knowledge_chunks_user_id_idx").on(table.userId),
+  ]
+);
 
 export const knowledgeChunkEmbeddings = sqliteTable("knowledge_chunk_embeddings", {
   chunkId: text("chunk_id")
