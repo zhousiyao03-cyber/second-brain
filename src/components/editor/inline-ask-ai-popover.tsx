@@ -22,6 +22,19 @@ import {
 
 const transport = new TextStreamChatTransport({ api: "/api/chat" });
 
+const REWRITE_QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
+  { label: "更简洁", prompt: "让它更简洁，保留核心信息" },
+  { label: "更易读", prompt: "改写得更清晰易读，分段或列表更合适" },
+  { label: "翻译为中文", prompt: "翻译为自然的中文" },
+  { label: "翻译为英文", prompt: "翻译为自然的英文" },
+];
+
+const ASK_QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
+  { label: "总结这篇笔记", prompt: "帮我用 3-5 个要点总结这篇笔记的主要内容" },
+  { label: "列出待办", prompt: "从这篇笔记里抽出所有可操作的 TODO，用 bullet list 输出" },
+  { label: "下一步建议", prompt: "基于这篇笔记的内容，给我 3 个具体的下一步建议" },
+];
+
 export interface InlineAskAiAnchor {
   /** Document position where the popover is anchored (insertion point). */
   pos: number;
@@ -154,13 +167,11 @@ export function InlineAskAiPopover({
 
   const isRewrite = Boolean(anchor.selectedText);
 
-  const handleSubmit = () => {
-    const trimmed = input.trim();
-    if (!trimmed || isLoading) return;
-
+  const sendPrompt = (instruction: string) => {
+    if (!instruction.trim() || isLoading) return;
     const finalPrompt = isRewrite
-      ? `请根据下面的指令改写给定文本。只输出改写后的文本本身，不要加任何解释、前言或 markdown 标题。\n\n指令：${trimmed}\n\n原文：\n${anchor.selectedText}`
-      : trimmed;
+      ? `请根据下面的指令改写给定文本。只输出改写后的文本本身，不要加任何解释、前言或 markdown 标题。\n\n指令：${instruction}\n\n原文：\n${anchor.selectedText}`
+      : instruction;
 
     sendMessage(
       { text: finalPrompt },
@@ -175,6 +186,16 @@ export function InlineAskAiPopover({
         },
       }
     );
+  };
+
+  const handleSubmit = () => {
+    sendPrompt(input.trim());
+  };
+
+  const handleQuickAction = (preset: string) => {
+    if (isLoading) return;
+    setInput(preset);
+    sendPrompt(preset);
   };
 
   const handleTextareaChange = (
@@ -276,6 +297,26 @@ export function InlineAskAiPopover({
         <Sparkles size={14} />
         {isRewrite ? "改写选中文本" : "Ask AI"}
       </div>
+
+      {!lastAssistantText && !isLoading && (
+        <div
+          data-inline-ask-ai-quick-actions
+          className="flex flex-wrap gap-1.5 border-b border-stone-100 px-3 py-2 dark:border-stone-800"
+        >
+          {(isRewrite ? REWRITE_QUICK_ACTIONS : ASK_QUICK_ACTIONS).map(
+            (action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => handleQuickAction(action.prompt)}
+                className="rounded-full border border-stone-200 bg-white px-2.5 py-0.5 text-[11px] text-stone-600 transition-colors hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-stone-600 dark:hover:bg-stone-800"
+              >
+                {action.label}
+              </button>
+            )
+          )}
+        </div>
+      )}
 
       {pinnedSources.length > 0 && (
         <div
