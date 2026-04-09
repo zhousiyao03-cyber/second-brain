@@ -20,6 +20,7 @@ import {
   Minus,
   PenTool,
   Quote,
+  Sparkles,
   Table,
   TableOfContents,
   Type,
@@ -63,6 +64,34 @@ export function createEditorCommandGroups(
   callbacks: EditorCommandCallbacks
 ): EditorCommandGroup[] {
   return [
+    {
+      id: "ai",
+      label: "AI",
+      items: [
+        {
+          id: "ask-ai",
+          title: "Ask AI",
+          description: "用 AI 帮你写或回答",
+          keywords: ["ai", "ask", "gpt", "claude", "问 ai", "人工智能", "写作"],
+          icon: Sparkles,
+          shortcutHint: "/ai",
+          run: (editor) => {
+            const { from } = editor.state.selection;
+            const coords = editor.view.coordsAtPos(from);
+            window.dispatchEvent(
+              new CustomEvent("open-inline-ask-ai", {
+                detail: {
+                  pos: from,
+                  top: coords.bottom + 6,
+                  left: coords.left,
+                },
+              })
+            );
+          },
+          transformable: false,
+        },
+      ],
+    },
     {
       id: "basic",
       label: "基础块",

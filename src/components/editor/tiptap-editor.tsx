@@ -21,6 +21,10 @@ import {
   SlashCommandMenu,
 } from "./slash-command";
 import { BubbleToolbar } from "./bubble-toolbar";
+import {
+  InlineAskAiPopover,
+  type InlineAskAiAnchor,
+} from "./inline-ask-ai-popover";
 import { TableToolbar } from "./table-toolbar";
 import { createCalloutBlockNode } from "./callout-block";
 import {
@@ -111,6 +115,8 @@ export function TiptapEditor({
   const [, setIsDragging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [linkTooltip, setLinkTooltip] = useState<{ href: string; top: number; left: number } | null>(null);
+  const [inlineAskAnchor, setInlineAskAnchor] =
+    useState<InlineAskAiAnchor | null>(null);
   const linkTooltipTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TiptapEditorInstance | null>(null);
@@ -572,6 +578,21 @@ export function TiptapEditor({
     }
   }, [editor, onEditorReady]);
 
+  // Listen for custom events dispatched by /ai slash command and the bubble
+  // toolbar Ask AI button. They carry the anchor position + optional selection
+  // text so the popover can render at the caret / selection.
+  useEffect(() => {
+    if (!editor) return;
+    const onOpen = (event: Event) => {
+      const detail = (event as CustomEvent<InlineAskAiAnchor>).detail;
+      if (detail) setInlineAskAnchor(detail);
+    };
+    window.addEventListener("open-inline-ask-ai", onOpen as EventListener);
+    return () => {
+      window.removeEventListener("open-inline-ask-ai", onOpen as EventListener);
+    };
+  }, [editor]);
+
   const commandGroups = useMemo(
     () =>
       createEditorCommandGroups({
@@ -741,6 +762,14 @@ export function TiptapEditor({
       )}
       {editable && <BubbleToolbar editor={editor} />}
       {editable && <TableToolbar editor={editor} />}
+      {editable && editor && (
+        <InlineAskAiPopover
+          editor={editor}
+          anchor={inlineAskAnchor}
+          noteText={editor.getText()}
+          onClose={() => setInlineAskAnchor(null)}
+        />
+      )}
 
       <div
         ref={editorSurfaceRef}
