@@ -1,4 +1,3 @@
-import type { ModelMessage } from "ai";
 import { z } from "zod/v4";
 import { ASK_AI_SOURCE_SCOPES } from "@/lib/ask-ai";
 import { retrieveAgenticContext } from "@/server/ai/agentic-rag";
