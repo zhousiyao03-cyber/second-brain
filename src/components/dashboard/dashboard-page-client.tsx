@@ -104,6 +104,7 @@ export function DashboardPageClient({
       {/* Focus Tracking */}
       <Link
         href="/focus"
+        data-testid="dashboard-focus-card"
         className="block rounded-2xl border border-sky-200 bg-sky-50/80 p-5 transition-colors hover:border-sky-300 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/20 dark:hover:border-sky-800 dark:hover:bg-sky-950/30"
       >
         <div className="flex items-start justify-between gap-3">
