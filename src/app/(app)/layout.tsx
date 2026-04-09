@@ -1,18 +1,19 @@
 import { Suspense } from "react";
-import { auth } from "@/lib/auth";
+import { FloatingAskAiDock } from "@/components/ask/floating-ask-ai-dock";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Sidebar } from "@/components/layout/sidebar";
 import { WorkspaceIdentityProvider } from "@/components/layout/workspace-identity-provider";
 import { getWorkspaceLabel } from "@/components/layout/workspace-label";
 import { SearchDialog } from "@/components/search-dialog";
 import { ToastProvider } from "@/components/ui/toast";
+import { getRequestSession } from "@/server/auth/request-session";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const session = await getRequestSession();
   const workspaceLabel = getWorkspaceLabel(
     session?.user?.name,
     session?.user?.email
@@ -32,6 +33,7 @@ export default async function AppLayout({
             </main>
           </div>
           <SearchDialog />
+          <FloatingAskAiDock />
         </div>
       </WorkspaceIdentityProvider>
     </ToastProvider>
