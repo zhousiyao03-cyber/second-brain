@@ -4,9 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { useChat } from "@ai-sdk/react";
 import { TextStreamChatTransport } from "ai";
-import { ArrowUp, Loader2, Sparkles, Square } from "lucide-react";
+import {
+  ArrowUp,
+  Bookmark,
+  FileText,
+  Loader2,
+  Sparkles,
+  Square,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { aiTextToTiptapJson } from "@/lib/ai-text-to-tiptap";
+import {
+  InlineAskAiMentionMenu,
+  type MentionSource,
+} from "./inline-ask-ai-mention-menu";
 
 const transport = new TextStreamChatTransport({ api: "/api/chat" });
 
@@ -38,6 +50,40 @@ function getMessageText(parts: Array<{ type: string; text?: string }> = []) {
     .join("");
 }
 
+/**
+ * Given the current textarea value and caret position, return the active
+ * @mention query string (chars between the most recent `@` and the caret),
+ * or `null` if the caret is not inside a mention token.
+ *
+ * Rules:
+ *  - `@` must be at the start of the value or preceded by whitespace.
+ *  - The span from `@` to caret must not contain whitespace/newlines.
+ *  - Returns the query without the leading `@`. Empty string means the user
+ *    just typed `@` with nothing after it.
+ */
+export function detectMentionQuery(
+  value: string,
+  caret: number
+): { query: string; start: number } | null {
+  if (caret < 1) return null;
+
+  // Walk backwards from caret to find the nearest `@` that is a valid trigger.
+  for (let i = caret - 1; i >= 0; i -= 1) {
+    const ch = value[i];
+    if (ch === "@") {
+      const prev = i > 0 ? value[i - 1] : "";
+      if (i === 0 || /\s/.test(prev)) {
+        return { query: value.slice(i + 1, caret), start: i };
+      }
+      return null;
+    }
+    if (ch === " " || ch === "\n" || ch === "\t") {
+      return null;
+    }
+  }
+  return null;
+}
+
 export function InlineAskAiPopover({
   editor,
   anchor,
@@ -45,6 +91,11 @@ export function InlineAskAiPopover({
   noteText,
 }: Props) {
   const [input, setInput] = useState("");
+  const [pinnedSources, setPinnedSources] = useState<MentionSource[]>([]);
+  const [mentionState, setMentionState] = useState<{
+    query: string;
+    start: number;
+  } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isComposingRef = useRef(false);
@@ -63,17 +114,23 @@ export function InlineAskAiPopover({
       )
     : "";
 
+  // Autofocus the textarea when the popover mounts. Callers should give this
+  // component a unique `key` per opening (e.g. keyed by anchor identity) so
+  // every open starts with a fresh state tree — that's how we reset input /
+  // pinnedSources / mentionState without touching them from an effect.
   useEffect(() => {
-    if (anchor) {
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
-  }, [anchor]);
+    const t = setTimeout(() => inputRef.current?.focus(), 0);
+    return () => clearTimeout(t);
+  }, []);
 
   // Close on Escape / click outside.
   useEffect(() => {
     if (!anchor) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // When the mention menu is open, let it eat the Escape and close
+        // itself instead of closing the whole popover.
+        if (mentionState) return;
         e.preventDefault();
         onClose();
       }
@@ -91,7 +148,7 @@ export function InlineAskAiPopover({
       window.removeEventListener("mousedown", onClick);
       clearTimeout(t);
     };
-  }, [anchor, onClose]);
+  }, [anchor, onClose, mentionState]);
 
   if (!anchor) return null;
 
@@ -111,13 +168,61 @@ export function InlineAskAiPopover({
         body: {
           sourceScope: "direct",
           contextNoteText: noteText.slice(0, 8000),
+          pinnedSources: pinnedSources.map((s) => ({
+            id: s.id,
+            type: s.type,
+          })),
         },
       }
     );
   };
 
+  const handleTextareaChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    const value = e.target.value;
+    const caret = e.target.selectionStart ?? value.length;
+    setInput(value);
+    setMentionState(detectMentionQuery(value, caret));
+  };
+
+  const handleSelectMention = (source: MentionSource) => {
+    // De-dupe by id.
+    setPinnedSources((prev) =>
+      prev.some((s) => s.id === source.id) ? prev : [...prev, source]
+    );
+    // Cut the `@query` token out of the input.
+    if (mentionState) {
+      const before = input.slice(0, mentionState.start);
+      const afterStart = mentionState.start + 1 + mentionState.query.length;
+      const after = input.slice(afterStart);
+      // Collapse an orphan leading space that would otherwise double up.
+      const next = `${before}${after}`;
+      setInput(next);
+    }
+    setMentionState(null);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleRemovePinned = (id: string) => {
+    setPinnedSources((prev) => prev.filter((s) => s.id !== id));
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing || isComposingRef.current) return;
+    // While the mention menu is open, let it handle Enter / ↑ / ↓ / Esc and
+    // don't submit the whole message.
+    if (mentionState) {
+      if (
+        e.key === "Enter" ||
+        e.key === "ArrowUp" ||
+        e.key === "ArrowDown" ||
+        e.key === "Escape"
+      ) {
+        e.preventDefault();
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -172,11 +277,40 @@ export function InlineAskAiPopover({
         {isRewrite ? "改写选中文本" : "Ask AI"}
       </div>
 
-      <div className="px-3 pt-2">
+      {pinnedSources.length > 0 && (
+        <div
+          data-inline-ask-ai-pinned-bar
+          className="flex flex-wrap items-center gap-1.5 border-b border-stone-100 px-3 py-2 dark:border-stone-800"
+        >
+          {pinnedSources.map((source) => {
+            const Icon = source.type === "note" ? FileText : Bookmark;
+            return (
+              <span
+                key={source.id}
+                data-pinned-source-id={source.id}
+                className="inline-flex max-w-[220px] items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] text-sky-700 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-200"
+              >
+                <Icon size={11} className="shrink-0" />
+                <span className="truncate">{source.title}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemovePinned(source.id)}
+                  aria-label={`移除 ${source.title}`}
+                  className="ml-0.5 shrink-0 rounded-full p-0.5 text-sky-600 hover:bg-sky-100 dark:text-sky-300 dark:hover:bg-sky-900/40"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="relative px-3 pt-2">
         <textarea
           ref={inputRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
           onCompositionStart={() => {
             isComposingRef.current = true;
@@ -187,12 +321,19 @@ export function InlineAskAiPopover({
           placeholder={
             isRewrite
               ? "想怎么改写？（例如：更简洁、翻译为英文、改成列表）"
-              : "问点什么，或让 AI 帮你写..."
+              : "问点什么，或用 @ 钉住 note/bookmark 作为上下文..."
           }
           rows={2}
           disabled={isLoading}
           className="w-full resize-none border-none bg-transparent text-sm leading-6 text-stone-900 outline-none placeholder:text-stone-400 disabled:opacity-60 dark:text-stone-100 dark:placeholder:text-stone-500"
         />
+        {mentionState && (
+          <InlineAskAiMentionMenu
+            query={mentionState.query}
+            onSelect={handleSelectMention}
+            onClose={() => setMentionState(null)}
+          />
+        )}
       </div>
 
       {(lastAssistantText || isLoading) && (

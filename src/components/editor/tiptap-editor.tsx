@@ -117,6 +117,10 @@ export function TiptapEditor({
   const [linkTooltip, setLinkTooltip] = useState<{ href: string; top: number; left: number } | null>(null);
   const [inlineAskAnchor, setInlineAskAnchor] =
     useState<InlineAskAiAnchor | null>(null);
+  // Bump every time a new anchor is set, so the popover remounts and
+  // resets its internal state cleanly (no setState-in-effect).
+  const inlineAskOpenIdRef = useRef(0);
+  const [inlineAskOpenId, setInlineAskOpenId] = useState(0);
   const linkTooltipTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TiptapEditorInstance | null>(null);
@@ -585,7 +589,11 @@ export function TiptapEditor({
     if (!editor) return;
     const onOpen = (event: Event) => {
       const detail = (event as CustomEvent<InlineAskAiAnchor>).detail;
-      if (detail) setInlineAskAnchor(detail);
+      if (detail) {
+        inlineAskOpenIdRef.current += 1;
+        setInlineAskOpenId(inlineAskOpenIdRef.current);
+        setInlineAskAnchor(detail);
+      }
     };
     window.addEventListener("open-inline-ask-ai", onOpen as EventListener);
     return () => {
@@ -769,7 +777,7 @@ export function TiptapEditor({
         <InlineAskAiPopover
           key={
             inlineAskAnchor
-              ? `${inlineAskAnchor.pos}:${inlineAskAnchor.selectionFrom ?? ""}:${inlineAskAnchor.selectionTo ?? ""}`
+              ? `inline-ask-${inlineAskOpenId}`
               : "inline-ask-closed"
           }
           editor={editor}
