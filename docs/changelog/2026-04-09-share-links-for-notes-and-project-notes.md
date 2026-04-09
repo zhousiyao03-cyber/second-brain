@@ -63,6 +63,15 @@
   - Passed, local schema changes applied
 - `node --input-type=module -e "import { createClient } from '@libsql/client'; const db=createClient({url:'file:data/second-brain.db'}); const projectNoteCols=await db.execute('PRAGMA table_info(os_project_notes)'); const projectCols=await db.execute('PRAGMA table_info(os_projects)'); console.log(JSON.stringify({ os_project_notes: projectNoteCols.rows.filter(r => r.name === 'share_token' || r.name === 'shared_at'), os_projects: projectCols.rows.filter(r => r.name === 'share_token' || r.name === 'shared_at') }, null, 2)); db.close();"`
   - Passed, confirmed `share_token` and `shared_at` exist on local `os_project_notes`, and no longer exist on local `os_projects`
+- `set -a && source .env.turso-prod.local && set +a && node --input-type=module - <<'EOF' ... PRAGMA table_info(os_project_notes) / PRAGMA table_info(os_projects) / sqlite_master share index check ... EOF`
+  - Passed, confirmed production `os_project_notes` initially had no `share_token` / `shared_at`, production `os_projects` had no share columns, and no share index existed yet
+- `set -a && source .env.turso-prod.local && set +a && node --input-type=module - <<'EOF' ... ALTER TABLE os_project_notes ADD COLUMN share_token text; ALTER TABLE os_project_notes ADD COLUMN shared_at integer; CREATE UNIQUE INDEX os_project_notes_share_token_unique ON os_project_notes (share_token); ... EOF`
+  - Passed, production Turso rollout applied successfully:
+    - `ALTER TABLE os_project_notes ADD COLUMN share_token text`
+    - `ALTER TABLE os_project_notes ADD COLUMN shared_at integer`
+    - `CREATE UNIQUE INDEX os_project_notes_share_token_unique ON os_project_notes (share_token)`
+- `set -a && source .env.turso-prod.local && set +a && node --input-type=module - <<'EOF' ... PRAGMA table_info(os_project_notes) / sqlite_master index check / SELECT id, project_id, title, share_token, shared_at FROM os_project_notes ORDER BY updated_at DESC LIMIT 1 ... EOF`
+  - Passed, confirmed production `os_project_notes` now contains `share_token` and `shared_at`, `os_projects` still has no share columns, `os_project_notes_share_token_unique` exists, and a real `SELECT ... share_token, shared_at ...` query returns successfully
 - `pnpm lint`
   - Failed due pre-existing unrelated repo issues in:
     - `src/components/editor/knowledge-note-editor.tsx`
@@ -78,5 +87,4 @@
 
 ## Remaining Risks Or Follow-up Items
 
-- Production Turso schema rollout was **not** performed in this task. Local schema is updated and verified; production rollout remains an explicit follow-up before deploying this migration to shared environments.
 - Existing repository-wide lint blockers remain outside the scope of this share-link task.
