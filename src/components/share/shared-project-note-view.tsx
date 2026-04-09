@@ -70,9 +70,12 @@ export function SharedProjectNoteView({
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(248,250,252,0.98),rgba(241,245,249,1)_26%,rgba(255,255,255,1)_60%)] text-stone-900 dark:bg-[radial-gradient(circle_at_top,rgba(41,37,36,0.98),rgba(24,24,27,1)_26%,rgba(9,9,11,1)_60%)] dark:text-stone-100">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-10 md:px-10">
-        <header className="rounded-[32px] border border-stone-200/80 bg-white/85 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur dark:border-stone-800 dark:bg-stone-950/80">
-          <div className="space-y-4">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 pb-12 pt-6 sm:gap-8 sm:px-6 sm:pb-16 sm:pt-10 md:px-10">
+        <header
+          data-testid="shared-project-note-hero"
+          className="border border-transparent bg-transparent p-0 shadow-none sm:rounded-[32px] sm:border-stone-200/80 sm:bg-white/85 sm:p-8 sm:shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:backdrop-blur sm:dark:border-stone-800 sm:dark:bg-stone-950/80"
+        >
+          <div className="space-y-3 sm:space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 dark:border-blue-900/80 dark:bg-blue-950/60 dark:text-blue-200">
               <FileText size={14} />
               Shared project note
@@ -81,10 +84,10 @@ export function SharedProjectNoteView({
               <p className="text-sm text-stone-500 dark:text-stone-400">
                 From project
               </p>
-              <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
+              <h1 className="text-[2.35rem] font-semibold leading-[1.02] tracking-tight sm:text-4xl md:text-5xl">
                 {note.projectName}
               </h1>
-              <p className="max-w-2xl text-base leading-7 text-stone-600 dark:text-stone-300">
+              <p className="max-w-2xl text-[15px] leading-7 text-stone-600 dark:text-stone-300 sm:text-base">
                 {note.projectDescription || "No description yet."}
               </p>
             </div>
@@ -110,8 +113,11 @@ export function SharedProjectNoteView({
           </div>
         </header>
 
-        <article className="rounded-[28px] border border-stone-200/80 bg-white/90 p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)] backdrop-blur dark:border-stone-800 dark:bg-stone-950/85">
-          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <article
+          data-testid="shared-project-note-body"
+          className="border border-transparent bg-transparent p-0 shadow-none sm:rounded-[28px] sm:border-stone-200/80 sm:bg-white/90 sm:p-6 sm:shadow-[0_12px_40px_rgba(15,23,42,0.06)] sm:backdrop-blur sm:dark:border-stone-800 sm:dark:bg-stone-950/85"
+        >
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-4 sm:mb-5">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300">
@@ -123,7 +129,7 @@ export function SharedProjectNoteView({
                   </span>
                 ) : null}
               </div>
-              <h2 className="text-3xl font-semibold text-stone-900 dark:text-stone-100">
+              <h2 className="text-[2rem] font-semibold leading-[1.08] text-stone-900 dark:text-stone-100 sm:text-3xl">
                 {note.title || "Untitled note"}
               </h2>
             </div>
@@ -148,7 +154,7 @@ export function SharedProjectNoteView({
           </div>
         </article>
 
-        <footer className="pt-4 text-center text-xs text-stone-400 dark:text-stone-500">
+        <footer className="pt-2 text-left text-xs text-stone-400 dark:text-stone-500 sm:pt-4 sm:text-center">
           Built with Second Brain
         </footer>
       </div>

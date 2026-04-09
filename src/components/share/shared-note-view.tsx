@@ -73,7 +73,10 @@ export function SharedNoteView({ note }: { note: SharedNote | null }) {
         </div>
       ) : null}
 
-      <article className="mx-auto w-full max-w-[780px] px-6 pb-20 pt-10 md:px-10">
+      <article
+        data-testid="shared-note-article"
+        className="mx-auto w-full max-w-[780px] px-4 pb-16 pt-6 sm:px-6 sm:pb-20 sm:pt-10 md:px-10"
+      >
         {note.icon ? (
           <div className={coverSource ? "-mt-14 mb-3" : "mb-3"}>
             <div className="inline-flex h-18 w-18 items-center justify-center rounded-[22px] border border-white/80 bg-white/95 text-4xl shadow-lg backdrop-blur dark:border-stone-800 dark:bg-stone-950/90">
@@ -82,12 +85,12 @@ export function SharedNoteView({ note }: { note: SharedNote | null }) {
           </div>
         ) : null}
 
-        <h1 className="mb-4 text-[3.15rem] font-semibold leading-[1.04] text-stone-900 dark:text-stone-100 md:text-[3.5rem]">
+        <h1 className="mb-4 text-[2.35rem] font-semibold leading-[1.02] text-stone-900 dark:text-stone-100 sm:text-[3.15rem] sm:leading-[1.04] md:text-[3.5rem]">
           {note.title}
         </h1>
 
         {tags.length > 0 ? (
-          <div className="mb-6 flex flex-wrap gap-2">
+          <div className="mb-5 flex flex-wrap gap-2 sm:mb-6">
             {tags.map((tag) => (
               <span
                 key={tag}
@@ -104,7 +107,7 @@ export function SharedNoteView({ note }: { note: SharedNote | null }) {
           <TiptapEditor content={note.content ?? undefined} editable={false} />
         </div>
 
-        <footer className="mt-16 border-t border-stone-200 pt-6 text-center text-xs text-stone-400 dark:border-stone-800 dark:text-stone-500">
+        <footer className="mt-12 border-t border-stone-200 pt-5 text-left text-xs text-stone-400 dark:border-stone-800 dark:text-stone-500 sm:mt-16 sm:pt-6 sm:text-center">
           Built with Second Brain
         </footer>
       </article>

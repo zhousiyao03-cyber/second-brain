@@ -424,7 +424,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
 
   return (
     <div className="-mx-4 -mt-5 w-auto pb-10 md:-mx-6 md:-mt-6">
-      <div className="mx-auto mb-4 flex w-full max-w-[1360px] flex-col gap-3 px-6 pt-5 md:px-10 md:pt-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto mb-4 flex w-full max-w-[1360px] flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pt-5 md:px-10 md:pt-6">
         <button
           onClick={() => router.push("/notes")}
           data-testid="note-editor-back"
@@ -468,7 +468,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/12" />
 
-          <div className="absolute inset-x-0 top-0 flex justify-end px-6 py-5 md:px-10">
+          <div className="absolute inset-x-0 top-0 flex justify-end px-4 py-4 sm:px-6 sm:py-5 md:px-10">
             <div
               ref={coverPickerRef}
               className="relative flex items-center gap-2"
@@ -517,9 +517,12 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
         </div>
       )}
 
-      <div className="group/page-shell mx-auto w-full max-w-[980px] px-6 md:px-10">
+      <div
+        data-testid="note-editor-shell"
+        className="group/page-shell mx-auto w-full max-w-[980px] px-4 sm:px-6 md:px-10"
+      >
         {!hasCover && (
-          <div className="mb-3 flex items-center px-1">
+          <div className="mb-3 flex items-center sm:px-1">
             <div
               ref={coverPickerRef}
               className={cn(
@@ -552,7 +555,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
 
         <div
           data-testid="page-properties"
-          className="mb-3 flex flex-wrap items-center gap-3 px-1 text-sm text-stone-500 dark:text-stone-400"
+          className="mb-3 flex flex-wrap items-center gap-3 text-sm text-stone-500 dark:text-stone-400 sm:px-1"
         >
           <div className="flex flex-wrap items-center gap-2">
             {(Object.entries(NOTE_TYPE_LABELS) as Array<
@@ -615,14 +618,14 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
         </div>
 
         {note.icon && (
-          <div className={cn("mb-3 px-1", hasCover && "-mt-14")}>
+          <div className={cn("mb-3 sm:px-1", hasCover && "-mt-14")}>
             <div className="inline-flex h-18 w-18 items-center justify-center rounded-[22px] border border-white/80 bg-white/95 text-4xl shadow-lg backdrop-blur dark:border-stone-800 dark:bg-stone-950/90">
               {note.icon}
             </div>
           </div>
         )}
 
-        <div className="mt-8 mb-6 px-1">
+        <div className="mb-5 mt-6 sm:mb-6 sm:mt-8 sm:px-1">
           <textarea
             ref={titleRef}
             value={title}
@@ -640,7 +643,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
           />
         </div>
 
-        <div className="px-1">
+        <div className="-mx-1 sm:mx-0 sm:px-1">
           <TiptapEditor
             content={note.content ?? undefined}
             onChange={handleContentChange}
