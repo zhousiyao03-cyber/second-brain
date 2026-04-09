@@ -101,6 +101,48 @@ test.describe("Ask AI inline in editor", () => {
     await expect(editor).toContainText("REPLACED_BY_AI");
   });
 
+  test("append to end inserts answer at the document tail, not the caret", async ({
+    page,
+  }) => {
+    await mockChatStream(page, "APPENDED_PAYLOAD");
+
+    const { editor } = await createNote(page);
+    await editor.click();
+    await editor.pressSequentially("TOP_LINE", { delay: 20 });
+    // Move caret back to start so "insert at caret" would land above TOP_LINE
+    await page.keyboard.press("Home");
+    for (let i = 0; i < 10; i += 1) {
+      await page.keyboard.press("ArrowLeft");
+    }
+
+    await editor.press("/");
+    const menu = page.getByTestId("editor-slash-menu");
+    await expect(menu).toBeVisible({ timeout: 3000 });
+    await menu.getByRole("button", { name: "Ask AI" }).click();
+
+    const popover = page.locator("[data-inline-ask-ai]");
+    await expect(popover).toBeVisible();
+
+    await popover.locator("textarea").fill("whatever");
+    await popover.locator("textarea").press("Enter");
+    await expect(popover).toContainText("APPENDED_PAYLOAD", {
+      timeout: 10_000,
+    });
+
+    const appendBtn = popover.locator("[data-inline-ask-ai-append]");
+    await expect(appendBtn).toBeVisible();
+    await appendBtn.click();
+
+    await expect(popover).toBeHidden();
+    // The appended text should be *after* TOP_LINE, not before.
+    const text = await editor.innerText();
+    expect(text).toContain("TOP_LINE");
+    expect(text).toContain("APPENDED_PAYLOAD");
+    expect(text.indexOf("TOP_LINE")).toBeLessThan(
+      text.indexOf("APPENDED_PAYLOAD")
+    );
+  });
+
   test("Escape closes popover without modifying the editor", async ({
     page,
   }) => {

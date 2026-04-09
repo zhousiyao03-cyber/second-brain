@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { aiTextToTiptapJson } from "@/lib/ai-text-to-tiptap";
+import { parseAiBlocks } from "@/lib/parse-ai-blocks";
+import type { JSONContent } from "@tiptap/react";
 import {
   InlineAskAiMentionMenu,
   type MentionSource,
@@ -250,9 +252,20 @@ export function InlineAskAiPopover({
     }
   };
 
+  /**
+   * Turn the current assistant answer into Tiptap block JSON. Prefers the
+   * structured `<ai_blocks>` payload if the model emitted one, otherwise
+   * falls back to the minimal Markdown→JSON converter used since M1.
+   */
+  const answerToBlocks = (text: string): JSONContent[] => {
+    const parsed = parseAiBlocks(text);
+    if (parsed.blocks && parsed.blocks.length > 0) return parsed.blocks;
+    return aiTextToTiptapJson(parsed.cleanText);
+  };
+
   const handleInsert = () => {
     if (!lastAssistantText.trim()) return;
-    const json = aiTextToTiptapJson(lastAssistantText);
+    const json = answerToBlocks(lastAssistantText);
     if (json.length === 0) return;
 
     if (
@@ -269,6 +282,15 @@ export function InlineAskAiPopover({
     } else {
       editor.chain().focus().insertContentAt(anchor.pos, json).run();
     }
+    onClose();
+  };
+
+  const handleAppendHere = () => {
+    if (!lastAssistantText.trim()) return;
+    const json = answerToBlocks(lastAssistantText);
+    if (json.length === 0) return;
+    const endPos = editor.state.doc.content.size;
+    editor.chain().focus().insertContentAt(endPos, json).run();
     onClose();
   };
 
@@ -419,9 +441,20 @@ export function InlineAskAiPopover({
               >
                 丢弃
               </button>
+              {!isRewrite && (
+                <button
+                  type="button"
+                  onClick={handleAppendHere}
+                  data-inline-ask-ai-append
+                  className="rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
+                >
+                  追加到末尾
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleInsert}
+                data-inline-ask-ai-primary
                 className={cn(
                   "rounded-md bg-stone-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-stone-700",
                   "dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-stone-300"
