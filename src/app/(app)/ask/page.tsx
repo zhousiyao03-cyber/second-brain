@@ -8,7 +8,6 @@ import { TextStreamChatTransport } from "ai";
 import {
   ArrowUp,
   Bookmark,
-  Bot,
   FileText,
   Loader2,
   Mic,
@@ -276,9 +275,9 @@ function SourcePill({
   return (
     <Link
       href={isNote ? `/notes/${source.id}` : "/bookmarks"}
-      className="inline-flex min-w-0 items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 transition-colors hover:border-stone-300 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300 dark:hover:border-stone-700 dark:hover:bg-stone-900"
+      className="inline-flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
     >
-      {isNote ? <FileText size={14} /> : <Bookmark size={14} />}
+      {isNote ? <FileText size={12} /> : <Bookmark size={12} />}
       <span className="max-w-[11rem] truncate">{source.title}</span>
     </Link>
   );
@@ -302,9 +301,9 @@ function IconActionButton({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-400 dark:hover:border-stone-700 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-40 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
     >
-      <Icon size={16} />
+      <Icon size={14} />
     </button>
   );
 }
@@ -449,7 +448,7 @@ function AskPageStream() {
               </h1>
             </section>
           ) : (
-            <section className="mx-auto flex w-full max-w-4xl flex-col gap-10 px-2 pb-10 pt-6 sm:px-4">
+            <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-2 pb-10 pt-6 sm:px-4">
               {messages.map((message) => {
                 const rawText = getMessageText(message.parts);
                 const isAssistant = message.role === "assistant";
@@ -461,7 +460,7 @@ function AskPageStream() {
                 if (!isAssistant) {
                   return (
                     <article key={message.id} className="flex justify-end">
-                      <div className="max-w-[min(32rem,88%)] rounded-[28px] bg-stone-100 px-5 py-3 text-[15px] leading-7 text-stone-900 shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-800">
+                      <div className="max-w-[min(32rem,88%)] rounded-2xl bg-stone-100 px-4 py-2 text-[15px] leading-6 text-stone-900 dark:bg-stone-900 dark:text-stone-100">
                         <div className="whitespace-pre-wrap">{cleanText}</div>
                       </div>
                     </article>
@@ -469,80 +468,60 @@ function AskPageStream() {
                 }
 
                 return (
-                  <article key={message.id} className="flex gap-4">
-                    <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-sm sm:flex dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200">
-                      <Bot size={18} />
+                  <article key={message.id} className="min-w-0">
+                    <div className="whitespace-pre-wrap text-[15px] leading-7 text-stone-800 dark:text-stone-100">
+                      {cleanText || (isLoading ? "正在思考..." : "")}
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[11px] uppercase tracking-[0.24em] text-stone-400 dark:text-stone-500">
-                        Ask AI
-                      </div>
-
-                      <div className="mt-4 whitespace-pre-wrap text-[15px] leading-8 text-stone-800 dark:text-stone-100">
-                        {cleanText || (isLoading ? "Preparing the answer..." : "")}
-                      </div>
-
-                      {isLatestAssistant && (
-                        <div className="mt-6 flex flex-wrap items-start justify-between gap-4 rounded-[24px] border border-stone-200/80 bg-white/70 px-4 py-3 shadow-[0_12px_38px_-30px_rgba(15,23,42,0.45)] backdrop-blur dark:border-stone-800 dark:bg-stone-950/70">
-                          <div className="min-w-0 flex-1">
-                            {sources.length === 0 ? (
-                              <div className="text-sm text-stone-500 dark:text-stone-400">
-                                {scope === "direct"
-                                  ? "Direct answer mode is on, so no sources are shown."
-                                  : "No displayable sources were attached to this answer."}
-                              </div>
-                            ) : (
-                              <div className="flex flex-wrap gap-2">
-                                {sources.slice(0, 3).map((source) => (
-                                  <SourcePill
-                                    key={`${source.type}-${source.id}`}
-                                    source={source}
-                                  />
-                                ))}
-                                {sources.length > 3 ? (
-                                  <div className="inline-flex items-center rounded-full bg-stone-100 px-3 py-2 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">
-                                    +{sources.length - 3} more
-                                  </div>
-                                ) : null}
-                              </div>
+                    {isLatestAssistant && cleanText && (
+                      <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1 text-stone-500">
+                        <IconActionButton
+                          icon={Save}
+                          label="保存为笔记"
+                          onClick={handleSaveAnswer}
+                          disabled={
+                            !latestAnswer.cleanText.trim() ||
+                            createNote.isPending
+                          }
+                        />
+                        <IconActionButton
+                          icon={RefreshCcw}
+                          label={`重新生成（${currentScope.label}）`}
+                          onClick={() => handleRegenerateWithScope(scope)}
+                          disabled={!lastUserMessage || isLoading}
+                        />
+                        {sources.length > 0 && (
+                          <>
+                            <span className="mx-1 h-3 w-px bg-stone-200 dark:bg-stone-800" />
+                            {sources.slice(0, 3).map((source) => (
+                              <SourcePill
+                                key={`${source.type}-${source.id}`}
+                                source={source}
+                              />
+                            ))}
+                            {sources.length > 3 && (
+                              <span className="px-1 text-xs text-stone-400">
+                                +{sources.length - 3}
+                              </span>
                             )}
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <IconActionButton
-                              icon={Save}
-                              label="Save as note"
-                              onClick={handleSaveAnswer}
-                              disabled={
-                                !latestAnswer.cleanText.trim() ||
-                                createNote.isPending
-                              }
-                            />
-                            <IconActionButton
-                              icon={RefreshCcw}
-                              label={`Regenerate (${currentScope.label})`}
-                              onClick={() => handleRegenerateWithScope(scope)}
-                              disabled={!lastUserMessage || isLoading}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </article>
                 );
               })}
 
               {isLoading && messages[messages.length - 1]?.role === "user" && (
-                <div className="flex items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
-                  <Loader2 size={16} className="animate-spin" />
-                  Pulling together an answer from {currentScope.label}...
+                <div className="flex items-center gap-2 text-sm text-stone-400 dark:text-stone-500">
+                  <Loader2 size={14} className="animate-spin" />
+                  正在思考...
                 </div>
               )}
 
               {errorMessage && (
-                <div className="rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-                  Something went wrong: {errorMessage}
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                  出错了：{errorMessage}
                 </div>
               )}
             </section>
@@ -772,7 +751,7 @@ function AskPageDaemon() {
               </h2>
             </section>
           ) : (
-            <section className="mx-auto flex w-full max-w-4xl flex-col gap-10 px-2 pb-10 pt-6 sm:px-4">
+            <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-2 pb-10 pt-6 sm:px-4">
               <DaemonBanner />
 
               {messages.map((message) => {
@@ -786,7 +765,7 @@ function AskPageDaemon() {
                 if (!isAssistant) {
                   return (
                     <article key={message.id} className="flex justify-end">
-                      <div className="max-w-[min(32rem,88%)] rounded-[28px] bg-stone-100 px-5 py-3 text-[15px] leading-7 text-stone-900 shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-800">
+                      <div className="max-w-[min(32rem,88%)] rounded-2xl bg-stone-100 px-4 py-2 text-[15px] leading-6 text-stone-900 dark:bg-stone-900 dark:text-stone-100">
                         <div className="whitespace-pre-wrap">{cleanText}</div>
                       </div>
                     </article>
@@ -794,76 +773,56 @@ function AskPageDaemon() {
                 }
 
                 return (
-                  <article key={message.id} className="flex gap-4">
-                    <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-sm sm:flex dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200">
-                      <Bot size={18} />
+                  <article key={message.id} className="min-w-0">
+                    <div className="whitespace-pre-wrap text-[15px] leading-7 text-stone-800 dark:text-stone-100">
+                      {cleanText || (isLoading ? "正在思考..." : "")}
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[11px] uppercase tracking-[0.24em] text-stone-400 dark:text-stone-500">
-                        Ask AI
-                      </div>
-
-                      <div className="mt-4 whitespace-pre-wrap text-[15px] leading-8 text-stone-800 dark:text-stone-100">
-                        {cleanText || (isLoading ? "Preparing the answer..." : "")}
-                      </div>
-
-                      {isLatestAssistant && (
-                        <div className="mt-6 flex flex-wrap items-start justify-between gap-4 rounded-[24px] border border-stone-200/80 bg-white/70 px-4 py-3 shadow-[0_12px_38px_-30px_rgba(15,23,42,0.45)] backdrop-blur dark:border-stone-800 dark:bg-stone-950/70">
-                          <div className="min-w-0 flex-1">
-                            {sources.length === 0 ? (
-                              <div className="text-sm text-stone-500 dark:text-stone-400">
-                                {scope === "direct"
-                                  ? "Direct answer mode is on, so no sources are shown."
-                                  : "No displayable sources were attached to this answer."}
-                              </div>
-                            ) : (
-                              <div className="flex flex-wrap gap-2">
-                                {sources.slice(0, 3).map((source) => (
-                                  <SourcePill
-                                    key={`${source.type}-${source.id}`}
-                                    source={source}
-                                  />
-                                ))}
-                                {sources.length > 3 ? (
-                                  <div className="inline-flex items-center rounded-full bg-stone-100 px-3 py-2 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">
-                                    +{sources.length - 3} more
-                                  </div>
-                                ) : null}
-                              </div>
+                    {isLatestAssistant && cleanText && (
+                      <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1 text-stone-500">
+                        <IconActionButton
+                          icon={RefreshCcw}
+                          label={`重新生成（${currentScope.label}）`}
+                          onClick={() => {
+                            if (!lastUserMessage || isLoading) return;
+                            const lastQ = getMessageText(lastUserMessage.parts);
+                            reset();
+                            sendMessage({ text: lastQ });
+                          }}
+                          disabled={!lastUserMessage || isLoading}
+                        />
+                        {sources.length > 0 && (
+                          <>
+                            <span className="mx-1 h-3 w-px bg-stone-200 dark:bg-stone-800" />
+                            {sources.slice(0, 3).map((source) => (
+                              <SourcePill
+                                key={`${source.type}-${source.id}`}
+                                source={source}
+                              />
+                            ))}
+                            {sources.length > 3 && (
+                              <span className="px-1 text-xs text-stone-400">
+                                +{sources.length - 3}
+                              </span>
                             )}
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <IconActionButton
-                              icon={RefreshCcw}
-                              label={`Regenerate (${currentScope.label})`}
-                              onClick={() => {
-                                if (!lastUserMessage || isLoading) return;
-                                const lastQ = getMessageText(lastUserMessage.parts);
-                                reset();
-                                sendMessage({ text: lastQ });
-                              }}
-                              disabled={!lastUserMessage || isLoading}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </article>
                 );
               })}
 
               {isLoading && messages[messages.length - 1]?.role === "user" && (
-                <div className="flex items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
-                  <Loader2 size={16} className="animate-spin" />
-                  Pulling together an answer from {currentScope.label}...
+                <div className="flex items-center gap-2 text-sm text-stone-400 dark:text-stone-500">
+                  <Loader2 size={14} className="animate-spin" />
+                  正在思考...
                 </div>
               )}
 
               {errorMessage && (
-                <div className="rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-                  Something went wrong: {errorMessage}
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                  出错了：{errorMessage}
                 </div>
               )}
             </section>
