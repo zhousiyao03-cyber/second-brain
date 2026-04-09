@@ -99,6 +99,13 @@ export interface BuildSystemPromptOptions {
    * Truncated to 8000 chars to keep token usage bounded.
    */
   contextNoteText?: string;
+  /**
+   * Hard-pinned sources the user explicitly selected via @mention in the
+   * inline Ask AI popover. These must be treated as authoritative context,
+   * higher priority than RAG-retrieved context. Already scoped to the user
+   * by the route handler, so no additional filtering here.
+   */
+  pinnedSources?: RetrievedKnowledgeItem[];
 }
 
 function withNoteContext(base: string, options?: BuildSystemPromptOptions) {
@@ -115,6 +122,30 @@ ${noteCtx.slice(0, 8000)}
 </current_note>`;
 }
 
+function withPinnedSources(base: string, options?: BuildSystemPromptOptions) {
+  const pinned = options?.pinnedSources;
+  if (!pinned || pinned.length === 0) return base;
+  const block = pinned
+    .map((item) => {
+      const content = (item.content ?? "").slice(0, 6000);
+      return `<pinned_source id="${item.id}" type="${item.type}" title="${item.title}">\n${content}\n</pinned_source>`;
+    })
+    .join("\n\n");
+  return `${base}
+
+---
+
+用户通过 @ 手动钉住了以下 source，作为回答这个问题的**权威上下文**。请优先基于这些内容回答；如果它们不足以回答问题，再说明哪些是补充：
+
+<pinned_sources>
+${block}
+</pinned_sources>`;
+}
+
+function finalizePrompt(base: string, options?: BuildSystemPromptOptions) {
+  return withPinnedSources(withNoteContext(base, options), options);
+}
+
 export function buildSystemPrompt(
   context: RetrievedKnowledgeItem[],
   sourceScope: AskAiSourceScope,
@@ -124,13 +155,13 @@ export function buildSystemPrompt(
 
   if (context.length === 0) {
     if (sourceScope === "direct") {
-      return withNoteContext(
+      return finalizePrompt(
         `${identityLine} 当前请求选择了直接回答模式，不要引用知识库，直接用中文回答用户的问题，简洁准确。`,
         options
       );
     }
 
-    return withNoteContext(
+    return finalizePrompt(
       `${identityLine} 用户的知识库中没有找到相关内容，请直接用中文回答用户的问题，简洁准确。`,
       options
     );
@@ -163,7 +194,7 @@ export function buildSystemPrompt(
     })
     .join("\n\n");
 
-  return withNoteContext(
+  return finalizePrompt(
     `${identityLine} 你帮助用户管理和理解他们的知识库。用中文回答问题，简洁准确。
 
 ${scopeHint}
