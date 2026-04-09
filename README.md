@@ -216,6 +216,30 @@ Web `/focus` page features:
 - Manual refresh for session categorization and daily summary
 - Generate one-time pairing codes for desktop clients; the desktop collector enters the code and automatically receives a per-device token
 
+## Using Claude Subscription via Local Daemon
+
+If you have a Claude Pro/Max subscription and want Ask AI to use it (instead of paying for the OpenAI API), set:
+
+```bash
+# .env.local
+AI_PROVIDER=claude-code-daemon
+CLAUDE_CODE_CHAT_MODEL=opus  # or sonnet / haiku / full model id
+```
+
+Then run the daemon in a separate terminal:
+
+```bash
+pnpm usage:daemon
+```
+
+The daemon polls `/api/chat/claim` every 3 seconds, spawns `claude -p` locally using your logged-in session, and streams results back through `/api/chat/progress`. The frontend polls `/api/chat/tokens` every 300 ms for a pseudo-streaming experience. This works identically against local dev (`localhost:3200`) **and** the hosted Vercel deployment — as long as the daemon is running on your machine, any browser you open can use Claude.
+
+When the daemon is not running, `/ask` shows an amber banner telling you to start it. Structured AI calls outside chat (Learn outline generation, OSS project analysis, Portfolio news) automatically fall back to the codex / openai / local provider, so those keep working even without the daemon.
+
+Requires:
+- Claude CLI installed and `claude login` completed once
+- `pnpm usage:daemon` running on the machine with your Claude credentials
+
 ## Common Commands
 
 ```bash
