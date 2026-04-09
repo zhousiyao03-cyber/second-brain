@@ -130,9 +130,25 @@ SECOND_BRAIN_URL=https://second-brain-self-alpha.vercel.app pnpm usage:daemon
 
 ### Results
 
-_After running the steps above, fill in:_
-- Turso rollout: ___
-- Vercel env vars set: ___
-- Deploy URL + commit: ___
-- Hosted smoke test result: ___
-- Daemon offline banner confirmed: ___
+**Turso rollout (2026-04-09)** — ✅ Applied via one-shot script `scripts/db/apply-2026-04-09-rollout.mjs` (reads credentials from `.env.turso-prod.local`, uses `@libsql/client` to execute the 5 DDL statements in `scripts/db/2026-04-09-chat-daemon-schema.sql`). Verified:
+
+```
+Tables: chat_tasks, daemon_chat_messages, daemon_heartbeats
+chat_tasks_status_created_idx SQL: CREATE INDEX `chat_tasks_status_created_idx` ON `chat_tasks` (`status`,`created_at`,`id`)
+Legacy chat_messages row count: 0
+daemon_chat_messages_task_seq_idx SQL: CREATE UNIQUE INDEX `daemon_chat_messages_task_seq_idx` ON `daemon_chat_messages` (`task_id`,`seq`)
+```
+
+All three tables present, status index is non-unique (correct), daemon task_seq index is unique (correct), legacy `chat_messages` table untouched.
+
+**Vercel env vars + redeploy** — ⏳ Pending. User needs to add the two env vars to Vercel (dashboard or CLI), then push/redeploy:
+- `AI_PROVIDER=claude-code-daemon`
+- `CLAUDE_CODE_CHAT_MODEL=opus`
+
+Until this is done, the hosted `/api/config` returns `{"chatMode":"stream"}` and `/ask` keeps using the legacy streaming path — which is safe (no breakage to existing users).
+
+**Hosted smoke test** — ⏳ Pending. After env vars are set and the next deploy finishes:
+1. `curl https://second-brain-self-alpha.vercel.app/api/config` → should return `{"chatMode":"daemon"}`
+2. `SECOND_BRAIN_URL=https://second-brain-self-alpha.vercel.app pnpm usage:daemon` on your local machine
+3. Open https://second-brain-self-alpha.vercel.app/ask from a browser, send a question → should stream back via the local daemon
+4. Stop the daemon, wait 90s, refresh `/ask` → amber banner should appear
