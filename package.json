@@ -24,6 +24,7 @@
     "@libsql/client": "^0.17.2",
     "@mariozechner/pi-ai": "0.61.1",
     "@mozilla/readability": "^0.6.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.91.3",
     "@tiptap/extension-bubble-menu": "^3.22.1",
     "@tiptap/extension-code-block-lowlight": "^3.22.1",
@@ -62,7 +63,9 @@
     "next-auth": "5.0.0-beta.30",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
+    "remark-gfm": "^4.0.1",
     "superjson": "^2.2.6",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"

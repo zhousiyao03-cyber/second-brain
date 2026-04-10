@@ -19,14 +19,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  for (const msg of body.messages) {
-    await db.insert(daemonChatMessages).values({
+  await db.insert(daemonChatMessages).values(
+    body.messages.map((msg) => ({
       taskId: body.taskId,
       seq: msg.seq,
       type: msg.type,
       delta: msg.delta ?? null,
-    });
-  }
+    }))
+  );
 
   return NextResponse.json({ status: "ok", count: body.messages.length });
 }

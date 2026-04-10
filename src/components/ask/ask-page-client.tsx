@@ -23,6 +23,7 @@ import {
   Layers,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { MarkdownRenderer } from "@/components/ask/markdown-renderer";
 import {
   ASK_AI_SCOPE_OPTIONS,
   type AskAiSource,
@@ -469,9 +470,13 @@ function AskPageStream() {
 
                 return (
                   <article key={message.id} className="min-w-0">
-                    <div className="whitespace-pre-wrap text-[15px] leading-7 text-stone-800 dark:text-stone-100">
-                      {cleanText || (isLoading ? "正在思考..." : "")}
-                    </div>
+                    {cleanText ? (
+                      <MarkdownRenderer content={cleanText} />
+                    ) : isLoading ? (
+                      <div className="text-[15px] leading-7 text-stone-800 dark:text-stone-100">
+                        正在思考...
+                      </div>
+                    ) : null}
 
                     {isLatestAssistant && cleanText && (
                       <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1 text-stone-500">
@@ -774,9 +779,13 @@ function AskPageDaemon() {
 
                 return (
                   <article key={message.id} className="min-w-0">
-                    <div className="whitespace-pre-wrap text-[15px] leading-7 text-stone-800 dark:text-stone-100">
-                      {cleanText || (isLoading ? "正在思考..." : "")}
-                    </div>
+                    {cleanText ? (
+                      <MarkdownRenderer content={cleanText} />
+                    ) : isLoading ? (
+                      <div className="text-[15px] leading-7 text-stone-800 dark:text-stone-100">
+                        正在思考...
+                      </div>
+                    ) : null}
 
                     {isLatestAssistant && cleanText && (
                       <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1 text-stone-500">

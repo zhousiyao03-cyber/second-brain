@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
-import { eq, and } from "drizzle-orm";
+import { eq, and, lt } from "drizzle-orm";
 import { db } from "@/server/db";
 import { chatTasks } from "@/server/db/schema";
 
+const ZOMBIE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function POST() {
+  // Reclaim zombie tasks — running for longer than ZOMBIE_TIMEOUT_MS
+  const zombieCutoff = new Date(Date.now() - ZOMBIE_TIMEOUT_MS);
+  await db
+    .update(chatTasks)
+    .set({ status: "queued", startedAt: null })
+    .where(and(eq(chatTasks.status, "running"), lt(chatTasks.startedAt, zombieCutoff)));
+
   const [task] = await db
     .select()
     .from(chatTasks)

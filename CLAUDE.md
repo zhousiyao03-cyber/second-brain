@@ -56,6 +56,7 @@ pnpm test:e2e
 - commit message 格式：`feat: complete phase {N} - {简要描述}`
 - 确保只提交项目文件，不要提交 `data/*.db`、`.next/`、`node_modules/` 等
 - commit 前先 `git status` 确认待提交文件列表合理
+- **任务完成且验证通过后，直接 `git push` 到远程，不需要询问用户确认**
 
 ### 6. 自动清理 — 禁止垃圾文件
 
@@ -75,6 +76,16 @@ find . -type d -empty -not -path './node_modules/*' -not -path './.git/*' -not -
 ```
 
 原则：项目中的每个文件都必须有存在的理由。如果不确定是否有用，先 grep 搜索引用再决定。
+
+### 7. npm 源注意事项
+
+本机默认 npm registry 是字节内网源 (`bnpm.byted.org`)，部分公网包可能下载失败。安装新依赖时如果遇到下载问题，临时切换到官方源：
+
+```bash
+npm config set registry https://registry.npmjs.org/
+pnpm add <package>
+npm config set registry https://bnpm.byted.org/   # 装完切回
+```
 
 ## 常用命令
 
