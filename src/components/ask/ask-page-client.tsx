@@ -539,7 +539,7 @@ function AskPageStream() {
           <div
             className={cn(
               "mx-auto w-full px-4",
-              messages.length > 0 ? "max-w-4xl" : "max-w-2xl"
+              "max-w-4xl"
             )}
           >
             <form
@@ -840,7 +840,7 @@ function AskPageDaemon() {
           <div
             className={cn(
               "mx-auto w-full px-4",
-              messages.length > 0 ? "max-w-4xl" : "max-w-2xl"
+              "max-w-4xl"
             )}
           >
             <form
