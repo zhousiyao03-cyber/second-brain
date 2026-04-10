@@ -52,10 +52,39 @@ function tiptapDocToPlainText(doc: TiptapNode | null | undefined): string {
 }
 
 export const notesRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    await normalizeJournalTitlesForUser(ctx.userId);
-    return db.select().from(notes).where(eq(notes.userId, ctx.userId)).orderBy(desc(notes.updatedAt));
-  }),
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(100).default(30),
+          offset: z.number().int().min(0).default(0),
+          type: z.enum(["note", "journal", "summary"]).optional(),
+        })
+        .optional()
+    )
+    .query(async ({ input, ctx }) => {
+      const limit = input?.limit ?? 30;
+      const offset = input?.offset ?? 0;
+      await normalizeJournalTitlesForUser(ctx.userId);
+
+      const clauses = [eq(notes.userId, ctx.userId)];
+      if (input?.type) {
+        clauses.push(eq(notes.type, input.type));
+      }
+
+      const items = await db
+        .select()
+        .from(notes)
+        .where(and(...clauses))
+        .orderBy(desc(notes.updatedAt))
+        .limit(limit + 1)
+        .offset(offset);
+
+      const hasMore = items.length > limit;
+      if (hasMore) items.pop();
+
+      return { items, hasMore, offset };
+    }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string() }))

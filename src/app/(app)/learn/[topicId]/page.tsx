@@ -45,12 +45,13 @@ export default function LearningTopicPage({
 
   const { data: topic, isLoading: topicLoading } =
     trpc.learningNotebook.getTopic.useQuery({ id: topicId });
-  const { data: notes = [], isLoading: notesLoading } =
+  const { data: notesResult, isLoading: notesLoading } =
     trpc.learningNotebook.listNotes.useQuery({
       topicId,
       search: search || undefined,
       tag: selectedTag,
     });
+  const notes = notesResult?.items ?? [];
   const { data: reviews = [] } = trpc.learningNotebook.listReviews.useQuery({
     topicId,
   });

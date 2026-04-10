@@ -25,7 +25,8 @@ export default function BookmarksPage() {
   const { toast } = useToast();
 
   const utils = trpc.useUtils();
-  const { data: bookmarks = [], isLoading } = trpc.bookmarks.list.useQuery();
+  const { data: bookmarkResult, isLoading } = trpc.bookmarks.list.useQuery();
+  const bookmarks = bookmarkResult?.items ?? [];
   const createBookmark = trpc.bookmarks.create.useMutation({
     onSuccess: () => {
       utils.bookmarks.list.invalidate();

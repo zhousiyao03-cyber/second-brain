@@ -1,21 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import type { inferRouterOutputs } from "@trpc/server";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Trash2, FileText, CalendarDays } from "lucide-react";
+import { Plus, Search, Trash2, FileText, CalendarDays, Loader2 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import { NOTE_TYPE_LABELS } from "@/lib/note-appearance";
-import type { AppRouter } from "@/server/routers/_app";
-
-type RouterOutputs = inferRouterOutputs<AppRouter>;
-type NotesListOutput = RouterOutputs["notes"]["list"];
 
 function parseTags(tags: string | null | undefined) {
   if (!tags) return [] as string[];
-
   try {
     const value = JSON.parse(tags);
     return Array.isArray(value)
@@ -26,23 +20,73 @@ function parseTags(tags: string | null | undefined) {
   }
 }
 
-export function NotesPageClient({
-  initialNotes,
-}: {
-  initialNotes: NotesListOutput;
-}) {
+const PAGE_SIZE = 30;
+
+type NoteItem = {
+  id: string;
+  userId: string;
+  title: string;
+  content: string | null;
+  plainText: string | null;
+  type: "note" | "journal" | "summary" | null;
+  icon: string | null;
+  cover: string | null;
+  tags: string | null;
+  shareToken: string | null;
+  sharedAt: Date | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+};
+
+export function NotesPageClient() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-
+  const { toast } = useToast();
   const utils = trpc.useUtils();
-  const { data: notes = initialNotes, isLoading } = trpc.notes.list.useQuery(
-    undefined,
-    {
-      initialData: initialNotes,
-      refetchOnMount: false,
+
+  const [offset, setOffset] = useState(0);
+  const [allItems, setAllItems] = useState<NoteItem[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const prevOffsetRef = useRef(-1);
+
+  const typeParam =
+    typeFilter !== "all" ? (typeFilter as "note" | "journal" | "summary") : undefined;
+
+  const { data, isLoading, isFetching } = trpc.notes.list.useQuery({
+    limit: PAGE_SIZE,
+    offset,
+    type: typeParam,
+  });
+
+  // Sync fetched data into accumulated items
+  useEffect(() => {
+    if (!data || prevOffsetRef.current === offset) return;
+    prevOffsetRef.current = offset;
+
+    if (offset === 0) {
+      setAllItems(data.items as NoteItem[]);
+    } else {
+      setAllItems((prev) => [...prev, ...(data.items as NoteItem[])]);
     }
-  );
+    setHasMore(data.hasMore);
+  }, [data, offset]);
+
+  // Reset when filter changes
+  const handleTypeChange = useCallback((newType: string) => {
+    setTypeFilter(newType);
+    setOffset(0);
+    setAllItems([]);
+    setHasMore(true);
+    prevOffsetRef.current = -1;
+  }, []);
+
+  const loadMore = useCallback(() => {
+    if (hasMore && !isFetching) {
+      setOffset((prev) => prev + PAGE_SIZE);
+    }
+  }, [hasMore, isFetching]);
+
   const createNote = trpc.notes.create.useMutation({
     onSuccess: (data) => {
       utils.notes.list.invalidate();
@@ -55,37 +99,26 @@ export function NotesPageClient({
       router.push(`/notes/${data.id}`);
     },
   });
-  const { toast } = useToast();
   const deleteNote = trpc.notes.delete.useMutation({
     onSuccess: () => {
+      // Reset pagination and refetch
+      setOffset(0);
+      setAllItems([]);
+      prevOffsetRef.current = -1;
       utils.notes.list.invalidate();
       toast("Note deleted", "success");
     },
   });
 
-  const filtered = notes.filter((note) => {
-    const matchesSearch =
-      !search ||
-      note.title.toLowerCase().includes(search.toLowerCase()) ||
-      note.plainText?.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === "all" || note.type === typeFilter;
-    return matchesSearch && matchesType;
+  // Client-side search filter on loaded items
+  const filtered = allItems.filter((note) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      note.title?.toLowerCase().includes(q) ||
+      note.plainText?.toLowerCase().includes(q)
+    );
   });
-
-  const handleCreate = () => {
-    createNote.mutate({ title: "" });
-  };
-
-  const handleOpenTodayJournal = () => {
-    openTodayJournal.mutate();
-  };
-
-  const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (confirm("Delete this note?")) {
-      deleteNote.mutate({ id });
-    }
-  };
 
   return (
     <div>
@@ -93,15 +126,15 @@ export function NotesPageClient({
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Notes</h1>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleOpenTodayJournal}
+            onClick={() => openTodayJournal.mutate()}
             disabled={openTodayJournal.isPending}
             className="flex items-center gap-2 px-4 py-2 border border-amber-200 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
           >
             <CalendarDays size={16} />
-            {openTodayJournal.isPending ? "Opening today’s daily note..." : "Open today’s daily note"}
+            {openTodayJournal.isPending ? "Opening today's daily note..." : "Open today's daily note"}
           </button>
           <button
-            onClick={handleCreate}
+            onClick={() => createNote.mutate({ title: "" })}
             disabled={createNote.isPending}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
@@ -124,7 +157,7 @@ export function NotesPageClient({
         </div>
         <select
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
+          onChange={(e) => handleTypeChange(e.target.value)}
           className="px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">All types</option>
@@ -134,12 +167,12 @@ export function NotesPageClient({
         </select>
       </div>
 
-      {isLoading ? (
+      {isLoading && allItems.length === 0 ? (
         <p className="text-gray-500 text-sm">Loading...</p>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <FileText size={48} className="mx-auto mb-3 opacity-50" />
-          <p>{notes.length === 0 ? "No notes yet. Create your first one." : "No matching notes."}</p>
+          <p>{allItems.length === 0 ? "No notes yet. Create your first one." : "No matching notes."}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -200,7 +233,12 @@ export function NotesPageClient({
                   </div>
                 </div>
                 <button
-                  onClick={(e) => handleDelete(e, note.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm("Delete this note?")) {
+                      deleteNote.mutate({ id: note.id });
+                    }
+                  }}
                   data-testid="note-delete"
                   className={cn(
                     "rounded-xl p-2 text-stone-400 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
@@ -212,6 +250,23 @@ export function NotesPageClient({
               </div>
             );
           })}
+
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={isFetching}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white/60 py-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950/50 dark:hover:bg-stone-900/80"
+            >
+              {isFetching ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                "Load more"
+              )}
+            </button>
+          )}
         </div>
       )}
     </div>

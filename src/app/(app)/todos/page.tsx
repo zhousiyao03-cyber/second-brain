@@ -71,8 +71,8 @@ export default function TodosPage() {
   });
 
   const utils = trpc.useUtils();
-  const { data: todoResults = [], isLoading } = trpc.todos.list.useQuery();
-  const todos = todoResults as TodoItem[];
+  const { data: todoResult, isLoading } = trpc.todos.list.useQuery();
+  const todos = (todoResult?.items ?? []) as TodoItem[];
 
   const createTodo = trpc.todos.create.useMutation({
     onSuccess: ({ id }, variables) => {

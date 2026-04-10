@@ -6,9 +6,32 @@ import { z } from "zod/v4";
 import crypto from "crypto";
 
 export const todosRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return db.select().from(todos).where(eq(todos.userId, ctx.userId)).orderBy(desc(todos.createdAt));
-  }),
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(100).default(50),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ input, ctx }) => {
+      const limit = input?.limit ?? 50;
+      const offset = input?.offset ?? 0;
+
+      const items = await db
+        .select()
+        .from(todos)
+        .where(eq(todos.userId, ctx.userId))
+        .orderBy(desc(todos.createdAt))
+        .limit(limit + 1)
+        .offset(offset);
+
+      const hasMore = items.length > limit;
+      if (hasMore) items.pop();
+
+      return { items, hasMore, offset };
+    }),
 
   create: protectedProcedure
     .input(

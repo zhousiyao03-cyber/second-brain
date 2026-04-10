@@ -11,9 +11,32 @@ import {
 } from "../ai/indexer";
 
 export const bookmarksRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return db.select().from(bookmarks).where(eq(bookmarks.userId, ctx.userId)).orderBy(desc(bookmarks.createdAt));
-  }),
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(100).default(30),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ input, ctx }) => {
+      const limit = input?.limit ?? 30;
+      const offset = input?.offset ?? 0;
+
+      const items = await db
+        .select()
+        .from(bookmarks)
+        .where(eq(bookmarks.userId, ctx.userId))
+        .orderBy(desc(bookmarks.createdAt))
+        .limit(limit + 1)
+        .offset(offset);
+
+      const hasMore = items.length > limit;
+      if (hasMore) items.pop();
+
+      return { items, hasMore, offset };
+    }),
 
   create: protectedProcedure
     .input(

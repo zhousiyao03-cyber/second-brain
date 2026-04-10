@@ -204,6 +204,8 @@ export const learningNotebookRouter = router({
         topicId: z.string(),
         search: z.string().trim().optional(),
         tag: z.string().trim().optional(),
+        limit: z.number().int().min(1).max(100).default(30),
+        offset: z.number().int().min(0).default(0),
       })
     )
     .query(async ({ input, ctx }) => {
@@ -220,15 +222,23 @@ export const learningNotebookRouter = router({
         );
       }
 
-      const notes = await db
+      let items = await db
         .select()
         .from(learningNotes)
         .where(and(...clauses))
-        .orderBy(desc(learningNotes.updatedAt));
+        .orderBy(desc(learningNotes.updatedAt))
+        .limit(input.limit + 1)
+        .offset(input.offset);
 
-      return notes.filter((note) =>
-        input.tag ? parseTags(note.tags).includes(input.tag) : true
-      );
+      // Tag filtering still needs to happen post-query (JSON column)
+      if (input.tag) {
+        items = items.filter((note) => parseTags(note.tags).includes(input.tag!));
+      }
+
+      const hasMore = items.length > input.limit;
+      if (hasMore) items.pop();
+
+      return { items, hasMore, offset: input.offset };
     }),
 
   getNote: protectedProcedure
