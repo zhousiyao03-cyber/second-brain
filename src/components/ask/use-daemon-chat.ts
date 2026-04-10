@@ -16,24 +16,23 @@ interface UseDaemonChatOptions {
   sourceScope: AskAiSourceScope;
 }
 
-const POLL_INTERVAL_MS = 300;
-const POLL_TIMEOUT_MS = 120 * 1000;
-
 export function useDaemonChat({ api, sourceScope }: UseDaemonChatOptions) {
   const [messages, setMessages] = useState<DaemonUIMessage[]>([]);
   const [status, setStatus] = useState<DaemonChatStatus>("idle");
   const [error, setError] = useState<Error | null>(null);
-  const cancelRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     setMessages([]);
     setStatus("idle");
     setError(null);
-    cancelRef.current = false;
   }, []);
 
   const stop = useCallback(() => {
-    cancelRef.current = true;
+    abortRef.current?.abort();
+    abortRef.current = null;
     setStatus("idle");
   }, []);
 
@@ -43,7 +42,8 @@ export function useDaemonChat({ api, sourceScope }: UseDaemonChatOptions) {
         return;
       }
 
-      cancelRef.current = false;
+      const ac = new AbortController();
+      abortRef.current = ac;
       setError(null);
 
       const userMsg: DaemonUIMessage = {
@@ -57,6 +57,7 @@ export function useDaemonChat({ api, sourceScope }: UseDaemonChatOptions) {
       setStatus("submitting");
 
       try {
+        // 1. Enqueue task
         const enqueueRes = await fetch(api, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -67,6 +68,7 @@ export function useDaemonChat({ api, sourceScope }: UseDaemonChatOptions) {
             })),
             sourceScope,
           }),
+          signal: ac.signal,
         });
 
         if (!enqueueRes.ok) {
@@ -95,81 +97,89 @@ export function useDaemonChat({ api, sourceScope }: UseDaemonChatOptions) {
         ]);
         setStatus("streaming");
 
-        let lastSeq = 0;
+        // 2. Consume SSE stream from /api/chat/tokens
         let currentText = "";
-        const startedAt = Date.now();
-
-        while (true) {
-          if (cancelRef.current) {
-            return;
-          }
-
-          if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
-            throw new Error(
-              "Daemon task did not finish within 2 minutes. The local daemon may be offline."
-            );
-          }
-
-          const tokenRes = await fetch(
-            `/api/chat/tokens?taskId=${encodeURIComponent(taskId)}&afterSeq=${lastSeq}`
-          );
-
-          if (!tokenRes.ok) {
-            throw new Error(`Token poll failed: ${tokenRes.status}`);
-          }
-
-          const tokenBody = (await tokenRes.json()) as {
-            messages: Array<{
-              seq: number;
-              type: "text_delta" | "text_final" | "error";
-              delta: string | null;
-            }>;
-            status: "queued" | "running" | "completed" | "failed";
-            totalText?: string;
-            error?: string;
-          };
-
-          for (const m of tokenBody.messages) {
-            lastSeq = Math.max(lastSeq, m.seq);
-            if (m.type === "text_delta" && m.delta != null) {
-              currentText += m.delta;
-            } else if (m.type === "text_final" && m.delta != null) {
-              // text_final carries the canonical full text — use as-is
-              // to correct any drift from missed or reordered deltas
-              currentText = m.delta;
-            }
-          }
-
+        const updateAssistant = (t: string) => {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantId
-                ? { ...msg, parts: [{ type: "text", text: currentText }] }
+                ? { ...msg, parts: [{ type: "text", text: t }] }
                 : msg
             )
           );
+        };
 
-          if (tokenBody.status === "completed") {
-            if (tokenBody.totalText && tokenBody.totalText !== currentText) {
-              currentText = tokenBody.totalText;
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantId
-                    ? { ...msg, parts: [{ type: "text", text: currentText }] }
-                    : msg
-                )
-              );
-            }
-            setStatus("idle");
-            return;
-          }
+        const sseUrl = `/api/chat/tokens?taskId=${encodeURIComponent(taskId)}&afterSeq=0`;
+        const sseRes = await fetch(sseUrl, { signal: ac.signal });
 
-          if (tokenBody.status === "failed") {
-            throw new Error(tokenBody.error || "Daemon task failed");
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+        if (!sseRes.ok || !sseRes.body) {
+          throw new Error(`SSE connection failed: ${sseRes.status}`);
         }
+
+        const reader = sseRes.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buf += decoder.decode(value, { stream: true });
+          const parts = buf.split("\n\n");
+          buf = parts.pop()!;
+
+          for (const part of parts) {
+            if (!part.trim()) continue;
+
+            let eventType = "message";
+            let dataStr = "";
+            for (const line of part.split("\n")) {
+              if (line.startsWith("event: ")) {
+                eventType = line.slice(7);
+              } else if (line.startsWith("data: ")) {
+                dataStr = line.slice(6);
+              }
+            }
+
+            if (!dataStr) continue;
+
+            try {
+              const data = JSON.parse(dataStr);
+
+              if (eventType === "delta") {
+                if (data.type === "text_delta" && data.delta != null) {
+                  currentText += data.delta;
+                  updateAssistant(currentText);
+                } else if (data.type === "text_final" && data.delta != null) {
+                  currentText = data.delta;
+                  updateAssistant(currentText);
+                }
+              } else if (eventType === "done") {
+                if (data.totalText && data.totalText !== currentText) {
+                  currentText = data.totalText;
+                  updateAssistant(currentText);
+                }
+                setStatus("idle");
+                abortRef.current = null;
+                return;
+              } else if (eventType === "error") {
+                throw new Error(data.error || "Daemon task failed");
+              }
+            } catch (e) {
+              if (e instanceof Error && e.message !== "Daemon task failed") {
+                // JSON parse error — skip
+                continue;
+              }
+              throw e;
+            }
+          }
+        }
+
+        // Stream ended without explicit done — treat as complete
+        setStatus("idle");
+        abortRef.current = null;
       } catch (err) {
+        if (ac.signal.aborted) return;
         setStatus("error");
         setError(err instanceof Error ? err : new Error(String(err)));
       }
