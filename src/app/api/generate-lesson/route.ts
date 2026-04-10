@@ -3,6 +3,7 @@ import { learningPaths, learningLessons } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { generateStructuredData, getAIErrorMessage } from "@/server/ai/provider";
+import { auth } from "@/lib/auth";
 
 const generateLessonInputSchema = z.object({
   pathId: z.string(),
@@ -20,6 +21,11 @@ const lessonOutputSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const parsedInput = generateLessonInputSchema.safeParse(body);
   if (!parsedInput.success) {

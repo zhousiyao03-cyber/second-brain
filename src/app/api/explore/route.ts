@@ -1,8 +1,9 @@
 import { db } from "@/server/db";
 import { notes, bookmarks, todos } from "@/server/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { generateStructuredData, getAIErrorMessage } from "@/server/ai/provider";
+import { auth } from "@/lib/auth";
 
 const exploreOutputSchema = z.object({
   interests: z.array(z.string().min(1)).min(3).max(5),
@@ -17,22 +18,32 @@ const exploreOutputSchema = z.object({
 });
 
 export async function POST() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+
   // Gather user's recent data to understand interests
   const recentNotes = await db
     .select({ title: notes.title, tags: notes.tags })
     .from(notes)
+    .where(eq(notes.userId, userId))
     .orderBy(desc(notes.updatedAt))
     .limit(10);
 
   const recentBookmarks = await db
     .select({ title: bookmarks.title, url: bookmarks.url, tags: bookmarks.tags })
     .from(bookmarks)
+    .where(eq(bookmarks.userId, userId))
     .orderBy(desc(bookmarks.createdAt))
     .limit(10);
 
   const recentTodos = await db
     .select({ title: todos.title, category: todos.category })
     .from(todos)
+    .where(eq(todos.userId, userId))
     .orderBy(desc(todos.createdAt))
     .limit(5);
 

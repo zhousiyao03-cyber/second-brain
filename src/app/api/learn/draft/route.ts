@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { generateStructuredData, getAIErrorMessage } from "@/server/ai/provider";
 import { db } from "@/server/db";
 import { learningNotes, learningTopics } from "@/server/db/schema";
+import { auth } from "@/lib/auth";
 
 type TiptapNode = {
   type: string;
@@ -201,6 +202,11 @@ const draftInputSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const parsedInput = draftInputSchema.safeParse(body);
   if (!parsedInput.success) {
