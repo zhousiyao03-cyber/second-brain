@@ -114,22 +114,47 @@ export function DailyFocusHeatmap() {
   const days = useMemo<DayStat[]>(() => data ?? [], [data]);
   const columns = useMemo(() => buildColumns(days, today), [days, today]);
 
-  const { totalSecs, activeDays, avgOnActiveSecs, streak, bestDay } =
-    useMemo(() => {
-      const total = days.reduce((s, d) => s + d.totalSecs, 0);
-      const active = days.filter((d) => d.totalSecs > 0);
-      const best = days.reduce<DayStat | null>(
-        (acc, d) => (!acc || d.totalSecs > acc.totalSecs ? d : acc),
-        null
-      );
-      return {
-        totalSecs: total,
-        activeDays: active.length,
-        avgOnActiveSecs: active.length > 0 ? Math.floor(total / active.length) : 0,
-        streak: computeStreak(days),
-        bestDay: best,
-      };
-    }, [days]);
+  const {
+    totalSecs,
+    weekdayActiveDays,
+    weekdayAvgSecs,
+    weekendActiveDays,
+    weekendAvgSecs,
+    streak,
+    bestDay,
+  } = useMemo(() => {
+    const total = days.reduce((s, d) => s + d.totalSecs, 0);
+    const weekdayActive: DayStat[] = [];
+    const weekendActive: DayStat[] = [];
+    for (const d of days) {
+      if (d.totalSecs <= 0) continue;
+      // getDayOfWeekIndex: 0=Mon..4=Fri, 5=Sat, 6=Sun
+      const dow = getDayOfWeekIndex(d.date);
+      if (dow >= 5) weekendActive.push(d);
+      else weekdayActive.push(d);
+    }
+    const weekdayTotal = weekdayActive.reduce((s, d) => s + d.totalSecs, 0);
+    const weekendTotal = weekendActive.reduce((s, d) => s + d.totalSecs, 0);
+    const best = days.reduce<DayStat | null>(
+      (acc, d) => (!acc || d.totalSecs > acc.totalSecs ? d : acc),
+      null
+    );
+    return {
+      totalSecs: total,
+      weekdayActiveDays: weekdayActive.length,
+      weekdayAvgSecs:
+        weekdayActive.length > 0
+          ? Math.floor(weekdayTotal / weekdayActive.length)
+          : 0,
+      weekendActiveDays: weekendActive.length,
+      weekendAvgSecs:
+        weekendActive.length > 0
+          ? Math.floor(weekendTotal / weekendActive.length)
+          : 0,
+      streak: computeStreak(days),
+      bestDay: best,
+    };
+  }, [days]);
 
   return (
     <section className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-950">
@@ -149,15 +174,20 @@ export function DailyFocusHeatmap() {
       </div>
 
       {/* 汇总数字 */}
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <SummaryStat
           label="总计"
           value={isLoading ? "--" : formatFocusDuration(totalSecs)}
         />
         <SummaryStat
-          label="活跃日均"
-          value={isLoading ? "--" : formatFocusDuration(avgOnActiveSecs)}
-          hint={activeDays > 0 ? `${activeDays} 天` : undefined}
+          label="工作日均"
+          value={isLoading ? "--" : formatFocusDuration(weekdayAvgSecs)}
+          hint={weekdayActiveDays > 0 ? `${weekdayActiveDays} 天` : undefined}
+        />
+        <SummaryStat
+          label="周末日均"
+          value={isLoading ? "--" : formatFocusDuration(weekendAvgSecs)}
+          hint={weekendActiveDays > 0 ? `${weekendActiveDays} 天` : undefined}
         />
         <SummaryStat
           label="连续"
