@@ -131,7 +131,11 @@ export function useDaemonChat({ api, sourceScope }: UseDaemonChatOptions) {
 
           for (const m of tokenBody.messages) {
             lastSeq = Math.max(lastSeq, m.seq);
-            if ((m.type === "text_delta" || m.type === "text_final") && m.delta != null) {
+            if (m.type === "text_delta" && m.delta != null) {
+              currentText += m.delta;
+            } else if (m.type === "text_final" && m.delta != null) {
+              // text_final carries the canonical full text — use as-is
+              // to correct any drift from missed or reordered deltas
               currentText = m.delta;
             }
           }

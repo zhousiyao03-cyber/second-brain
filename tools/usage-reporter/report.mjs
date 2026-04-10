@@ -372,10 +372,9 @@ function spawnClaudeForChat({ prompt, systemPrompt, model, onText }) {
     const stderrChunks = [];
     let finalResult = "";
     let lineBuf = "";
-    // Running accumulator for partial token deltas. With
-    // --include-partial-messages, the CLI emits stream_event lines carrying
-    // Anthropic content_block_delta events; we concatenate their .text and
-    // push the cumulative snapshot to the frontend on every delta.
+    // Running accumulator so we can emit the final canonical text and detect
+    // drift. With --include-partial-messages the CLI emits content_block_delta
+    // events; we forward only the incremental .text to onText (true delta).
     let partialText = "";
 
     child.stdout.on("data", (chunk) => {
@@ -398,8 +397,9 @@ function spawnClaudeForChat({ prompt, systemPrompt, model, onText }) {
               se.delta?.type === "text_delta" &&
               typeof se.delta.text === "string"
             ) {
-              partialText += se.delta.text;
-              onText(partialText);
+              const chunk = se.delta.text;
+              partialText += chunk;
+              onText(chunk);
             }
             continue;
           }
@@ -407,10 +407,11 @@ function spawnClaudeForChat({ prompt, systemPrompt, model, onText }) {
           if (event.type === "assistant" && event.message?.content) {
             for (const block of event.message.content) {
               if (block.type === "text" && typeof block.text === "string") {
-                // Final full assistant message. Overwrite with the canonical
-                // text so any tiny drift from streamed deltas gets corrected.
+                // Final full assistant message. Update the accumulator so the
+                // resolve value is canonical. Don't call onText here —
+                // handleChatTask sends a text_final with the full text after
+                // the process exits, so emitting it here would double-count.
                 partialText = block.text;
-                onText(block.text);
               }
             }
           }
@@ -770,9 +771,9 @@ async function handleChatTask(task) {
     }
   }
 
-  function onText(snapshot) {
+  function onText(delta) {
     seq++;
-    pending.push({ seq, type: "text_delta", delta: snapshot });
+    pending.push({ seq, type: "text_delta", delta });
     if (pending.length >= 8) {
       flushMessages();
     } else if (!flushTimer) {
