@@ -42,65 +42,81 @@ export const userCredentials = sqliteTable("user_credentials", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-export const notes = sqliteTable("notes", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  content: text("content"), // JSON, Tiptap format
-  plainText: text("plain_text"), // for search & vectorization
-  type: text("type", { enum: ["note", "journal", "summary"] }).default("note"),
-  icon: text("icon"),
-  cover: text("cover"),
-  tags: text("tags"), // JSON array
-  shareToken: text("share_token").unique(),
-  sharedAt: integer("shared_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const notes = sqliteTable(
+  "notes",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content"), // JSON, Tiptap format
+    plainText: text("plain_text"), // for search & vectorization
+    type: text("type", { enum: ["note", "journal", "summary"] }).default("note"),
+    icon: text("icon"),
+    cover: text("cover"),
+    tags: text("tags"), // JSON array
+    shareToken: text("share_token").unique(),
+    sharedAt: integer("shared_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("notes_user_idx").on(table.userId)]
+);
 
-export const bookmarks = sqliteTable("bookmarks", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  url: text("url"),
-  title: text("title"),
-  content: text("content"),
-  summary: text("summary"),
-  tags: text("tags"), // JSON array
-  source: text("source", { enum: ["url", "text", "lark"] }).default("url"),
-  status: text("status", { enum: ["pending", "processed", "failed"] }).default("pending"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const bookmarks = sqliteTable(
+  "bookmarks",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    url: text("url"),
+    title: text("title"),
+    content: text("content"),
+    summary: text("summary"),
+    tags: text("tags"), // JSON array
+    source: text("source", { enum: ["url", "text", "lark"] }).default("url"),
+    status: text("status", { enum: ["pending", "processed", "failed"] }).default("pending"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("bookmarks_user_idx").on(table.userId)]
+);
 
-export const todos = sqliteTable("todos", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  priority: text("priority", { enum: ["low", "medium", "high"] }).default("medium"),
-  status: text("status", { enum: ["todo", "in_progress", "done"] }).default("todo"),
-  category: text("category"),
-  dueDate: integer("due_date", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const todos = sqliteTable(
+  "todos",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    priority: text("priority", { enum: ["low", "medium", "high"] }).default("medium"),
+    status: text("status", { enum: ["todo", "in_progress", "done"] }).default("todo"),
+    category: text("category"),
+    dueDate: integer("due_date", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("todos_user_idx").on(table.userId)]
+);
 
-export const chatMessages = sqliteTable("chat_messages", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  role: text("role", { enum: ["user", "assistant"] }).notNull(),
-  content: text("content").notNull(),
-  sources: text("sources"), // JSON, referenced doc IDs
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const chatMessages = sqliteTable(
+  "chat_messages",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["user", "assistant"] }).notNull(),
+    content: text("content").notNull(),
+    sources: text("sources"), // JSON, referenced doc IDs
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("chat_messages_user_idx").on(table.userId)]
+);
 
 export const knowledgeChunks = sqliteTable(
   "knowledge_chunks",
@@ -131,6 +147,7 @@ export const knowledgeChunks = sqliteTable(
   },
   (table) => [
     index("knowledge_chunks_user_id_idx").on(table.userId),
+    index("knowledge_chunks_source_idx").on(table.sourceId),
   ]
 );
 
@@ -144,88 +161,115 @@ export const knowledgeChunkEmbeddings = sqliteTable("knowledge_chunk_embeddings"
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-export const knowledgeIndexJobs = sqliteTable("knowledge_index_jobs", {
-  id: text("id").primaryKey(),
-  sourceType: text("source_type", { enum: ["note", "bookmark"] }).notNull(),
-  sourceId: text("source_id").notNull(),
-  reason: text("reason"),
-  status: text("status", { enum: ["pending", "running", "done", "failed"] })
-    .notNull()
-    .default("pending"),
-  error: text("error"),
-  attempts: integer("attempts").notNull().default(1),
-  queuedAt: integer("queued_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  finishedAt: integer("finished_at", { mode: "timestamp" }),
-});
+export const knowledgeIndexJobs = sqliteTable(
+  "knowledge_index_jobs",
+  {
+    id: text("id").primaryKey(),
+    sourceType: text("source_type", { enum: ["note", "bookmark"] }).notNull(),
+    sourceId: text("source_id").notNull(),
+    reason: text("reason"),
+    status: text("status", { enum: ["pending", "running", "done", "failed"] })
+      .notNull()
+      .default("pending"),
+    error: text("error"),
+    attempts: integer("attempts").notNull().default(1),
+    queuedAt: integer("queued_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    finishedAt: integer("finished_at", { mode: "timestamp" }),
+  },
+  (table) => [
+    index("knowledge_index_jobs_source_idx").on(table.sourceId),
+    index("knowledge_index_jobs_status_idx").on(table.status),
+  ]
+);
 
-export const workflows = sqliteTable("workflows", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description"),
-  nodes: text("nodes"), // JSON, workflow node definitions
-  edges: text("edges"), // JSON, node connections
-  status: text("status", { enum: ["draft", "active"] }).default("draft"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const workflows = sqliteTable(
+  "workflows",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    nodes: text("nodes"), // JSON, workflow node definitions
+    edges: text("edges"), // JSON, node connections
+    status: text("status", { enum: ["draft", "active"] }).default("draft"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("workflows_user_idx").on(table.userId)]
+);
 
-export const learningPaths = sqliteTable("learning_paths", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  category: text("category", {
-    enum: ["backend", "database", "devops", "ai", "system-design"],
-  }),
-  lessons: text("lessons"), // JSON, lesson list & order
-  progress: real("progress").default(0), // 0-100
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const learningPaths = sqliteTable(
+  "learning_paths",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    category: text("category", {
+      enum: ["backend", "database", "devops", "ai", "system-design"],
+    }),
+    lessons: text("lessons"), // JSON, lesson list & order
+    progress: real("progress").default(0), // 0-100
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("learning_paths_user_idx").on(table.userId)]
+);
 
-export const learningLessons = sqliteTable("learning_lessons", {
-  id: text("id").primaryKey(),
-  pathId: text("path_id").references(() => learningPaths.id),
-  title: text("title").notNull(),
-  content: text("content"), // AI generated lesson content
-  quiz: text("quiz"), // JSON, exercises
-  orderIndex: integer("order_index"),
-  status: text("status", { enum: ["locked", "available", "completed"] }).default("locked"),
-  notes: text("notes"), // user study notes
-  completedAt: integer("completed_at", { mode: "timestamp" }),
-});
+export const learningLessons = sqliteTable(
+  "learning_lessons",
+  {
+    id: text("id").primaryKey(),
+    pathId: text("path_id").references(() => learningPaths.id),
+    title: text("title").notNull(),
+    content: text("content"), // AI generated lesson content
+    quiz: text("quiz"), // JSON, exercises
+    orderIndex: integer("order_index"),
+    status: text("status", { enum: ["locked", "available", "completed"] }).default("locked"),
+    notes: text("notes"), // user study notes
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [index("learning_lessons_path_idx").on(table.pathId)]
+);
 
-export const workflowRuns = sqliteTable("workflow_runs", {
-  id: text("id").primaryKey(),
-  workflowId: text("workflow_id").references(() => workflows.id),
-  status: text("status", { enum: ["running", "completed", "failed"] }).default("running"),
-  results: text("results"), // JSON, per-node results
-  startedAt: integer("started_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  completedAt: integer("completed_at", { mode: "timestamp" }),
-});
+export const workflowRuns = sqliteTable(
+  "workflow_runs",
+  {
+    id: text("id").primaryKey(),
+    workflowId: text("workflow_id").references(() => workflows.id),
+    status: text("status", { enum: ["running", "completed", "failed"] }).default("running"),
+    results: text("results"), // JSON, per-node results
+    startedAt: integer("started_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [index("workflow_runs_workflow_idx").on(table.workflowId)]
+);
 
-export const tokenUsageEntries = sqliteTable("token_usage_entries", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  provider: text("provider", { enum: ["codex", "claude-code", "openai-api", "other"] }).notNull(),
-  model: text("model"),
-  totalTokens: integer("total_tokens").notNull(),
-  inputTokens: integer("input_tokens").default(0),
-  outputTokens: integer("output_tokens").default(0),
-  cachedTokens: integer("cached_tokens").default(0),
-  notes: text("notes"),
-  source: text("source", { enum: ["manual", "import"] }).notNull().default("manual"),
-  usageAt: integer("usage_at", { mode: "timestamp" }).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const tokenUsageEntries = sqliteTable(
+  "token_usage_entries",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider", { enum: ["codex", "claude-code", "openai-api", "other"] }).notNull(),
+    model: text("model"),
+    totalTokens: integer("total_tokens").notNull(),
+    inputTokens: integer("input_tokens").default(0),
+    outputTokens: integer("output_tokens").default(0),
+    cachedTokens: integer("cached_tokens").default(0),
+    notes: text("notes"),
+    source: text("source", { enum: ["manual", "import"] }).notNull().default("manual"),
+    usageAt: integer("usage_at", { mode: "timestamp" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("token_usage_entries_user_idx").on(table.userId, table.usageAt)]
+);
 
 export const usageRecords = sqliteTable(
   "usage_records",
@@ -401,104 +445,131 @@ export const aiUsage = sqliteTable(
   ]
 );
 
-export const portfolioHoldings = sqliteTable("portfolio_holdings", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  symbol: text("symbol").notNull(),
-  name: text("name").notNull(),
-  assetType: text("asset_type", { enum: ["stock", "crypto"] }).notNull(),
-  quantity: real("quantity").notNull(),
-  costPrice: real("cost_price").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const portfolioHoldings = sqliteTable(
+  "portfolio_holdings",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    symbol: text("symbol").notNull(),
+    name: text("name").notNull(),
+    assetType: text("asset_type", { enum: ["stock", "crypto"] }).notNull(),
+    quantity: real("quantity").notNull(),
+    costPrice: real("cost_price").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("portfolio_holdings_user_idx").on(table.userId)]
+);
 
-export const portfolioNews = sqliteTable("portfolio_news", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  symbol: text("symbol").notNull(),
-  summary: text("summary").notNull(),
-  sentiment: text("sentiment", { enum: ["bullish", "bearish", "neutral"] }).notNull(),
-  generatedAt: integer("generated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const portfolioNews = sqliteTable(
+  "portfolio_news",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    symbol: text("symbol").notNull(),
+    summary: text("summary").notNull(),
+    sentiment: text("sentiment", { enum: ["bullish", "bearish", "neutral"] }).notNull(),
+    generatedAt: integer("generated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("portfolio_news_user_idx").on(table.userId)]
+);
 
 // ── Learning Notebook ──────────────────────────────
 
-export const learningTopics = sqliteTable("learning_topics", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  icon: text("icon"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const learningTopics = sqliteTable(
+  "learning_topics",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    icon: text("icon"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("learning_topics_user_idx").on(table.userId)]
+);
 
-export const learningNotes = sqliteTable("learning_notes", {
-  id: text("id").primaryKey(),
-  topicId: text("topic_id")
-    .notNull()
-    .references(() => learningTopics.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  content: text("content"),
-  plainText: text("plain_text"),
-  tags: text("tags"),
-  aiSummary: text("ai_summary"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const learningNotes = sqliteTable(
+  "learning_notes",
+  {
+    id: text("id").primaryKey(),
+    topicId: text("topic_id")
+      .notNull()
+      .references(() => learningTopics.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content"),
+    plainText: text("plain_text"),
+    tags: text("tags"),
+    aiSummary: text("ai_summary"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("learning_notes_topic_idx").on(table.topicId),
+    index("learning_notes_user_idx").on(table.userId),
+  ]
+);
 
-export const learningReviews = sqliteTable("learning_reviews", {
-  id: text("id").primaryKey(),
-  topicId: text("topic_id")
-    .notNull()
-    .references(() => learningTopics.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: text("type", { enum: ["outline", "gap", "quiz"] }).notNull(),
-  content: text("content").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const learningReviews = sqliteTable(
+  "learning_reviews",
+  {
+    id: text("id").primaryKey(),
+    topicId: text("topic_id")
+      .notNull()
+      .references(() => learningTopics.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type", { enum: ["outline", "gap", "quiz"] }).notNull(),
+    content: text("content").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("learning_reviews_topic_idx").on(table.topicId)]
+);
 
 // ── Open Source Projects ──────────────────────────
 
-export const osProjects = sqliteTable("os_projects", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  repoUrl: text("repo_url"),
-  description: text("description"),
-  language: text("language"),
-  aiSummary: text("ai_summary"),
-  // Source-code analysis fields
-  analysisStatus: text("analysis_status"), // null | pending | analyzing | completed | failed
-  analysisError: text("analysis_error"),
-  // Snapshot of the repo at the time of the most recent successful analysis
-  analysisCommit: text("analysis_commit"), // git rev-parse HEAD (full sha)
-  analysisCommitDate: integer("analysis_commit_date", { mode: "timestamp" }), // commit author/committer date
-  analysisStartedAt: integer("analysis_started_at", { mode: "timestamp" }),
-  analysisFinishedAt: integer("analysis_finished_at", { mode: "timestamp" }),
-  starsCount: integer("stars_count"),
-  trendingDate: text("trending_date"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const osProjects = sqliteTable(
+  "os_projects",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    repoUrl: text("repo_url"),
+    description: text("description"),
+    language: text("language"),
+    aiSummary: text("ai_summary"),
+    // Source-code analysis fields
+    analysisStatus: text("analysis_status"), // null | pending | analyzing | completed | failed
+    analysisError: text("analysis_error"),
+    // Snapshot of the repo at the time of the most recent successful analysis
+    analysisCommit: text("analysis_commit"), // git rev-parse HEAD (full sha)
+    analysisCommitDate: integer("analysis_commit_date", { mode: "timestamp" }), // commit author/committer date
+    analysisStartedAt: integer("analysis_started_at", { mode: "timestamp" }),
+    analysisFinishedAt: integer("analysis_finished_at", { mode: "timestamp" }),
+    starsCount: integer("stars_count"),
+    trendingDate: text("trending_date"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("os_projects_user_idx").on(table.userId)]
+);
 
 /**
  * User-customizable prompts for source code analysis.
@@ -522,59 +593,74 @@ export const analysisPrompts = sqliteTable(
   })
 );
 
-export const osProjectNotes = sqliteTable("os_project_notes", {
-  id: text("id").primaryKey(),
-  projectId: text("project_id")
-    .notNull()
-    .references(() => osProjects.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  content: text("content"),
-  plainText: text("plain_text"),
-  tags: text("tags"),
-  shareToken: text("share_token").unique(),
-  sharedAt: integer("shared_at", { mode: "timestamp" }),
-  noteType: text("note_type").default("manual"), // manual | analysis | followup
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const osProjectNotes = sqliteTable(
+  "os_project_notes",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => osProjects.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content"),
+    plainText: text("plain_text"),
+    tags: text("tags"),
+    shareToken: text("share_token").unique(),
+    sharedAt: integer("shared_at", { mode: "timestamp" }),
+    noteType: text("note_type").default("manual"), // manual | analysis | followup
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("os_project_notes_project_idx").on(table.projectId)]
+);
 
-export const analysisTasks = sqliteTable("analysis_tasks", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  projectId: text("project_id")
-    .notNull()
-    .references(() => osProjects.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  taskType: text("task_type", { enum: ["analysis", "followup"] }).notNull(),
-  status: text("status", { enum: ["queued", "running", "completed", "failed"] })
-    .notNull()
-    .default("queued"),
-  provider: text("provider").notNull().default("claude"), // claude | codex | ...
-  repoUrl: text("repo_url").notNull(),
-  question: text("question"),
-  originalAnalysis: text("original_analysis"),
-  result: text("result"),
-  error: text("error"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  startedAt: integer("started_at", { mode: "timestamp" }),
-  completedAt: integer("completed_at", { mode: "timestamp" }),
-});
+export const analysisTasks = sqliteTable(
+  "analysis_tasks",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => osProjects.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    taskType: text("task_type", { enum: ["analysis", "followup"] }).notNull(),
+    status: text("status", { enum: ["queued", "running", "completed", "failed"] })
+      .notNull()
+      .default("queued"),
+    provider: text("provider").notNull().default("claude"), // claude | codex | ...
+    repoUrl: text("repo_url").notNull(),
+    question: text("question"),
+    originalAnalysis: text("original_analysis"),
+    result: text("result"),
+    error: text("error"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    startedAt: integer("started_at", { mode: "timestamp" }),
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [
+    index("analysis_tasks_project_idx").on(table.projectId),
+    index("analysis_tasks_status_idx").on(table.status, table.createdAt),
+  ]
+);
 
-export const analysisMessages = sqliteTable("analysis_messages", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  taskId: text("task_id")
-    .notNull()
-    .references(() => analysisTasks.id, { onDelete: "cascade" }),
-  seq: integer("seq").notNull(),
-  type: text("type", { enum: ["tool_use", "tool_result", "text", "error"] }).notNull(),
-  tool: text("tool"),
-  summary: text("summary"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
+export const analysisMessages = sqliteTable(
+  "analysis_messages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => analysisTasks.id, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+    type: text("type", { enum: ["tool_use", "tool_result", "text", "error"] }).notNull(),
+    tool: text("tool"),
+    summary: text("summary"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [index("analysis_messages_task_idx").on(table.taskId, table.seq)]
+);
 
 // ── Ask AI Daemon Queue ────────────────────────────
 // daemonChatMessages is prefixed to avoid colliding with the legacy v1

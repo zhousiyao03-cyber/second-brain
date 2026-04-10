@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { and, desc, eq, like } from "drizzle-orm";
+import { and, desc, eq, like, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { generateStructuredData } from "../ai/provider";
 import { db } from "../db";
@@ -89,18 +89,54 @@ async function collectTopicMeta(topicId: string) {
 
 export const learningNotebookRouter = router({
   listTopics: protectedProcedure.query(async ({ ctx }) => {
+    // Single query: fetch topics + note counts + tags in one pass (no N+1)
     const topics = await db
       .select()
       .from(learningTopics)
       .where(eq(learningTopics.userId, ctx.userId))
       .orderBy(desc(learningTopics.updatedAt));
 
-    return Promise.all(
-      topics.map(async (topic) => ({
-        ...topic,
-        ...(await collectTopicMeta(topic.id)),
-      }))
-    );
+    if (topics.length === 0) return [];
+
+    // Batch: get note count + tags for ALL topics in one query
+    const topicIds = topics.map((t) => t.id);
+    const noteMeta = await db
+      .select({
+        topicId: learningNotes.topicId,
+        noteCount: sql<number>`count(*)`.as("note_count"),
+        allTags: sql<string>`group_concat(${learningNotes.tags})`.as("all_tags"),
+      })
+      .from(learningNotes)
+      .where(
+        and(
+          sql`${learningNotes.topicId} IN (${sql.join(topicIds.map((id) => sql`${id}`), sql`, `)})`,
+          eq(learningNotes.userId, ctx.userId)
+        )
+      )
+      .groupBy(learningNotes.topicId);
+
+    const metaMap = new Map(noteMeta.map((m) => [m.topicId, m]));
+
+    return topics.map((topic) => {
+      const meta = metaMap.get(topic.id);
+      const noteCount = meta?.noteCount ?? 0;
+
+      // Parse concatenated tags to get top 5
+      const tagCounts = new Map<string, number>();
+      if (meta?.allTags) {
+        for (const chunk of meta.allTags.split(",")) {
+          for (const tag of parseTags(chunk)) {
+            tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+          }
+        }
+      }
+      const topTags = [...tagCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([tag]) => tag);
+
+      return { ...topic, noteCount, topTags, combinedText: "" };
+    });
   }),
 
   getTopic: protectedProcedure
