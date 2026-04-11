@@ -18,7 +18,6 @@ import {
   FileText,
   CalendarDays,
   Loader2,
-  Folder,
   Menu,
   X,
   GripVertical,
@@ -49,8 +48,8 @@ type NoteItem = {
   updatedAt: Date | null;
 };
 
-/** Wrapper to make a note card draggable */
-function DraggableNoteCard({
+/** Wrapper to make a note row draggable */
+function DraggableNoteRow({
   noteId,
   children,
 }: {
@@ -68,13 +67,13 @@ function DraggableNoteCard({
       {...attributes}
       className={cn("group/drag relative", isDragging && "opacity-40")}
     >
-      {/* Drag handle — visible on card hover */}
+      {/* Drag handle — visible on row hover */}
       <div
         {...listeners}
-        className="absolute -left-6 top-1/2 z-10 -translate-y-1/2 cursor-grab rounded p-1 text-stone-300 opacity-0 transition-opacity hover:text-stone-500 group-hover/drag:opacity-100 active:cursor-grabbing dark:text-stone-600 dark:hover:text-stone-400"
+        className="absolute -left-5 top-1/2 z-10 -translate-y-1/2 cursor-grab rounded p-0.5 text-stone-300 opacity-0 transition-opacity hover:text-stone-500 group-hover/drag:opacity-100 active:cursor-grabbing dark:text-stone-600 dark:hover:text-stone-400"
         style={{ touchAction: "none" }}
       >
-        <GripVertical size={14} />
+        <GripVertical size={13} />
       </div>
       {children}
     </div>
@@ -301,10 +300,10 @@ export function NotesPageClient() {
         setDragActiveLabel("");
       }}
     >
-    <div className="flex gap-6">
+    <div className="-ml-4 flex gap-3 md:-ml-6">
       {/* Desktop multi-panel sidebar */}
       <ResizableSidebar className="hidden md:block">
-        <div className="sticky top-6 h-[calc(100vh-120px)] overflow-y-auto">
+        <div className="sticky top-6 h-[calc(100vh-120px)] overflow-y-auto pl-2 pr-3">
           <FolderTree
             activeFolderId={activeFolderId}
             onSelectFolder={handleFolderChange}
@@ -342,8 +341,8 @@ export function NotesPageClient() {
       )}
 
       {/* Main content */}
-      <div className="min-w-0 flex-1">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="min-w-0 flex-1 pr-4 md:pr-6">
+        <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {/* Mobile hamburger */}
             <button
@@ -352,128 +351,115 @@ export function NotesPageClient() {
             >
               <Menu size={20} />
             </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
               {activeFolderName ?? "Notes"}
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => openTodayJournal.mutate()}
               disabled={openTodayJournal.isPending}
-              className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md border border-stone-200 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-stone-600 shadow-sm transition-all hover:border-stone-300 hover:bg-white hover:text-stone-900 disabled:opacity-50 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-400 dark:hover:border-stone-700 dark:hover:text-stone-100"
             >
-              <CalendarDays size={16} />
+              <CalendarDays size={13} />
               <span className="hidden sm:inline">
-                {openTodayJournal.isPending
-                  ? "Opening..."
-                  : "Today's daily note"}
+                {openTodayJournal.isPending ? "Opening..." : "Today"}
               </span>
             </button>
             <button
               onClick={() => handleCreateNote(activeFolderId)}
               disabled={createNote.isPending}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-stone-800 disabled:opacity-50 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
             >
-              <Plus size={16} />
+              <Plus size={13} />
               New note
             </button>
           </div>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-3">
           <div className="relative">
             <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={13}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400"
             />
             <input
               type="text"
               placeholder="Search notes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              className="w-full rounded-md border border-stone-200 bg-white/70 py-1.5 pl-8 pr-3 text-xs text-stone-700 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none dark:border-stone-800 dark:bg-stone-950/50 dark:text-stone-200 dark:focus:border-stone-600"
             />
           </div>
         </div>
 
         {isLoading && allItems.length === 0 ? (
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-sm text-stone-500">Loading...</p>
         ) : filtered.length === 0 ? (
-          <div className="py-12 text-center text-gray-400">
-            <FileText size={48} className="mx-auto mb-3 opacity-50" />
-            <p>
+          <div className="py-12 text-center text-stone-400">
+            <FileText size={40} className="mx-auto mb-3 opacity-40" />
+            <p className="text-sm">
               {allItems.length === 0
                 ? "No notes yet. Create your first one."
                 : "No matching notes."}
             </p>
           </div>
         ) : (
-          <div className="space-y-2 pl-7">
-            {filtered.map((note) => {
+          <div className="overflow-hidden rounded-md border border-stone-200 bg-white/60 pl-6 dark:border-stone-800 dark:bg-stone-950/40">
+            {filtered.map((note, idx) => {
+              const folderTag =
+                activeFolderId === null && note.folderId
+                  ? folderData.find((fd) => fd.id === note.folderId)?.name ?? null
+                  : null;
               return (
-                <DraggableNoteCard key={note.id} noteId={note.id}>
-                <div
-                  onClick={() => router.push(`/notes/${note.id}`)}
-                  data-testid="note-card"
-                  className="group flex items-center justify-between rounded-2xl border border-stone-200 bg-white/80 p-4 shadow-sm transition-colors hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950/70 dark:hover:bg-stone-900/80"
-                >
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="mt-0.5 shrink-0">
-                      {note.icon ? (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-stone-200 bg-white text-xl shadow-sm dark:border-stone-800 dark:bg-stone-950">
-                          {note.icon}
-                        </div>
-                      ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-stone-200 bg-stone-50 text-stone-400 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-500">
-                          <FileText size={16} />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="truncate font-medium text-stone-900 dark:text-stone-100">
-                          {note.title || "New page"}
-                        </h3>
-                      </div>
-                      {note.plainText && (
-                        <p className="mt-1 line-clamp-1 text-xs text-stone-500 dark:text-stone-400">
-                          {note.plainText.slice(0, 80)}
-                        </p>
-                      )}
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-stone-400">
-                          {formatDate(note.updatedAt)}
-                        </span>
-                        {activeFolderId === null && note.folderId && (() => {
-                          const f = folderData.find((fd) => fd.id === note.folderId);
-                          return f ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-1.5 py-0.5 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-                              <Folder size={10} />
-                              {f.name}
-                            </span>
-                          ) : null;
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm("Delete this note?")) {
-                        deleteNote.mutate({ id: note.id });
-                      }
-                    }}
-                    data-testid="note-delete"
+                <DraggableNoteRow key={note.id} noteId={note.id}>
+                  <div
+                    onClick={() => router.push(`/notes/${note.id}`)}
+                    data-testid="note-card"
                     className={cn(
-                      "rounded-xl p-2 text-stone-400 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
+                      "group flex items-center gap-2.5 px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-900/60",
+                      idx !== 0 &&
+                        "border-t border-stone-100 dark:border-stone-900"
                     )}
-                    title="Delete"
                   >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                </DraggableNoteCard>
+                    {note.icon ? (
+                      <span className="w-4 shrink-0 text-center text-sm leading-none">
+                        {note.icon}
+                      </span>
+                    ) : (
+                      <FileText
+                        size={13}
+                        className="shrink-0 text-stone-400 dark:text-stone-600"
+                      />
+                    )}
+                    <h3 className="min-w-0 flex-1 truncate text-sm text-stone-800 dark:text-stone-200">
+                      {note.title || "New page"}
+                    </h3>
+                    {folderTag && (
+                      <span className="hidden shrink-0 max-w-[120px] truncate text-xs text-stone-400 sm:inline dark:text-stone-500">
+                        {folderTag}
+                      </span>
+                    )}
+                    <span className="shrink-0 text-xs tabular-nums text-stone-400 dark:text-stone-600">
+                      {formatDate(note.updatedAt)}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm("Delete this note?")) {
+                          deleteNote.mutate({ id: note.id });
+                        }
+                      }}
+                      data-testid="note-delete"
+                      className={cn(
+                        "shrink-0 rounded p-1 text-stone-400 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
+                      )}
+                      title="Delete"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </DraggableNoteRow>
               );
             })}
 
@@ -481,11 +467,11 @@ export function NotesPageClient() {
               <button
                 onClick={loadMore}
                 disabled={isFetching}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white/60 py-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950/50 dark:hover:bg-stone-900/80"
+                className="flex w-full items-center justify-center gap-2 border-t border-stone-100 py-2 text-xs text-stone-500 transition-colors hover:bg-stone-50 dark:border-stone-900 dark:hover:bg-stone-900/60"
               >
                 {isFetching ? (
                   <>
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={12} className="animate-spin" />
                     Loading...
                   </>
                 ) : (

@@ -296,10 +296,10 @@ export function FolderTree({
         }
       }}
     >
-      <div className="mb-3 flex h-9 items-center justify-between">
+      <div className="mb-2 flex h-9 items-center justify-between px-1">
         <button
           onClick={() => onSelectFolder(null)}
-          className="text-xs font-semibold uppercase tracking-wider text-stone-400 transition-colors hover:text-stone-600 dark:hover:text-stone-300"
+          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-200"
           title="Show all notes"
         >
           Explorer
@@ -309,10 +309,10 @@ export function FolderTree({
             setCreatingIn(null);
             setNewFolderName("");
           }}
-          className="rounded p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+          className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-stone-200"
           title="New folder"
         >
-          <FolderPlus size={14} />
+          <FolderPlus size={13} />
         </button>
       </div>
 
