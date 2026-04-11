@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { generateStructuredData, getAIErrorMessage } from "@/server/ai/provider";
 import { auth } from "@/lib/auth";
+import { guardBot } from "@/server/botid-guard";
 
 const generateLessonInputSchema = z.object({
   pathId: z.string(),
@@ -21,6 +22,9 @@ const lessonOutputSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const botBlock = await guardBot();
+  if (botBlock) return botBlock;
+
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

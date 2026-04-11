@@ -4,6 +4,7 @@ import { bookmarks } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { generateStructuredData, getAIErrorMessage } from "@/server/ai/provider";
 import { auth } from "@/lib/auth";
+import { guardBot } from "@/server/botid-guard";
 
 const summarizeInputSchema = z.object({
   bookmarkId: z.string(),
@@ -19,6 +20,9 @@ function normalizeTags(tags: string[]) {
 }
 
 export async function POST(req: Request) {
+  const botBlock = await guardBot();
+  if (botBlock) return botBlock;
+
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

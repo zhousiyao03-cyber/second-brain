@@ -119,12 +119,18 @@ dependencies:
   '@vercel/blob':
     specifier: ^2.3.3
     version: 2.3.3
+  '@vercel/functions':
+    specifier: ^3.4.3
+    version: 3.4.3
   '@vercel/speed-insights':
     specifier: ^2.0.0
     version: 2.0.0(next@16.2.1)(react@19.2.4)
   ai:
     specifier: ^6.0.134
     version: 6.0.134(zod@4.3.6)
+  botid:
+    specifier: ^1.5.11
+    version: 1.5.11(next@16.2.1)(react@19.2.4)
   cheerio:
     specifier: ^1.2.0
     version: 1.2.0
@@ -4997,8 +5003,25 @@ packages:
       undici: 6.24.1
     dev: false
 
+  /@vercel/functions@3.4.3:
+    resolution: {integrity: sha512-kA14KIUVgAY6VXbhZ5jjY+s0883cV3cZqIU3WhrSRxuJ9KvxatMjtmzl0K23HK59oOUjYl7HaE/eYMmhmqpZzw==}
+    engines: {node: '>= 20'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-web-identity': '*'
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-web-identity':
+        optional: true
+    dependencies:
+      '@vercel/oidc': 3.2.0
+    dev: false
+
   /@vercel/oidc@3.1.0:
     resolution: {integrity: sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w==}
+    engines: {node: '>= 20'}
+    dev: false
+
+  /@vercel/oidc@3.2.0:
+    resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
     engines: {node: '>= 20'}
     dev: false
 
@@ -5301,6 +5324,21 @@ packages:
 
   /boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
+    dev: false
+
+  /botid@1.5.11(next@16.2.1)(react@19.2.4):
+    resolution: {integrity: sha512-KOO1A3+/vFVJk5aFoG3sNwiogKFPVR+x4aw4gQ1b2e0XoE+i5xp48/EZn+WqR07jRHeDGwHWQUOtV5WVm7xiww==}
+    peerDependencies:
+      next: '*'
+      react: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      next:
+        optional: true
+      react:
+        optional: true
+    dependencies:
+      next: 16.2.1(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.4)(react@19.2.4)
+      react: 19.2.4
     dev: false
 
   /bowser@2.14.1:

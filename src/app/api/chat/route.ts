@@ -20,6 +20,7 @@ import { bookmarks, notes } from "@/server/db/schema";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
 import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
+import { guardBot } from "@/server/botid-guard";
 
 export const maxDuration = 30;
 
@@ -110,6 +111,9 @@ async function resolvePinnedSources(
 const SKIP_RAG_KEYWORDS = ["不用搜索", "直接回答", "不需要搜索", "不要搜索"];
 
 export async function POST(req: Request) {
+  const botBlock = await guardBot();
+  if (botBlock) return botBlock;
+
   // Auth bypass for E2E testing
   let userId: string | null = null;
   if (process.env.AUTH_BYPASS !== "true") {
