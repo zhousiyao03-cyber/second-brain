@@ -169,6 +169,12 @@ export function NotesPageClient() {
       moveNoteToFolder.mutate({ id: noteId, folderId: targetFolderId });
     }
 
+    // Note dropped on "All notes" (root) → move out of folder
+    if (activeData.type === "note" && overData.type === "folder-root") {
+      const noteId = activeData.noteId as string;
+      moveNoteToFolder.mutate({ id: noteId, folderId: null });
+    }
+
     // Folder dropped on folder (reparent)
     if (activeData.type === "folder" && overData.type === "folder") {
       const draggedFolderId = activeData.folderId as string;
@@ -180,6 +186,15 @@ export function NotesPageClient() {
       moveFolderToFolder.mutate({
         id: draggedFolderId,
         targetParentId: targetFolderId,
+      });
+    }
+
+    // Folder dropped on "All notes" (root) → move to top level
+    if (activeData.type === "folder" && overData.type === "folder-root") {
+      const draggedFolderId = activeData.folderId as string;
+      moveFolderToFolder.mutate({
+        id: draggedFolderId,
+        targetParentId: null,
       });
     }
   };

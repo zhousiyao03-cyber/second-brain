@@ -277,6 +277,15 @@ export function FolderTree({
         : "text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-900"
     );
 
+  // Droppable "root" target — dropping a folder here moves it to top-level
+  const {
+    isOver: isOverRoot,
+    setNodeRef: setRootDropRef,
+  } = useDroppable({
+    id: "folder-drop-root",
+    data: { type: "folder-root" },
+  });
+
   return (
     <div className="space-y-0.5">
       <div className="mb-2 flex items-center justify-between">
@@ -295,14 +304,19 @@ export function FolderTree({
         </button>
       </div>
 
-      {/* All notes */}
-      <button
+      {/* All notes — also acts as drop target for moving folders/notes to root */}
+      <div
+        ref={setRootDropRef}
         onClick={() => onSelectFolder(null)}
-        className={staticItemClass(activeFolderId === null)}
+        className={cn(
+          staticItemClass(activeFolderId === null),
+          isOverRoot &&
+            "ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950/30 dark:ring-blue-500"
+        )}
       >
         <FileText size={14} className="shrink-0" />
         <span className="flex-1 truncate">All notes</span>
-      </button>
+      </div>
 
       {/* Unfiled */}
       <button
