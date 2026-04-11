@@ -1,13 +1,19 @@
 /**
  * 轻量级后台任务队列，复用 knowledgeIndexJobs 表。
  *
- * 这是一个"pull-based" 队列：worker 主动 claim 下一条 pending 任务，
+ * 这是一个 "pull-based" 队列：worker 主动 claim 下一条 pending 任务，
  * 不是消息总线 push 过去。优点：不需要额外的 broker 进程；缺点：只能
  * 依赖外部触发（cron / HTTP 调 tick 接口）来推动消费。
  *
+ * ── 业务定位 ──
+ * Second Brain 的 "笔记/书签 → RAG 索引" 后台重建管道的入队/出队层。
+ * notes.ts 在用户保存笔记时 fire-and-forget 入队，worker.ts 被 cron
+ * 或 /api/jobs tick 端点驱动，最终交给 ai/indexer.ts 做 chunk + embed
+ * + 写入 knowledgeChunks。设计与实验见 docs/learn-backend/phase-b1.md。
+ *
  * ── 任务生命周期 ──
  *   enqueue()    → status = "pending", attempts = 0, queuedAt = now
- *   claimNext()  → status = "running"（原子拾取：先 select 再 update）
+ *   claimNext()  → status = "running"（一条 UPDATE ... RETURNING 原子完成）
  *   completeJob()→ status = "done", finishedAt = now
  *   failJob()    → 如果 attempts < MAX，重置为 pending 并延后 queuedAt
  *                  (指数退避)；否则置为 failed
@@ -18,18 +24,32 @@
  *   达到 MAX_ATTEMPTS（默认 5）后标记 failed，需要人工介入
  *
  * ── 学习要点 ──
- * - 队列的"原子拾取"很重要，否则多 worker 会抢到同一条任务。这里用
- *   "select pending + update set status=running where id=X and status=pending"
- *   的两步方式，配合 SQLite 的事务保证同一时刻只有一个 update 成功
+ * - 原子拾取的关键不是 "SELECT + UPDATE 两步"，而是 UPDATE 的 WHERE
+ *   子句里包含一个会被其他 worker 改掉的字段（status='pending'），
+ *   起到 compare-and-swap 的作用。B1-2 实验证明：去掉这个 WHERE
+ *   守卫会出现 32/32 double-claim，保留了就能天然互斥。
+ * - 为了让代码层面的原子性更显然，这里用 "UPDATE ... WHERE id=
+ *   (SELECT ... LIMIT 1) RETURNING" 压成一条 SQL，消除两步之间的窗口。
  * - 指数退避避免雪崩：下游服务抖动时别用固定间隔硬怼，等它恢复
  * - MAX_ATTEMPTS 是"死信队列"的替身：超了就进 failed，留给人看
+ * - enqueueJob 支持传入 tx，让调用方能把入队和业务写放进同一个 DB
+ *   事务（outbox 雏形）——参见 notes.update。
  */
 
 import crypto from "node:crypto";
-import { and, asc, eq, lte, sql } from "drizzle-orm";
-import { db } from "../db";
+import { eq, sql } from "drizzle-orm";
+import { db, dbClient } from "../db";
 import { knowledgeIndexJobs } from "../db/schema";
 import { logger } from "../logger";
+
+/**
+ * 可接受 db 或事务 tx 的 runner 类型。
+ * Drizzle 的 tx 在结构上兼容 db —— 共用 insert/select/update/run 方法，
+ * 所以这里只抽取 enqueueJob 真正用到的子集作为参数类型，既满足调用方
+ * 传 db 的老用法，也允许 notes.update 这样的事务里把入队放进同一个
+ * tx，形成一个最小的 outbox 雏形。
+ */
+type DbRunner = Pick<typeof db, "insert">;
 
 export type JobSourceType = "note" | "bookmark";
 
@@ -41,14 +61,20 @@ const RETRY_BASE_MS = 1_000; // 1s，第一次重试的基础延迟
  * 相同 sourceId 的重复入队会产生多条记录 — 这是有意的：
  * worker 可能正在处理老版本，而用户又更新了一次；
  * 老 job 完成后新 job 会再跑一次，自然达到"最新内容最终被索引"的状态。
+ *
+ * @param runner 可选。默认用模块级 db；调用方如果在 db.transaction 里
+ *   想让入队跟随事务（outbox 雏形），把 tx 传进来即可。
  */
-export async function enqueueJob(input: {
-  sourceType: JobSourceType;
-  sourceId: string;
-  reason: string;
-}) {
+export async function enqueueJob(
+  input: {
+    sourceType: JobSourceType;
+    sourceId: string;
+    reason: string;
+  },
+  runner: DbRunner = db
+) {
   const id = crypto.randomUUID();
-  await db.insert(knowledgeIndexJobs).values({
+  await runner.insert(knowledgeIndexJobs).values({
     id,
     sourceType: input.sourceType,
     sourceId: input.sourceId,
@@ -74,51 +100,58 @@ export async function enqueueJob(input: {
  * 拾取下一条可执行的任务。
  *
  * "可执行" = status 为 pending 且 queuedAt <= now（后者用于等待退避冷却）。
- * 多 worker 场景下靠 "update ... where id=X and status=pending" 的单行更新
- * 做原子锁，只有一个 worker 能抢到。
+ *
+ * 实现：一条 "UPDATE ... WHERE id=(SELECT ... LIMIT 1 WHERE status='pending'
+ * AND queued_at <= now ORDER BY queued_at ASC) RETURNING *"。
+ * 把 "挑一条最早的 pending" 和 "标记 running + attempts++" 压在一条 SQL
+ * 里，彻底消除两步之间的 race 窗口。多 worker 并发下只有一个 UPDATE
+ * 能命中匹配行，其余的子查询 LIMIT 1 返回空集 → 没有 row 被影响 →
+ * RETURNING 空 → 本次判空返回 null。
+ *
+ * 设计决策参见 docs/learn-backend/phase-b1.md（B1-2 实验 + B1-1 重构）。
+ *
+ * 另：这里走 dbClient.execute 直接发 SQL，而不是 Drizzle 的链式 API。
+ * 原因是我们需要子查询 + RETURNING 的组合，Drizzle 对 libsql 的
+ * .returning() 支持已经稳定（B1-2 脚本里验证过），但 "UPDATE WHERE
+ * id IN (SELECT ... ORDER BY ... LIMIT 1)" 这种形式用链式 API 组装
+ * 反而比原始 SQL 啰嗦、更难读。
  */
 export async function claimNextJob() {
-  const now = new Date();
+  const nowSeconds = Math.floor(Date.now() / 1000);
 
-  const [candidate] = await db
-    .select()
-    .from(knowledgeIndexJobs)
-    .where(
-      and(
-        eq(knowledgeIndexJobs.status, "pending"),
-        lte(knowledgeIndexJobs.queuedAt, now)
+  const result = await dbClient.execute({
+    sql: `
+      UPDATE knowledge_index_jobs
+      SET status = 'running', attempts = attempts + 1
+      WHERE id = (
+        SELECT id FROM knowledge_index_jobs
+        WHERE status = 'pending' AND queued_at <= ?
+        ORDER BY queued_at ASC
+        LIMIT 1
       )
-    )
-    .orderBy(asc(knowledgeIndexJobs.queuedAt))
-    .limit(1);
+      RETURNING id, source_type, source_id, reason, status, error, attempts, queued_at, finished_at
+    `,
+    args: [nowSeconds],
+  });
 
-  if (!candidate) return null;
+  const row = result.rows[0];
+  if (!row) return null;
 
-  // 原子拾取：只有当该 job 仍处于 pending 时 update 才会生效
-  // 注意：Drizzle 对 libsql 的 `.returning()` 尚不稳定，这里先 update 再二次
-  // 读取，用 attempts 的变化来判断是否确实抢到（我们 attempts++ 了）
-  await db
-    .update(knowledgeIndexJobs)
-    .set({
-      status: "running",
-      attempts: sql`${knowledgeIndexJobs.attempts} + 1`,
-    })
-    .where(
-      and(
-        eq(knowledgeIndexJobs.id, candidate.id),
-        eq(knowledgeIndexJobs.status, "pending")
-      )
-    );
-
-  const [claimed] = await db
-    .select()
-    .from(knowledgeIndexJobs)
-    .where(eq(knowledgeIndexJobs.id, candidate.id));
-
-  // 检查是不是真的我们抢到的（status 变成 running 且 attempts 增加）
-  if (!claimed || claimed.status !== "running") {
-    return null;
-  }
+  const claimed = {
+    id: String(row.id),
+    sourceType: row.source_type as JobSourceType,
+    sourceId: String(row.source_id),
+    reason: row.reason == null ? null : String(row.reason),
+    status: row.status as "pending" | "running" | "done" | "failed",
+    error: row.error == null ? null : String(row.error),
+    attempts: Number(row.attempts),
+    queuedAt:
+      row.queued_at == null ? null : new Date(Number(row.queued_at) * 1000),
+    finishedAt:
+      row.finished_at == null
+        ? null
+        : new Date(Number(row.finished_at) * 1000),
+  };
 
   logger.debug(
     {

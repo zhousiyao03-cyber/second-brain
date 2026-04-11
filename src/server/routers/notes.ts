@@ -213,13 +213,22 @@ export const notesRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
-      await db
-        .update(notes)
-        .set({ ...data, updatedAt: new Date() })
-        .where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
 
-      // 入队后台重新索引
-      void enqueueNoteIndexJob(id, "note-update").catch(() => undefined);
+      // 事务范围：只包 "写 notes" 和 "写 outbox(索引队列)"。
+      // - 二者必须一起成功或一起失败：否则会出现 "笔记已存但索引没排队"
+      //   或 "索引排了但笔记没变" 的数据不一致。
+      // - 事务外：Redis/Vercel Cache 的 invalidate（网络 IO，不该进事务）、
+      //   syncNoteLinks（自身是 fire-and-forget 的弱一致写）、回读 SELECT。
+      // 详见 docs/learn-backend/phase-b1.md 的 B1-1 段落。
+      await db.transaction(async (tx) => {
+        await tx
+          .update(notes)
+          .set({ ...data, updatedAt: new Date() })
+          .where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
+
+        await enqueueNoteIndexJob(id, "note-update", tx);
+      });
+
       if (input.content !== undefined) {
         const [updatedNote] = await db.select().from(notes).where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
         if (updatedNote) {

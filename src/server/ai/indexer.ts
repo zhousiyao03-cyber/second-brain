@@ -263,12 +263,24 @@ export async function syncBookmarkKnowledgeIndex(
  *
  * router 里的写路径应该用这个，而不是直接 sync*Index。
  */
-export async function enqueueNoteIndexJob(noteId: string, reason: string) {
-  return enqueueJob({ sourceType: "note", sourceId: noteId, reason });
+/**
+ * tx 参数可选：调用方在 db.transaction 内想让入队与业务写原子一致时，
+ * 把事务句柄传进来即可（outbox 雏形）。不传就走模块级 db，行为和之前一样。
+ */
+export async function enqueueNoteIndexJob(
+  noteId: string,
+  reason: string,
+  tx?: Parameters<typeof enqueueJob>[1]
+) {
+  return enqueueJob({ sourceType: "note", sourceId: noteId, reason }, tx);
 }
 
-export async function enqueueBookmarkIndexJob(bookmarkId: string, reason: string) {
-  return enqueueJob({ sourceType: "bookmark", sourceId: bookmarkId, reason });
+export async function enqueueBookmarkIndexJob(
+  bookmarkId: string,
+  reason: string,
+  tx?: Parameters<typeof enqueueJob>[1]
+) {
+  return enqueueJob({ sourceType: "bookmark", sourceId: bookmarkId, reason }, tx);
 }
 
 /**
