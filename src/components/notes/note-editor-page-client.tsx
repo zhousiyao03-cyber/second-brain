@@ -6,7 +6,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Copy, FolderOpen, ImagePlus, Link, Share2, X } from "lucide-react";
 import dynamic from "next/dynamic";
+import type { Editor as TiptapEditorInstance } from "@tiptap/react";
 import { BacklinksPanel } from "./backlinks-panel";
+import { TocSidebar } from "@/components/editor/toc-sidebar";
 
 const TiptapEditor = dynamic(
   () =>
@@ -246,6 +248,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
   const [title, setTitle] = useState(note.title);
   const [cover, setCover] = useState<string | null>(note.cover);
   const [folderId, setFolderId] = useState<string | null>(note.folderId ?? null);
+  const [editorInstance, setEditorInstance] = useState<TiptapEditorInstance | null>(null);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const folderPickerRef = useRef<HTMLDivElement>(null);
   const { data: allFolders = [] } = trpc.folders.list.useQuery();
@@ -292,8 +295,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
   const coverPickerRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const editorInstanceRef = useRef<any>(null);
+  const editorInstanceRef = useRef<TiptapEditorInstance | null>(null);
 
   const doSave = useCallback(
     (overrides?: SaveOverrides) => {
@@ -383,9 +385,9 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleEditorReady = useCallback((editor: any) => {
+  const handleEditorReady = useCallback((editor: TiptapEditorInstance) => {
     editorInstanceRef.current = editor;
+    setEditorInstance(editor);
   }, []);
 
   const handleFolderChange = (newFolderId: string | null) => {
@@ -655,6 +657,21 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
           <BacklinksPanel noteId={id} />
         </div>
       </div>
+
+      {/* TOC sidebar — fixed in the right margin, shown on large screens */}
+      {editorInstance && (
+        <div
+          className="fixed bottom-4 top-24 hidden xl:flex"
+          style={{
+            right: "max(1.5rem, calc((100vw - 980px) / 2 - 14rem - 1rem))",
+            width: "13rem",
+          }}
+        >
+          <div className="w-full overflow-y-auto">
+            <TocSidebar editor={editorInstance} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
