@@ -15,6 +15,7 @@ import {
   type Editor as TiptapEditorInstance,
 } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
+import { DOMParser as PMDOMParser, type Node as PMNode } from "@tiptap/pm/model";
 import { GripVertical, Plus } from "lucide-react";
 import {
   createSlashCommandExtension,
@@ -544,10 +545,42 @@ export function TiptapEditor({
         }
         return false;
       },
-      // Paste priority: image files (here) > markdown structures (MarkdownTablePaste plugin).
-      // This handler only fires for clipboard items with image/* files.
+      // Paste priority: heading+list flattening > image files > markdown structures (MarkdownTablePaste plugin).
       // Text-only paste (markdown tables, mermaid) falls through to the plugin.
       handlePaste(view, event) {
+        // If the cursor is inside a heading and the clipboard is a list,
+        // flatten the list items into a single space-joined inline string
+        // so the heading absorbs them instead of being replaced by the list.
+        if (view.state.selection.$from.parent.type.name === "heading") {
+          const html = event.clipboardData?.getData("text/html");
+          if (html) {
+            const container = document.createElement("div");
+            container.innerHTML = html;
+            const slice = PMDOMParser.fromSchema(view.state.schema).parseSlice(container);
+            const topNodes: PMNode[] = [];
+            slice.content.forEach((n) => topNodes.push(n));
+            const allLists =
+              topNodes.length > 0 &&
+              topNodes.every(
+                (n) => n.type.name === "bulletList" || n.type.name === "orderedList"
+              );
+            if (allLists) {
+              const parts: string[] = [];
+              topNodes.forEach((list) => {
+                list.forEach((li) => {
+                  const text = li.textContent.trim();
+                  if (text) parts.push(text);
+                });
+              });
+              if (parts.length) {
+                const joined = parts.join(" ");
+                view.dispatch(view.state.tr.insertText(joined));
+                return true;
+              }
+            }
+          }
+        }
+
         const files = Array.from(event.clipboardData?.files ?? []).filter(
           (file) => file.type.startsWith("image/")
         );
