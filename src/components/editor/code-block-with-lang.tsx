@@ -9,6 +9,7 @@ import {
 import type { NodeViewProps } from "@tiptap/react";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
+import "highlight.js/styles/github.css";
 
 /** Practical list of ~20 common programming languages. */
 const LANGUAGES = [
