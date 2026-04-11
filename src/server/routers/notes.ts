@@ -6,8 +6,8 @@ import { extractWikiLinks } from "../notes/link-extractor";
 import { z } from "zod/v4";
 import crypto from "crypto";
 import {
+  enqueueNoteIndexJob,
   removeKnowledgeSourceIndex,
-  syncNoteKnowledgeIndex,
 } from "../ai/indexer";
 import {
   createJournalTemplate,
@@ -157,12 +157,8 @@ export const notesRouter = router({
 
     await db.insert(notes).values({ id, userId: ctx.userId, ...journalInput });
 
-    const [createdNote] = await db.select().from(notes).where(eq(notes.id, id));
-    if (createdNote) {
-      void syncNoteKnowledgeIndex(createdNote, "note-create").catch(
-        () => undefined
-      );
-    }
+    // 入队而不是直接跑：worker 稍后会拾取并执行索引
+    void enqueueNoteIndexJob(id, "note-create").catch(() => undefined);
 
     invalidateDashboardForUser(ctx.userId);
     return { id, created: true };
@@ -182,11 +178,9 @@ export const notesRouter = router({
     .mutation(async ({ input, ctx }) => {
       const id = crypto.randomUUID();
       await db.insert(notes).values({ id, userId: ctx.userId, ...input });
-      const [createdNote] = await db.select().from(notes).where(eq(notes.id, id));
-      if (createdNote) {
-        void syncNoteKnowledgeIndex(createdNote, "note-create").catch(() => undefined);
-        void syncNoteLinks(id, input.content ?? null).catch(() => undefined);
-      }
+      // 入队后台索引；wiki-link 同步仍走 fire-and-forget（轻量级）
+      void enqueueNoteIndexJob(id, "note-create").catch(() => undefined);
+      void syncNoteLinks(id, input.content ?? null).catch(() => undefined);
       invalidateDashboardForUser(ctx.userId);
       return { id };
     }),
@@ -210,10 +204,11 @@ export const notesRouter = router({
         .set({ ...data, updatedAt: new Date() })
         .where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
 
-      const [updatedNote] = await db.select().from(notes).where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
-      if (updatedNote) {
-        void syncNoteKnowledgeIndex(updatedNote, "note-update").catch(() => undefined);
-        if (input.content !== undefined) {
+      // 入队后台重新索引
+      void enqueueNoteIndexJob(id, "note-update").catch(() => undefined);
+      if (input.content !== undefined) {
+        const [updatedNote] = await db.select().from(notes).where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
+        if (updatedNote) {
           void syncNoteLinks(id, updatedNote.content).catch(() => undefined);
         }
       }
@@ -374,17 +369,8 @@ export const notesRouter = router({
           and(eq(notes.id, input.noteId), eq(notes.userId, ctx.userId))
         );
 
-      const [updatedNote] = await db
-        .select()
-        .from(notes)
-        .where(
-          and(eq(notes.id, input.noteId), eq(notes.userId, ctx.userId))
-        );
-      if (updatedNote) {
-        void syncNoteKnowledgeIndex(updatedNote, "note-update").catch(
-          () => undefined
-        );
-      }
+      // 入队后台重新索引（appendBlocks 也算一次内容更新）
+      void enqueueNoteIndexJob(input.noteId, "note-append").catch(() => undefined);
 
       return { ok: true, blocksAppended: input.blocks.length };
     }),

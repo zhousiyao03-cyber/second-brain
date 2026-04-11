@@ -13,6 +13,7 @@ import {
   embedTexts,
   vectorArrayToBuffer,
 } from "./embeddings";
+import { enqueueJob } from "../jobs/queue";
 
 type ExistingChunkRow = typeof knowledgeChunks.$inferSelect;
 
@@ -113,6 +114,7 @@ async function syncSourceIndex({
   sourceUpdatedAt,
   summary,
   userId,
+  trackJob = true,
 }: {
   content?: string | null;
   plainText?: string | null;
@@ -123,8 +125,15 @@ async function syncSourceIndex({
   sourceUpdatedAt?: Date | null;
   summary?: string | null;
   userId: string;
+  /**
+   * 是否由 syncSourceIndex 内部创建一条 knowledgeIndexJobs 记录。
+   * - true（默认）：旧路径 / seed 路径使用，保持之前的行为
+   * - false：worker 路径使用 —— 此时外层已经在管 job 生命周期了，
+   *   内部不应再写一条新的
+   */
+  trackJob?: boolean;
 }) {
-  const jobId = await startIndexJob(sourceType, sourceId, reason);
+  const jobId = trackJob ? await startIndexJob(sourceType, sourceId, reason) : null;
 
   try {
     const nextChunks = chunkKnowledgeSource({
@@ -136,7 +145,7 @@ async function syncSourceIndex({
 
     if (nextChunks.length === 0) {
       await deleteChunkRows(sourceType, sourceId);
-      await finishIndexJob(jobId, "done");
+      if (jobId) await finishIndexJob(jobId, "done");
       return;
     }
 
@@ -165,7 +174,7 @@ async function syncSourceIndex({
             eq(knowledgeChunks.sourceId, sourceId)
           )
         );
-      await finishIndexJob(jobId, "done");
+      if (jobId) await finishIndexJob(jobId, "done");
       return;
     }
 
@@ -203,11 +212,11 @@ async function syncSourceIndex({
       );
     }
 
-    await finishIndexJob(jobId, "done");
+    if (jobId) await finishIndexJob(jobId, "done");
   } catch (error) {
     const message =
       error instanceof Error ? error.message : String(error ?? "Unknown error");
-    await finishIndexJob(jobId, "failed", message);
+    if (jobId) await finishIndexJob(jobId, "failed", message);
     throw error;
   }
 }
@@ -242,6 +251,81 @@ export async function syncBookmarkKnowledgeIndex(
     summary: bookmark.summary,
     userId: bookmark.userId,
   });
+}
+
+/**
+ * 异步入队版本：只创建一条 pending job，立即返回。
+ * 真正的索引工作由 worker 拾取后执行（见 `src/server/jobs/worker.ts`）。
+ *
+ * 和旧的 syncNoteKnowledgeIndex 的区别：
+ *   - 旧版：fire-and-forget，失败就丢了
+ *   - 新版：失败会自动重试（指数退避），超限才进 failed 终态
+ *
+ * router 里的写路径应该用这个，而不是直接 sync*Index。
+ */
+export async function enqueueNoteIndexJob(noteId: string, reason: string) {
+  return enqueueJob({ sourceType: "note", sourceId: noteId, reason });
+}
+
+export async function enqueueBookmarkIndexJob(bookmarkId: string, reason: string) {
+  return enqueueJob({ sourceType: "bookmark", sourceId: bookmarkId, reason });
+}
+
+/**
+ * Worker 调用的入口：根据 sourceType + sourceId 重新读一次最新数据，
+ * 然后跑 syncSourceIndex（含内部的 job 生命周期追踪）。
+ *
+ * 注意：这里读"最新数据"而不是把 payload 塞到 job 表里，因为 worker 延迟
+ * 执行期间数据可能又被用户改过，最终写入的应该是最新版本。
+ */
+export async function runIndexJobFor(
+  sourceType: KnowledgeSourceType,
+  sourceId: string,
+  reason: string
+) {
+  if (sourceType === "note") {
+    const [note] = await db.select().from(notes).where(eq(notes.id, sourceId));
+    if (!note) {
+      // note 已被删除 — 把索引清掉即可
+      await deleteChunkRows("note", sourceId);
+      return;
+    }
+    await syncSourceIndex({
+      content: note.content,
+      plainText: note.plainText,
+      reason,
+      sourceId: note.id,
+      sourceTitle: note.title,
+      sourceType: "note",
+      sourceUpdatedAt: note.updatedAt,
+      userId: note.userId,
+      trackJob: false, // 外层 worker 已经管着 job 生命周期
+    });
+    return;
+  }
+
+  if (sourceType === "bookmark") {
+    const [bookmark] = await db
+      .select()
+      .from(bookmarks)
+      .where(eq(bookmarks.id, sourceId));
+    if (!bookmark) {
+      await deleteChunkRows("bookmark", sourceId);
+      return;
+    }
+    await syncSourceIndex({
+      content: bookmark.content ?? bookmark.title ?? bookmark.url,
+      reason,
+      sourceId: bookmark.id,
+      sourceTitle: bookmark.title ?? bookmark.url ?? "无标题",
+      sourceType: "bookmark",
+      sourceUpdatedAt: bookmark.updatedAt,
+      summary: bookmark.summary,
+      userId: bookmark.userId,
+      trackJob: false,
+    });
+    return;
+  }
 }
 
 export async function removeKnowledgeSourceIndex(

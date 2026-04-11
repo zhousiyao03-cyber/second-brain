@@ -23,6 +23,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { auth } from "@/lib/auth";
 import { snapshotMetrics } from "@/server/metrics";
+import { queueSnapshot } from "@/server/jobs/queue";
 
 function computeEtag(body: string) {
   const hash = createHash("sha1").update(body).digest("base64url");
@@ -37,7 +38,9 @@ export async function GET(request: Request) {
     }
   }
 
-  const snapshot = snapshotMetrics();
+  const baseSnapshot = snapshotMetrics();
+  const jobs = await queueSnapshot();
+  const snapshot = { ...baseSnapshot, jobs };
   const body = JSON.stringify(snapshot);
   // ETag 基于"内容"而不是"时间戳" —— 否则每次请求 generatedAt 变了，
   // 304 就永远命中不了。这里取除 generatedAt 之外的部分做 hash。
