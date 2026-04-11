@@ -10,13 +10,14 @@ export async function guardBot(): Promise<Response | null> {
   try {
     const verification = await checkBotId();
     if (verification.isBot) {
+      console.warn("[botid] blocked", JSON.stringify(verification));
       return Response.json(
         { error: "Request blocked" },
         { status: 403 }
       );
     }
-  } catch {
-    // BotID 本身异常时不阻断请求,避免服务因为第三方校验挂掉
+  } catch (err) {
+    console.warn("[botid] check threw", err);
     return null;
   }
 
