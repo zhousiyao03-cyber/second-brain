@@ -221,9 +221,16 @@ export const notesRouter = router({
       //   syncNoteLinks（自身是 fire-and-forget 的弱一致写）、回读 SELECT。
       // 详见 docs/learn-backend/phase-b1.md 的 B1-1 段落。
       await db.transaction(async (tx) => {
+        // version 单调递增（B1-3）——每次内容写入 +1。不做 CAS 冲突检测，
+        // 只是作为"这条 note 经历过多少次用户内容写入"的计数器，为未来
+        // 的编辑历史 / 事件溯源做铺垫。详见 docs/learn-backend/phase-b1.md。
         await tx
           .update(notes)
-          .set({ ...data, updatedAt: new Date() })
+          .set({
+            ...data,
+            updatedAt: new Date(),
+            version: sql`${notes.version} + 1`,
+          })
           .where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
 
         await enqueueNoteIndexJob(id, "note-update", tx);
@@ -383,19 +390,23 @@ export const notesRouter = router({
       const nextContent = JSON.stringify(doc);
       const nextPlainText = tiptapDocToPlainText(doc);
 
-      await db
-        .update(notes)
-        .set({
-          content: nextContent,
-          plainText: nextPlainText,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(eq(notes.id, input.noteId), eq(notes.userId, ctx.userId))
-        );
+      // 和 notes.update 对齐：事务里同步做 "写 content" + "入队索引" +
+      // "version++"。appendBlocks 是 "用户内容写入"的一种，所以递增版本号。
+      await db.transaction(async (tx) => {
+        await tx
+          .update(notes)
+          .set({
+            content: nextContent,
+            plainText: nextPlainText,
+            updatedAt: new Date(),
+            version: sql`${notes.version} + 1`,
+          })
+          .where(
+            and(eq(notes.id, input.noteId), eq(notes.userId, ctx.userId))
+          );
 
-      // 入队后台重新索引（appendBlocks 也算一次内容更新）
-      void enqueueNoteIndexJob(input.noteId, "note-append").catch(() => undefined);
+        await enqueueNoteIndexJob(input.noteId, "note-append", tx);
+      });
 
       return { ok: true, blocksAppended: input.blocks.length };
     }),

@@ -84,6 +84,17 @@ export const notes = sqliteTable(
     folderId: text("folder_id").references(() => folders.id, { onDelete: "set null" }),
     shareToken: text("share_token").unique(),
     sharedAt: integer("shared_at", { mode: "timestamp" }),
+    /**
+     * 单调递增的内容版本号。每次经过 notes.update / notes.appendBlocks
+     * 这两个"用户内容写入"路径时 +1。用途见 docs/learn-backend/phase-b1.md
+     * B1-3 段落：
+     *   1. 为未来的"编辑历史"功能留版本号入口
+     *   2. 为 B9 事件溯源的 event id 做铺垫
+     *   3. 故意不做 CAS 乐观锁 — 详细原因见同一份文档
+     * enableShare / disableShare / 系统性 title normalize / folder 批量迁移
+     * 都不递增这一列（它们不是"内容变更"）。
+     */
+    version: integer("version").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
     updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   },

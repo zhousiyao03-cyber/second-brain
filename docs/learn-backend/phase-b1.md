@@ -408,3 +408,243 @@ if (!row) return null;
 - `src/server/jobs/queue.ts` — 重写 `claimNextJob`，`enqueueJob` 加 runner 参数
 - `src/server/ai/indexer.ts` — `enqueueNoteIndexJob` / `enqueueBookmarkIndexJob` 加可选 tx 透传
 - `src/server/routers/notes.ts` — `update` mutation 用事务包 UPDATE + enqueue
+
+---
+
+## B1-3 — notes.version：加单调递增版本号，**不做乐观锁**
+
+### 原计划 vs 实际决定
+
+B1 原计划是"给 notes 加 version 列 + 每次 UPDATE 用 `WHERE version = ?` 做 CAS 检测冲突 + 冲突返回 409 / CONFLICT"。也就是**经典的乐观锁**。
+
+**动手之前我停了一下问自己："这个乐观锁真的对 Second Brain 有价值吗？"** 把这个问题认真想清楚之后，我改了主意——**只加 version 列做单调递增，不做 CAS，不做前端冲突处理**。这份文档把"为什么"写完整，避免以后自己忘了又绕回来。
+
+### 先讲一个事实：现在这个版本有什么问题？
+
+**答案是：没有真实的、正在发生数据丢失的问题**。
+
+现状是 LWW（Last-Write-Wins，最后写入者赢）：
+
+```sql
+UPDATE notes SET content = ?, updated_at = ? WHERE id = ? AND user_id = ?
+```
+
+没有 version、没有 CAS，谁的 UPDATE 后到谁就覆盖谁。但这个方案在 Second Brain 的真实使用场景里几乎不会出 bug：
+
+| 场景 | 会不会丢数据？| 发生频率 |
+|---|---|---|
+| 单 tab 单用户编辑同一篇笔记 | 不会 | 99% |
+| 多 tab / 多设备同时编辑同一篇笔记 | **会**（后到的静默覆盖先到的） | 罕见，个人工具里可能一年一次 |
+| `appendBlocks` (Ask AI 追加) 和编辑器编辑同一篇笔记撞车 | **会** | 极少，需要用户主动同时操作 |
+| 系统写（normalize journal titles / folder delete 搬笔记） | 不会（和用户写不在同一字段） | — |
+
+**乐观锁能保护场景 2 和 3，但代价是给 99% 的单 tab 情况都加一层复杂度**。这笔账值不值得——取决于你对"宁可多一次错误弹窗也不要丢一次数据"的偏好。
+
+### 为什么 Notion / Google Docs / Figma 都不用乐观锁？
+
+这是我在这次决策里学到的最核心的一件事：**工业级协同产品几乎都绕过乐观锁，直接走 CRDT 或 OT 路线**。原因不是乐观锁太难，而是**乐观锁的 UX 注定糟糕**。
+
+#### 乐观锁的 UX 天花板
+
+乐观锁的核心是 "检测冲突 → 拒绝 → 让用户决定"。这句话翻译成用户视角：
+
+> **"你刚才写的那段话没保存成功。请刷新页面看看别人改了什么，然后手动合并。"**
+
+对普通用户来说这是灾难级体验：
+
+1. **丢失的是哪段修改？** 用户不知道。乐观锁只告诉他"冲突了"，不告诉他"你的哪几行输没了"。
+2. **合并怎么做？** 用户不会 git merge。即使给他看 diff，也很难在两段自然语言段落里决定"保留哪段"。
+3. **多久一次？** 如果这个弹窗每小时出现一次（协同场景的真实频率），用户会放弃使用。
+
+#### CRDT / OT 的根本不同
+
+Google Docs（历史上用 OT — Operational Transformation）、Notion / Figma / Linear（现在主要用 CRDT — Conflict-Free Replicated Data Type）都不检测冲突——**它们让冲突不可能发生**。
+
+核心思想：**不发送"最终文档状态"，发送"操作"**。
+
+```
+乐观锁的世界里，客户端发送：
+  "把笔记的 content 改成这个 JSON" → 服务器 CAS 检查 version
+  两个客户端同时发，后到的被拒绝，用户丢修改
+
+CRDT 的世界里，客户端发送：
+  "在位置 42 插入 'hello'"
+  "在位置 100 删除 5 个字符"
+  服务器把所有操作合并，任何顺序都能得到同一个最终状态
+  两个客户端同时操作不同位置 → 自然无冲突
+  两个客户端同时操作同一位置 → CRDT 算法保证合并结果确定
+```
+
+关键差别：
+- **乐观锁**：冲突是个**状态**（"version 3 ≠ version 4，失败"）。需要人处理。
+- **CRDT**：冲突是个**概念错误**。操作集合是可交换半群，任何顺序合并结果相同。不需要人处理。
+
+所以当你在 Google Docs 里两个人同时打字，**不会有任何对话框弹出来**——文字自动交错插入。这件事乐观锁永远做不到。
+
+#### 为什么不是所有场景都该用 CRDT
+
+CRDT 的代价巨大：
+
+1. **引入完整的 CRDT 运行时**（Yjs / Automerge），客户端和服务端都需要
+2. **编辑器必须 CRDT-aware**——Tiptap 支持 Yjs collab extension，但必须切换到 Yjs 文档模型，不再是 JSON 字符串
+3. **持久化变成事件流**（每次都是"操作"），不是"整段 content 覆盖"——数据库 schema 要大改
+4. **Undo / redo 语义要重做**——本地 undo 必须只撤销本地操作，不能撤销远端的
+5. **调试变难**——你不再能简单地 "看数据库里的 content 是什么"，要看操作历史
+
+对**个人 KM 工具**来说这笔账很容易算：
+- 单用户场景 → CRDT 的好处（自动合并）几乎没机会触发
+- 单用户场景 → CRDT 的代价（复杂度、schema 改造）照单全收
+- 结论：**单用户工具用最简单的 LWW 就够**，除非你真的想引入协同
+
+#### 那为什么 Notion 还是用了 CRDT-like 方案？
+
+因为 Notion 从第一天就是**多人协作工具**——它的 "mention / comment / 实时 cursor" 都建立在"多人同时编辑同一文档"的假设上。对它来说"加 CRDT" 不是可选项，是产品定义的一部分。
+
+Second Brain 不是。它本质上是"我个人的 markdown 文件夹，加了些 AI"。所以**继承 Google Docs / Notion 的决策**不合理——它们的约束和你的约束不是同一套。
+
+### 反过来想：乐观锁的真正主场
+
+上一节说"Notion / Google Docs 不用乐观锁"很容易被误读成"乐观锁过时了"。完全不是。它只是**和自然语言协同编辑不匹配**而已。换到另外几类场景里，乐观锁是最合适、甚至是唯一能用的方案。
+
+核心观察：**乐观锁的 UX 烂是针对"人类用户在写自然语言"这个场景**。换到别的场景，它反而最合适。
+
+#### 乐观锁真正擅长的 5 类场景
+
+**1. 结构化数据的字段级更新（最经典的主场）**
+
+银行账户余额、电商库存、工单状态、订单金额。这些数据的共同特征：
+
+- **字段是结构化的**（一个数字、一个枚举）——不是一大段文字
+- **语义是可判定的**（100 - 30 = 70 是精确的，没有"合并两种写法"的说法）
+- **冲突必须被拒绝**（丢失一次扣款就是事故）
+- **冲突的 UX 是机器的，不是人的**——调用方是另一段代码，它会 retry
+
+举例：两个人同时给同一张工单改状态
+```
+User A: "todo" → "in_progress"  (version 3)
+User B: "todo" → "done"          (version 3)
+```
+CRDT 的答案："合并成什么？in_progress_and_done？"— 无解。
+乐观锁的答案：第二个到达的被拒绝，返回"状态已被别人修改，请刷新"— 正确。
+
+这里乐观锁**不是次优解，是正解**。CRDT 在这种场景下无法工作，因为状态机的状态不是"可合并"的。
+
+**2. 后台 job / 任务调度**
+
+这就是 B1-1 在 `claimNextJob` 里做的事，只是用的是 `status` 字段的 CAS 不是 `version` 字段。多个 worker 竞争同一条 pending job，"合并两个 worker 声明自己抢到了"是没意义的——只能一个赢。
+
+注意 **UX 在这里不存在**——调用方是另一个 worker 进程，对"失败返回"的处理是"看到 rowsAffected=0 就认输，去找下一条"，没有任何人被打扰。
+
+**3. 配置 / 设置类数据**
+
+用户设置面板、feature flag、系统配置。冲突极少（一个用户不会同时在两个地方改自己的设置），如果真的冲突了，"刷新重改"代价低（设置只有几个字段，用户看得懂）。这里乐观锁是**比 LWW 更保险**的选择，UX 代价很小。
+
+**4. "所有权转移"类操作**
+
+文档转让、账户绑定、资源分配。一个 resource 只能有一个 owner，"合并"在语义上不存在。CRDT 根本没法表达"所有权"——它是单值字段，不是可合并的数据结构。乐观锁是唯一合理方案。
+
+**5. 对账 / 财务记录**
+
+账单、发票、报销单。**不允许静默覆盖**是硬性合规要求。宁可拒绝写入让用户重试，也不能把别人的修改悄悄抹掉——审计会查出来的。乐观锁在这里是"法律要求的设计"。
+
+#### 一张对照表：什么时候用什么
+
+| 场景 | 数据形状 | 冲突处理 | 合适方案 |
+|---|---|---|---|
+| 自然语言文档协同编辑 | 长字符串 / 富文本 | 自动合并 | **CRDT / OT** |
+| 结构化字段并发更新 | 单个数值 / 状态 | 必须拒绝 | **乐观锁** |
+| 后台任务竞争 | 状态机 | 必须拒绝 | **CAS on status** |
+| 所有权 / 配额转移 | 单值引用 | 必须拒绝 | **乐观锁** |
+| 个人单用户场景 | 任何 | 不存在冲突 | **LWW（最简单）** |
+| 计数器（如点赞数） | integer | 合并 | **CRDT counter / atomic INCR** |
+| 购物车 | 集合 | 合并 | **CRDT set** 或乐观锁都可以 |
+| 财务 / 对账 | 金额 | 必须拒绝 | **乐观锁 + 审计日志** |
+
+#### 同一个系统里可以做不同的选择
+
+你可能会想："Second Brain 的 `notes.version` 不做 CAS，但 `claimNextJob` 里 `status='pending'` 做 CAS，不矛盾吗？"
+
+不矛盾——**同一个系统里，不同子系统可以做不同的选择**。
+
+- **`notes` 的 content 字段** → 自然语言，人类编辑，LWW 够用，未来上 CRDT。**不做乐观锁**。
+- **`knowledge_index_jobs` 的 status 字段** → 状态机，机器消费，必须拒绝双抢。**必须做 CAS**。
+
+这两个判断背后是同一条原则：**数据形状 + 冲突处理语义 共同决定方案**。notes 的 content 是"一大段文字"，语义是"最终看起来对就行"；jobs 的 status 是"有限状态机"，语义是"不能有两个 worker 同时声称拿到"。形状不同 → 方案不同。
+
+#### 真正的结论
+
+B1-3 不用乐观锁**不是因为乐观锁技术烂**，而是因为它和"笔记内容字段"的数据形状不匹配——自然语言 + 人类编辑 + "冲突需要看起来合理的合并"这个组合，正好是乐观锁的弱点。
+
+如果哪天 Second Brain 要加一个"任务看板"（结构化 status 字段）、或者"待办清单的优先级排序"（单值字段），那时候**就应该毫不犹豫用乐观锁**。同样一个系统里，notes 用 LWW（最后走向 CRDT），tasks 用乐观锁，jobs queue 用 CAS——这不是不一致，这是"**每块数据配它应得的方案**"。
+
+### 所以这次 B1-3 的决定
+
+**结论**：
+
+- **加 `notes.version` 列**，`integer NOT NULL DEFAULT 0`
+- **每次 UPDATE 时 `version = version + 1`**（单调递增，永不回退）
+- **`notes.get` 返回里带 version**
+- **不做 CAS 检查**，WHERE 里不加 `AND version = ?`
+- **不改前端**，`doSave` 照常发全量 content
+
+这样做我换到了三样东西：
+
+1. **为 B9 事件溯源铺路**：每次编辑都有一个单调递增的 sequence，将来把 `notes` 的编辑历史做成事件流时，这个 version 就天然是 event id。
+2. **为"编辑历史"这个产品功能留接口**：以后想做"查看第 N 版笔记"时，后端已经在跟踪版本数了。
+3. **为 CAS 概念留一个真实的锚点**：CAS 的概念在 B1-2 讲过，B1-1 在 `claimNextJob` 里落地过（那是用 `status='pending'` 字段做 CAS）。B1-3 这里我本来想在 `version` 上再做一次，但**意识到对这个产品没收益**——这件事本身就是学习点。**不是所有学过的模式都应该用**。
+
+### 学到了什么（after state）
+
+这次的学习比原计划更有价值，因为它是**"应该但不要"** 的典型案例：
+
+1. **学术上正确 ≠ 产品上合适**。乐观锁是经典答案，但"经典答案"是针对"经典问题"的——"多用户协同冲突"。我的问题不是那个问题，直接套经典答案就是错。
+2. **选择技术方案时要先问"我真实的用户场景是什么"**。Second Brain 的主战场是单 tab 单用户，这个事实一旦承认，后面的技术选型就完全不一样。
+3. **"乐观锁 vs CRDT"的真正对立不是技术复杂度，是 UX 哲学**。乐观锁承认冲突存在 → 让用户处理；CRDT 让冲突不可能存在。选哪条路线本质上是"是否接受冲突作为用户可感知的概念"。
+4. **"加一个没用的字段"比"加一个错的功能"更便宜**。单调递增的 version 几乎零成本，还留下了三条未来路径（事件溯源 / 编辑历史 / 潜在的未来乐观锁）；加乐观锁 + 前端冲突处理是一笔立即生效的复杂度债，且 99% 时间不会被用到。
+5. **决策留档的价值**：这份文档的目标读者是 6 个月后的我自己——那时候可能完全忘了"B1-3 为什么没做乐观锁"，翻开这段就能 30 秒恢复记忆。代码里的一个 `// B1-3: 只递增不 CAS` 注释做不到这件事。
+
+### 下一步什么时候回来做真正的冲突处理？
+
+**B10 — 实时与协同**。那是 CRDT / Yjs 合适的地方：当我真的想做"多设备实时同步编辑同一篇笔记"时，不应该先做乐观锁、再推翻改成 CRDT——应该直接一步到位做 CRDT。乐观锁作为"中间过渡方案"既不省事也不省学习曲线。
+
+### 代码变动范围
+
+- **schema**：`notes.version` (`integer NOT NULL DEFAULT 0`)
+- **`notes.create` / `createFromTemplate`**：不用改，插入时走默认值 0
+- **`notes.update`**：事务里 UPDATE 时显式 `set({ version: sql\`${notes.version} + 1\` })`
+- **`notes.appendBlocks`**：同上（这里也是 content 写）。顺手也给它包了 `db.transaction`，和 `notes.update` 的"写 + 入队索引"事务结构保持一致
+- **`notes.enableShare` / `disableShare`**：**不递增**。这两个改的是 share 元数据，不是内容，不应该让 "分享一次" 也计入笔记的版本号
+- **`folders.ts` 批量 move**：**不递增**。这是管理性的 folderId 迁移
+- **`journal-titles.ts` normalize**：**不递增**。系统性标题规范化
+- **`notes.get`** / **`notes.list`**：两个查询都用 `db.select().from(notes)` 不带字段投影，整个 row 自动返回，**version 列 "免费"进了 return**，前端暂时不用
+- **production Turso rollout**：`ALTER TABLE notes ADD COLUMN version INTEGER NOT NULL DEFAULT 0`
+
+### 踩坑记录
+
+1. **`drizzle-kit push` 拒绝本地同步**。schema 里明明写了 `.default(0)`，drizzle-kit 还是提示 "You're about to add not-null version column without default value"，并因为 "data-loss" 而要求交互式确认——而我的 Bash 环境没有 TTY。这是 drizzle-kit 对 SQLite ALTER 的一个已知保守策略。对策：**直接用 `@libsql/client` 发原始 SQL**，和我对生产做的是同一条命令，不依赖 drizzle-kit 的启发式判断。这也让 rollout 脚本和本地应用命令完全对齐——可重现、可对比。
+
+2. **`notes.ts` smoke test 一开始触发 FK constraint failure**。我最初写的 smoke 脚本往 `notes` 插了一条带假 `user_id = "b1-3-smoke-user"` 的测试记录——被 `FOREIGN KEY (user_id) REFERENCES users(id)` 拒绝。对策：不插新记录，**直接对一条已有 note 做 UPDATE，事后把 version 回滚到原值**。这也是"smoke test 应该尽量零副作用"的好实践——生产数据就不要瞎动了。
+
+3. **`appendBlocks` 原本没有缓存失效**。我在读代码时发现 `notes.appendBlocks` 改了 content 但没调 `invalidateNotesListForUser`，这是一个已经存在的 bug。但**这不是 B1-3 的作用域**，我有意识地不顺手修——保持 commit 的 "一次只做一件事" 原则。在本 changelog 和本段都做了明确记录，留给未来的 Phase 处理。
+
+### 验证
+
+- `pnpm build` ✅（通过，无 type error）
+- ESLint 对 `notes.ts / schema.ts` ✅（exit 0，干净）
+- **smoke test**：对本地 DB 里一条真实 note 做两次 "UPDATE ... version = version + 1"，确认 version 从 0 → 1 → 2 单调递增，然后回滚到 0 保持本地数据干净。通过。
+- **production rollout**：运行 `node scripts/db/apply-2026-04-11-notes-version-rollout.mjs`，对生产 Turso（60 条现存笔记）执行 ALTER + 验证：
+  ```
+  column present: name=version type=INTEGER notnull=1 dflt=0
+  sample rows: 全部 version=0
+  stats: total=60 min_version=0 max_version=0
+  ```
+  完整记录在 `docs/changelog/2026-04-11-notes-version-rollout.md`。
+- **e2e**：本 Phase 学习向，跳过。
+
+### 关键文件
+
+- `src/server/db/schema.ts` — 加 `notes.version` 列声明
+- `drizzle/0026_bright_puppet_master.sql` — Drizzle 生成的 migration
+- `src/server/routers/notes.ts` — `update` 和 `appendBlocks` 里 `version = version + 1`
+- `scripts/db/apply-2026-04-11-notes-version-rollout.mjs` — 生产 rollout 脚本（幂等）
+- `docs/changelog/2026-04-11-notes-version-rollout.md` — rollout 留档

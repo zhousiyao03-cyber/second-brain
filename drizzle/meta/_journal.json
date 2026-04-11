@@ -183,6 +183,13 @@
       "when": 1775833904784,
       "tag": "0025_workable_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1775916857694,
+      "tag": "0026_bright_puppet_master",
+      "breakpoints": true
     }
   ]
 }
