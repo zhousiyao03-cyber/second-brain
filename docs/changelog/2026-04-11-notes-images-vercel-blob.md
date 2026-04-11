@@ -52,16 +52,38 @@
   - 这是 main 分支上的 pre-existing 回归，猜测是 `81bdda5 refactor(focus,portfolio): Notion-style minimal UI` / `7b53c11 refactor(home): Notion-style minimal UI` 改动 notes 页面时按钮结构变了
   - **不是本次迁移引入的问题**，但在这个回归修好之前没法用 E2E 验证 Notes 上传流程
 
+## 数据迁移执行记录
+
+本地 dev DB（`data/second-brain.db`）：4 条笔记，0 张 base64 图片，不需要迁移。
+
+生产 Turso 迁移命令：
+
+```bash
+set -a && source .env.local && source .env.turso-prod.local && set +a \
+  && node scripts/db/migrate-base64-images-to-blob.mjs
+```
+
+执行结果：
+
+```
+Notes scanned:   60
+Notes mutated:   2
+Images found:    4
+Images uploaded: 4
+Images failed:   0
+```
+
+涉及笔记：
+- `3176c994-bd76-4e33-9dc8-9094c31f0639`
+- `fbc8cded-6ea6-4ec2-8d84-1310568fd16c`
+
+迁移后再跑一次 `--dry` 验证干净：`Images found: 0`。
+
+schema 本身没变（只改 `notes.content` JSON 字段里的 `src` 值），不需要 drizzle migration。
+
 ## 还没做的事
 
-1. **历史数据迁移脚本没跑**
-   - 脚本写好了但还没在本地和生产跑
-   - 需要先本地 `node --env-file=.env.local scripts/db/migrate-base64-images-to-blob.mjs --dry` 看一下体量
-   - 再去掉 `--dry` 跑本地
-   - 最后 `set -a && source .env.turso-prod.local && source .env.local && set +a && node scripts/db/migrate-base64-images-to-blob.mjs` 走生产 Turso
-   - **schema 没变**，只是数据迁移；不需要 drizzle 生成新的 migration
-
-2. **E2E 端到端**
+1. **E2E 端到端**
    - `createNote` helper 的 pre-existing 回归修好后，需要真跑 test 23 确认 mock 路径走通
    - 如果未来想真连 Blob 测，需要 Playwright 带登录 storageState + 有 `BLOB_READ_WRITE_TOKEN`
 
