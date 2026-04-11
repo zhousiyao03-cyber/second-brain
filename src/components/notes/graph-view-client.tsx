@@ -120,9 +120,28 @@ export function GraphViewClient() {
   const edgesRef = useRef<GraphEdge[]>([]);
 
   const { data: graphData, isLoading } = trpc.notes.graphData.useQuery();
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  // Track container size changes
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setContainerSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!graphData || !canvasRef.current || !containerRef.current) return;
+    if (containerSize.width === 0) return;
 
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -213,7 +232,7 @@ export function GraphViewClient() {
     }
 
     ctx.restore();
-  }, [graphData, zoom, hoveredNode]);
+  }, [graphData, zoom, hoveredNode, containerSize]);
 
   // Mouse interaction
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {

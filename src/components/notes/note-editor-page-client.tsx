@@ -268,7 +268,36 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
   const [tagInput, setTagInput] = useState("");
   const [folderId, setFolderId] = useState<string | null>(note.folderId ?? null);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
+  const folderPickerRef = useRef<HTMLDivElement>(null);
   const { data: allFolders = [] } = trpc.folders.list.useQuery();
+
+  // Build flat tree for folder picker with depth
+  const folderPickerItems = (() => {
+    type FItem = { id: string; name: string; parentId: string | null; depth: number };
+    const items: FItem[] = [];
+    const build = (parentId: string | null, depth: number) => {
+      const children = allFolders
+        .filter((f) => f.parentId === parentId)
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+      for (const child of children) {
+        items.push({ id: child.id, name: child.name, parentId: child.parentId, depth });
+        build(child.id, depth + 1);
+      }
+    };
+    build(null, 0);
+    return items;
+  })();
+
+  // Click-outside to close folder picker
+  useEffect(() => {
+    if (!folderPickerOpen) return;
+    const handler = (e: PointerEvent) => {
+      if (folderPickerRef.current?.contains(e.target as Node)) return;
+      setFolderPickerOpen(false);
+    };
+    window.addEventListener("pointerdown", handler);
+    return () => window.removeEventListener("pointerdown", handler);
+  }, [folderPickerOpen]);
   const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">(
     "saved"
@@ -593,7 +622,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
           <span className="hidden h-4 w-px bg-stone-200 dark:bg-stone-800 md:block" />
 
           {/* Folder picker */}
-          <div className="relative">
+          <div ref={folderPickerRef} className="relative">
             <button
               type="button"
               onClick={() => setFolderPickerOpen((v) => !v)}
@@ -611,7 +640,7 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
             </button>
 
             {folderPickerOpen && (
-              <div className="absolute left-0 top-full z-40 mt-2 w-52 rounded-xl border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900">
+              <div className="absolute left-0 top-full z-40 mt-2 max-h-64 w-56 overflow-y-auto rounded-xl border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900">
                 <button
                   type="button"
                   onClick={() => handleFolderChange(null)}
@@ -624,18 +653,18 @@ function NoteEditor({ id, note }: { id: string; note: NoteData }) {
                 >
                   No folder
                 </button>
-                {allFolders.map((f) => (
+                {folderPickerItems.map((f) => (
                   <button
                     key={f.id}
                     type="button"
                     onClick={() => handleFolderChange(f.id)}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors",
+                      "flex w-full items-center gap-2 py-1.5 text-sm transition-colors",
                       folderId === f.id
                         ? "bg-stone-100 font-medium text-stone-900 dark:bg-stone-800 dark:text-stone-100"
                         : "text-stone-600 hover:bg-stone-50 dark:text-stone-400 dark:hover:bg-stone-800"
                     )}
-                    style={{ paddingLeft: 12 }}
+                    style={{ paddingLeft: 12 + f.depth * 16 }}
                   >
                     <FolderOpen size={13} />
                     {f.name}

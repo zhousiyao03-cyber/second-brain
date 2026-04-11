@@ -54,11 +54,17 @@ export function FolderTreeContextMenu({
     { icon: Trash2, label: "Delete", action: onDelete, danger: true },
   ];
 
+  // Clamp to viewport bounds
+  const menuWidth = 160;
+  const menuHeight = 140;
+  const clampedX = Math.min(x, window.innerWidth - menuWidth - 8);
+  const clampedY = Math.min(y, window.innerHeight - menuHeight - 8);
+
   return (
     <div
       ref={menuRef}
       className="fixed z-50 min-w-[160px] rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900"
-      style={{ left: x, top: y }}
+      style={{ left: Math.max(8, clampedX), top: Math.max(8, clampedY) }}
     >
       {items.map((item) => (
         <button

@@ -319,6 +319,11 @@ export function NotesPageClient() {
       sensors={sensors}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => {
+        setDragActiveId(null);
+        setDragActiveType(null);
+        setDragActiveLabel("");
+      }}
     >
     <div className="flex gap-6">
       {/* Desktop multi-panel sidebar */}

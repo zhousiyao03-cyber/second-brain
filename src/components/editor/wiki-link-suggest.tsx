@@ -120,9 +120,11 @@ function WikiLinkSuggestInner({
 }
 
 export function WikiLinkSuggest(props: WikiLinkSuggestProps) {
+  // Only search when there's a real query — don't fallback to "a"
+  const hasQuery = props.query.trim().length > 0;
   const { data: results = [] } = trpc.notes.searchByTitle.useQuery(
-    { query: props.query || "a" },
-    { enabled: props.query.length > 0, staleTime: 5000 }
+    { query: props.query },
+    { enabled: hasQuery, staleTime: 5000 }
   );
 
   // Key by query so selectedIndex resets on query change

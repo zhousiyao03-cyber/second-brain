@@ -62,28 +62,7 @@ function SearchPanel() {
 }
 
 function TagsPanel() {
-  const { data: allNotes } = trpc.notes.list.useQuery({ limit: 100 });
-
-  // Extract all tags with counts
-  const tagCounts = new Map<string, number>();
-  for (const note of allNotes?.items ?? []) {
-    try {
-      const tags = JSON.parse(note.tags ?? "[]");
-      if (Array.isArray(tags)) {
-        for (const tag of tags) {
-          if (typeof tag === "string") {
-            tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-          }
-        }
-      }
-    } catch {
-      // skip
-    }
-  }
-
-  const sortedTags = Array.from(tagCounts.entries()).sort(
-    (a, b) => b[1] - a[1]
-  );
+  const { data: sortedTags = [] } = trpc.notes.listTags.useQuery();
 
   if (sortedTags.length === 0) {
     return <p className="px-2 text-xs text-stone-400">No tags yet</p>;
@@ -91,13 +70,13 @@ function TagsPanel() {
 
   return (
     <div className="flex flex-wrap gap-1.5">
-      {sortedTags.map(([tag, count]) => (
+      {sortedTags.map((t) => (
         <span
-          key={tag}
+          key={t.name}
           className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
         >
-          {tag}
-          <span className="text-blue-400">{count}</span>
+          {t.name}
+          <span className="text-blue-400">{t.count}</span>
         </span>
       ))}
     </div>

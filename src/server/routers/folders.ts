@@ -43,8 +43,30 @@ export const foldersRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Get max sortOrder among siblings
       const parentId = input.parentId ?? null;
+
+      // Check for duplicate name among siblings
+      const [existing] = await db
+        .select({ id: folders.id })
+        .from(folders)
+        .where(
+          and(
+            eq(folders.userId, ctx.userId),
+            eq(folders.name, input.name),
+            parentId
+              ? eq(folders.parentId, parentId)
+              : sql`${folders.parentId} is null`
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        // Append a number suffix to make it unique
+        const name = `${input.name} (2)`;
+        input = { ...input, name };
+      }
+
+      // Get max sortOrder among siblings
       const [maxSort] = await db
         .select({ max: sql<number>`coalesce(max(${folders.sortOrder}), -1)` })
         .from(folders)
@@ -129,6 +151,28 @@ export const foldersRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Prevent circular nesting: target cannot be self or a descendant
+      if (input.targetParentId === input.id) {
+        return { success: false, error: "Cannot move folder into itself" };
+      }
+
+      if (input.targetParentId) {
+        // Walk up the tree from targetParentId to root — if we hit input.id, it's circular
+        const allFolders = await db
+          .select({ id: folders.id, parentId: folders.parentId })
+          .from(folders)
+          .where(eq(folders.userId, ctx.userId));
+
+        const parentMap = new Map(allFolders.map((f) => [f.id, f.parentId]));
+        let cursor: string | null = input.targetParentId;
+        while (cursor) {
+          if (cursor === input.id) {
+            return { success: false, error: "Cannot move folder into its descendant" };
+          }
+          cursor = parentMap.get(cursor) ?? null;
+        }
+      }
+
       const updates: Record<string, unknown> = {
         parentId: input.targetParentId,
         updatedAt: new Date(),
