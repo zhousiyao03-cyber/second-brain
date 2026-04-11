@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   GitCommit,
   Loader2,
-  Plus,
   RefreshCw,
   Send,
   Trash2,
@@ -120,13 +119,6 @@ export default function ProjectDetailPage({
 
   // ---------- Mutations ----------
 
-  const createNote = trpc.ossProjects.createNote.useMutation({
-    onSuccess: async (data) => {
-      await utils.ossProjects.listNotes.invalidate({ projectId: id });
-      router.push(`/projects/${id}/notes/${data.id}`);
-    },
-  });
-
   const startAnalysis = trpc.ossProjects.startAnalysis.useMutation({
     onSuccess: () => {
       setMessages([]);
@@ -151,7 +143,7 @@ export default function ProjectDetailPage({
     },
   });
 
-  const deleteNote = trpc.ossProjects.deleteNote.useMutation({
+  const deleteNote = trpc.notes.delete.useMutation({
     onSuccess: async () => {
       await utils.ossProjects.listNotes.invalidate({ projectId: id });
     },
@@ -354,14 +346,6 @@ export default function ProjectDetailPage({
 
           <button
             type="button"
-            onClick={() => createNote.mutate({ projectId: id, title: "" })}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-          >
-            <Plus size={16} />
-            Add note
-          </button>
-          <button
-            type="button"
             onClick={() => {
               if (confirm("Delete this project and all its notes?")) {
                 deleteProject.mutate({ id });
@@ -533,12 +517,12 @@ export default function ProjectDetailPage({
                     role="button"
                     tabIndex={0}
                     onClick={() =>
-                      router.push(`/projects/${id}/notes/${note.id}`)
+                      router.push(`/notes/${note.id}`)
                     }
                     onKeyDown={(event) => {
                       if (event.key !== "Enter" && event.key !== " ") return;
                       event.preventDefault();
-                      router.push(`/projects/${id}/notes/${note.id}`);
+                      router.push(`/notes/${note.id}`);
                     }}
                     className="group w-full rounded-[20px] border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-stone-800 dark:bg-stone-950 dark:hover:bg-stone-900 dark:focus:ring-blue-900"
                   >
@@ -560,7 +544,7 @@ export default function ProjectDetailPage({
                           onClick={(e) => {
                             e.stopPropagation();
                             if (confirm("Delete this note?")) {
-                              deleteNote.mutate({ id: note.id, projectId: id });
+                              deleteNote.mutate({ id: note.id });
                             }
                           }}
                           className="rounded-lg p-1 text-stone-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:hover:bg-red-950"
@@ -598,12 +582,12 @@ export default function ProjectDetailPage({
                       role="button"
                       tabIndex={0}
                       onClick={() =>
-                        router.push(`/projects/${id}/notes/${note.id}`)
+                        router.push(`/notes/${note.id}`)
                       }
                       onKeyDown={(event) => {
                         if (event.key !== "Enter" && event.key !== " ") return;
                         event.preventDefault();
-                        router.push(`/projects/${id}/notes/${note.id}`);
+                        router.push(`/notes/${note.id}`);
                       }}
                       className="group w-full rounded-[20px] border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-stone-800 dark:bg-stone-950 dark:hover:bg-stone-900 dark:focus:ring-blue-900"
                     >

@@ -2,7 +2,13 @@ import crypto from "crypto";
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { db } from "../db";
-import { analysisPrompts, osProjectNotes, osProjects, analysisTasks } from "../db/schema";
+import {
+  analysisPrompts,
+  notes as notesTable,
+  osProjectNotes,
+  osProjects,
+  analysisTasks,
+} from "../db/schema";
 import { protectedProcedure, router } from "../trpc";
 import { fetchTrending } from "../analysis/trending";
 import { fetchRepoInfo, searchRepos } from "../analysis/github";
@@ -40,55 +46,36 @@ function parseTags(tags: string | null | undefined) {
   }
 }
 
-/** 单个项目的 meta 查询（用于 getProject 等单条场景） */
-async function collectProjectMeta(projectId: string) {
-  const notes = await db
-    .select({ tags: osProjectNotes.tags })
-    .from(osProjectNotes)
-    .where(eq(osProjectNotes.projectId, projectId));
-
-  const tagCounts = new Map<string, number>();
-  for (const note of notes) {
-    for (const tag of parseTags(note.tags)) {
-      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-    }
-  }
-
-  const topTags = [...tagCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([tag]) => tag);
-
-  return { noteCount: notes.length, topTags };
-}
-
 /**
- * 批量获取多个项目的 meta（解决 N+1 问题）
- * 用一次 SQL 查询替代 N 次 collectProjectMeta 调用
+ * Project notes now live in the unified `notes` table, tagged with the
+ * project name. Aggregate note counts + top tags by scanning a user's
+ * notes and matching against project names.
  */
-async function collectProjectMetaBatch(projectIds: string[]) {
-  if (projectIds.length === 0) return new Map<string, { noteCount: number; topTags: string[] }>();
-
-  const allNotes = await db
-    .select({
-      projectId: osProjectNotes.projectId,
-      noteCount: sql<number>`count(*)`.as("note_count"),
-      allTags: sql<string>`group_concat(${osProjectNotes.tags})`.as("all_tags"),
-    })
-    .from(osProjectNotes)
-    .where(
-      sql`${osProjectNotes.projectId} IN (${sql.join(projectIds.map((id) => sql`${id}`), sql`, `)})`
-    )
-    .groupBy(osProjectNotes.projectId);
-
+async function collectProjectMetaBatch(
+  userId: string,
+  projects: Array<{ id: string; name: string }>
+) {
   const metaMap = new Map<string, { noteCount: number; topTags: string[] }>();
+  for (const p of projects) metaMap.set(p.id, { noteCount: 0, topTags: [] });
+  if (projects.length === 0) return metaMap;
 
-  for (const row of allNotes) {
+  const rows = await db
+    .select({ tags: notesTable.tags })
+    .from(notesTable)
+    .where(eq(notesTable.userId, userId));
+
+  const parsed = rows.map((r) => parseTags(r.tags));
+
+  for (const project of projects) {
     const tagCounts = new Map<string, number>();
-    if (row.allTags) {
-      for (const chunk of row.allTags.split(",")) {
-        for (const tag of parseTags(chunk)) {
-          tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    let noteCount = 0;
+    for (const tagList of parsed) {
+      if (tagList.includes(project.name)) {
+        noteCount++;
+        for (const t of tagList) {
+          if (t !== project.name && t !== "源码阅读") {
+            tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+          }
         }
       }
     }
@@ -96,15 +83,7 @@ async function collectProjectMetaBatch(projectIds: string[]) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([tag]) => tag);
-
-    metaMap.set(row.projectId, { noteCount: row.noteCount, topTags });
-  }
-
-  // 没有笔记的项目也要有默认值
-  for (const id of projectIds) {
-    if (!metaMap.has(id)) {
-      metaMap.set(id, { noteCount: 0, topTags: [] });
-    }
+    metaMap.set(project.id, { noteCount, topTags });
   }
 
   return metaMap;
@@ -118,7 +97,7 @@ export const ossProjectsRouter = router({
       .where(eq(osProjects.userId, ctx.userId))
       .orderBy(desc(osProjects.updatedAt));
 
-    const metaMap = await collectProjectMetaBatch(projects.map((p) => p.id));
+    const metaMap = await collectProjectMetaBatch(ctx.userId, projects);
 
     return projects.map((project) => ({
       ...project,
@@ -165,7 +144,7 @@ export const ossProjectsRouter = router({
         .limit(pageSize)
         .offset(offset);
 
-      const metaMap = await collectProjectMetaBatch(rows.map((p) => p.id));
+      const metaMap = await collectProjectMetaBatch(ctx.userId, rows);
       const items = rows.map((project) => ({
         ...project,
         ...(metaMap.get(project.id) ?? { noteCount: 0, topTags: [] }),
@@ -183,18 +162,30 @@ export const ossProjectsRouter = router({
   firstNoteId: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ input, ctx }) => {
-      const [note] = await db
-        .select({ id: osProjectNotes.id })
-        .from(osProjectNotes)
+      // Look up the project name so we can find the matching unified note.
+      const [project] = await db
+        .select({ name: osProjects.name })
+        .from(osProjects)
         .where(
           and(
-            eq(osProjectNotes.projectId, input.projectId),
-            eq(osProjectNotes.userId, ctx.userId)
+            eq(osProjects.id, input.projectId),
+            eq(osProjects.userId, ctx.userId)
           )
-        )
-        .orderBy(desc(osProjectNotes.updatedAt))
-        .limit(1);
-      return note?.id ?? null;
+        );
+      if (!project) return null;
+
+      // Find the most recently updated note in the unified notes table
+      // that is tagged with the project name. Scan a reasonable batch.
+      const candidates = await db
+        .select({ id: notesTable.id, tags: notesTable.tags })
+        .from(notesTable)
+        .where(eq(notesTable.userId, ctx.userId))
+        .orderBy(desc(notesTable.updatedAt))
+        .limit(200);
+      for (const n of candidates) {
+        if (parseTags(n.tags).includes(project.name)) return n.id;
+      }
+      return null;
     }),
 
   getProject: protectedProcedure
@@ -207,7 +198,11 @@ export const ossProjectsRouter = router({
 
       if (!project) return null;
 
-      return { ...project, ...(await collectProjectMeta(project.id)) };
+      const metaMap = await collectProjectMetaBatch(ctx.userId, [project]);
+      return {
+        ...project,
+        ...(metaMap.get(project.id) ?? { noteCount: 0, topTags: [] }),
+      };
     }),
 
   createProject: protectedProcedure
@@ -286,23 +281,46 @@ export const ossProjectsRouter = router({
       return { success: true };
     }),
 
+  /**
+   * List project notes from the unified `notes` table, filtered by the
+   * project name tag. Falls back to an empty list if the project is missing.
+   * The returned IDs are `notes.id`, so the UI can link directly to
+   * /notes/[id].
+   */
   listNotes: protectedProcedure
     .input(z.object({ projectId: z.string(), tag: z.string().trim().optional() }))
     .query(async ({ input, ctx }) => {
-      const notes = await db
-        .select()
-        .from(osProjectNotes)
+      const [project] = await db
+        .select({ name: osProjects.name })
+        .from(osProjects)
         .where(
           and(
-            eq(osProjectNotes.projectId, input.projectId),
-            eq(osProjectNotes.userId, ctx.userId)
+            eq(osProjects.id, input.projectId),
+            eq(osProjects.userId, ctx.userId)
           )
-        )
-        .orderBy(desc(osProjectNotes.updatedAt));
+        );
+      if (!project) return [];
 
-      return notes.filter((note) =>
-        input.tag ? parseTags(note.tags).includes(input.tag) : true
-      );
+      const rows = await db
+        .select()
+        .from(notesTable)
+        .where(eq(notesTable.userId, ctx.userId))
+        .orderBy(desc(notesTable.updatedAt));
+
+      return rows
+        .filter((note) => {
+          const tags = parseTags(note.tags);
+          if (!tags.includes(project.name)) return false;
+          if (input.tag && !tags.includes(input.tag)) return false;
+          return true;
+        })
+        .map((note) => ({
+          ...note,
+          // For backward compat with UI that expects noteType on project notes
+          noteType: parseTags(note.tags).includes("followup")
+            ? "followup"
+            : "analysis",
+        }));
     }),
 
   getNote: protectedProcedure
