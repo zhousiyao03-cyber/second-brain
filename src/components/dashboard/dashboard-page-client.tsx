@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Activity, ArrowRight, BookOpen, FolderGit2 } from "lucide-react";
+import { Activity, ArrowRight, CircleDot, Circle } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
@@ -72,33 +72,31 @@ export function DashboardPageClient({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <section className="rounded-2xl border border-stone-200 bg-white p-6 dark:border-stone-800 dark:bg-stone-950">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-xs font-medium uppercase tracking-widest text-stone-400 dark:text-stone-500">
-              {greetingLabel}
-            </div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900 dark:text-stone-50">
-              {displayName}
-            </h1>
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
+            {greetingLabel}
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => openTodayJournal.mutate()}
-              disabled={openTodayJournal.isPending}
-              className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-100 dark:hover:bg-amber-950/60"
-            >
-              {openTodayJournal.isPending ? "打开中..." : "今日日报"}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-            <Link
-              href="/notes"
-              className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
-            >
-              所有笔记 <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-stone-900 dark:text-stone-50">
+            {displayName}
+          </h1>
+        </div>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => openTodayJournal.mutate()}
+            disabled={openTodayJournal.isPending}
+            className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300 dark:hover:bg-stone-900"
+          >
+            {openTodayJournal.isPending ? "打开中…" : "今日日报"}
+            <ArrowRight className="h-3 w-3" />
+          </button>
+          <Link
+            href="/notes"
+            className="inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+          >
+            所有笔记 <ArrowRight className="h-3 w-3" />
+          </Link>
         </div>
       </section>
 
@@ -106,42 +104,40 @@ export function DashboardPageClient({
       <Link
         href="/focus"
         data-testid="dashboard-focus-card"
-        className="block rounded-2xl border border-sky-200 bg-sky-50/80 p-5 transition-colors hover:border-sky-300 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/20 dark:hover:border-sky-800 dark:hover:bg-sky-950/30"
+        className="block rounded-md border border-stone-200 bg-white/70 p-4 transition-colors hover:border-stone-300 hover:bg-white dark:border-stone-800 dark:bg-stone-950/50 dark:hover:border-stone-700 dark:hover:bg-stone-950"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs font-medium uppercase tracking-widest text-sky-600 dark:text-sky-300/80">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
+              <Activity className="h-3 w-3" />
               今日专注
             </div>
-            <div className="mt-2 text-2xl font-semibold text-stone-900 dark:text-stone-50">
-              {focusStats ? formatFocusDuration(focusStats.totalSecs) : "--"}
+            <div className="mt-1.5 text-xl font-semibold tabular-nums text-stone-900 dark:text-stone-50">
+              {focusStats ? formatFocusDuration(focusStats.totalSecs) : "—"}
             </div>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-sky-600 shadow-sm dark:bg-stone-900 dark:text-sky-300">
-            <Activity className="h-4 w-4" />
+          <div className="text-[11px] tabular-nums text-stone-400 dark:text-stone-500">
+            {focusGoalPct}% / 8h
           </div>
         </div>
 
-        <div className="mt-3 h-2 rounded-full bg-white/80 dark:bg-stone-900">
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-900">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-teal-400 to-sky-400 transition-all"
-            style={{ width: `${Math.max(6, focusGoalPct)}%` }}
+            className="h-full rounded-full bg-stone-900 transition-all dark:bg-stone-100"
+            style={{ width: `${Math.max(3, focusGoalPct)}%` }}
           />
-        </div>
-        <div className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
-          {focusGoalPct}% / 8h 目标
         </div>
 
         <div className="mt-4">
           <FocusTimeline sessions={focusSessions ?? []} compact />
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-xs text-stone-600 dark:text-stone-300">
+        <div className="mt-3 flex flex-wrap gap-1 text-[11px] text-stone-500 dark:text-stone-400">
           {topApps.length ? (
             topApps.map((app) => (
               <span
                 key={app.appName}
-                className="rounded-full border border-stone-200 bg-white/80 px-2.5 py-1 dark:border-stone-700 dark:bg-stone-900"
+                className="rounded border border-stone-200 bg-white px-1.5 py-0.5 dark:border-stone-800 dark:bg-stone-900"
               >
                 {app.appName} · {formatFocusDuration(app.durationSecs)}
               </span>
@@ -157,132 +153,108 @@ export function DashboardPageClient({
       {/* 最近 30 天工作时长热力图 */}
       <DailyFocusHeatmap />
 
-      {/* Main Grid: Recent Notes + Learn + Projects */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Notes */}
-        <section className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-950">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-stone-900 dark:text-stone-100">最近笔记</h2>
+      {/* Main Grid: Recent notes + Today's todos */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Recent notes */}
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
+              最近笔记
+            </h2>
             <Link
               href="/notes"
-              className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
+              className="text-[11px] text-stone-400 transition-colors hover:text-stone-900 dark:text-stone-500 dark:hover:text-stone-100"
             >
-              查看全部
+              查看全部 →
             </Link>
           </div>
-          <div className="space-y-2">
+          <div className="overflow-hidden rounded-md border border-stone-200 bg-white/60 dark:border-stone-800 dark:bg-stone-950/50">
             {isLoading ? (
-              <div className="py-8 text-center text-sm text-stone-400">加载中...</div>
+              <div className="px-3 py-6 text-center text-xs text-stone-400">
+                加载中…
+              </div>
             ) : !data?.recentNotes.length ? (
-              <div className="py-8 text-center text-sm text-stone-400">暂无笔记</div>
+              <div className="px-3 py-6 text-center text-xs text-stone-400">
+                暂无笔记
+              </div>
             ) : (
-              data.recentNotes.map((note) => (
+              data.recentNotes.map((note, idx) => (
                 <Link
                   key={note.id}
                   href={`/notes/${note.id}`}
-                  className="block rounded-xl border border-stone-100 px-4 py-3 transition-colors hover:border-stone-200 hover:bg-stone-50 dark:border-stone-800 dark:hover:border-stone-700 dark:hover:bg-stone-900"
+                  className={`flex items-center gap-2 px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-900/60 ${
+                    idx !== 0
+                      ? "border-t border-stone-100 dark:border-stone-900"
+                      : ""
+                  }`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="truncate text-sm font-medium text-stone-800 dark:text-stone-200">
-                      {note.title || "未命名"}
-                    </span>
-                    <span className="shrink-0 text-xs text-stone-400">{formatDate(note.updatedAt)}</span>
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* Recent Learn Notes */}
-        <section className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-950">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h2 className="text-base font-semibold text-stone-900 dark:text-stone-100">学习笔记</h2>
-            </div>
-            <Link
-              href="/learn"
-              className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
-            >
-              查看全部
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {isLoading ? (
-              <div className="py-8 text-center text-sm text-stone-400">加载中...</div>
-            ) : !data?.recentLearnNotes?.length ? (
-              <div className="py-8 text-center">
-                <p className="text-sm text-stone-400">暂无学习笔记</p>
-                <Link href="/notes" className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-700">
-                  去 Notes 里创建一个文件夹 →
-                </Link>
-              </div>
-            ) : (
-              data.recentLearnNotes.map((note) => (
-                <Link
-                  key={note.id}
-                  href={`/notes/${note.id}`}
-                  className="block rounded-xl border border-stone-100 px-4 py-3 transition-colors hover:border-stone-200 hover:bg-stone-50 dark:border-stone-800 dark:hover:border-stone-700 dark:hover:bg-stone-900"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <span className="truncate text-sm font-medium text-stone-800 dark:text-stone-200">
-                        {note.title || "未命名"}
-                      </span>
-                      {note.folder && (
-                        <span className="ml-2 text-xs text-stone-400">
-                          📁 {note.folder}
-                        </span>
-                      )}
-                    </div>
-                    <span className="shrink-0 text-xs text-stone-400">{formatDate(note.updatedAt)}</span>
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* Recent Project Notes */}
-        <section className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-950 lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FolderGit2 className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-              <h2 className="text-base font-semibold text-stone-900 dark:text-stone-100">项目笔记</h2>
-            </div>
-            <Link
-              href="/projects"
-              className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
-            >
-              查看全部
-            </Link>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {isLoading ? (
-              <div className="py-8 text-center text-sm text-stone-400 sm:col-span-2 lg:col-span-3">加载中...</div>
-            ) : !data?.recentProjectNotes?.length ? (
-              <div className="py-8 text-center sm:col-span-2 lg:col-span-3">
-                <p className="text-sm text-stone-400">暂无项目笔记</p>
-                <Link href="/projects" className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-700">
-                  去创建一个项目 →
-                </Link>
-              </div>
-            ) : (
-              data.recentProjectNotes.map((note) => (
-                <Link
-                  key={note.id}
-                  href={`/projects/${note.projectId}/notes/${note.id}`}
-                  className="block rounded-xl border border-stone-100 px-4 py-3 transition-colors hover:border-stone-200 hover:bg-stone-50 dark:border-stone-800 dark:hover:border-stone-700 dark:hover:bg-stone-900"
-                >
-                  <div className="truncate text-sm font-medium text-stone-800 dark:text-stone-200">
+                  <span className="min-w-0 flex-1 truncate text-sm text-stone-800 dark:text-stone-200">
                     {note.title || "未命名"}
-                  </div>
-                  <div className="mt-1 text-xs text-stone-400">
-                    {note.projectName} · {formatDate(note.updatedAt)}
-                  </div>
+                  </span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-stone-400">
+                    {formatDate(note.updatedAt)}
+                  </span>
                 </Link>
               ))
+            )}
+          </div>
+        </section>
+
+        {/* Today's todos */}
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
+              今日待办
+            </h2>
+            <Link
+              href="/todos"
+              className="text-[11px] text-stone-400 transition-colors hover:text-stone-900 dark:text-stone-500 dark:hover:text-stone-100"
+            >
+              查看全部 →
+            </Link>
+          </div>
+          <div className="overflow-hidden rounded-md border border-stone-200 bg-white/60 dark:border-stone-800 dark:bg-stone-950/50">
+            {isLoading ? (
+              <div className="px-3 py-6 text-center text-xs text-stone-400">
+                加载中…
+              </div>
+            ) : !data?.todayTodos?.length ? (
+              <div className="px-3 py-6 text-center text-xs text-stone-400">
+                今天没有待办
+              </div>
+            ) : (
+              data.todayTodos.map((todo, idx) => {
+                const isInProgress = todo.status === "in_progress";
+                const Icon = isInProgress ? CircleDot : Circle;
+                return (
+                  <Link
+                    key={todo.id}
+                    href="/todos"
+                    className={`flex items-center gap-2 px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-900/60 ${
+                      idx !== 0
+                        ? "border-t border-stone-100 dark:border-stone-900"
+                        : ""
+                    }`}
+                  >
+                    <Icon
+                      className={`h-3 w-3 shrink-0 ${
+                        isInProgress
+                          ? "text-stone-700 dark:text-stone-300"
+                          : "text-stone-300 dark:text-stone-600"
+                      }`}
+                      strokeWidth={2}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm text-stone-800 dark:text-stone-200">
+                      {todo.title}
+                    </span>
+                    {todo.priority && (
+                      <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500 dark:bg-stone-900 dark:text-stone-400">
+                        {todo.priority}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })
             )}
           </div>
         </section>
