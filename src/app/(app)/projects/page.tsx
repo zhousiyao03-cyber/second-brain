@@ -72,13 +72,13 @@ export default function ProjectsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">
+          <h1 className="text-xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
             Open source projects
           </h1>
-          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
             Save architecture notes, code-reading findings, and reusable patterns.
           </p>
         </div>
@@ -86,34 +86,34 @@ export default function ProjectsPage() {
           <button
             type="button"
             onClick={() => setShowForm((open) => !open)}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            className="inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
           >
-            <Plus size={16} />
+            <Plus size={13} />
             Add project
           </button>
         )}
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 rounded-xl bg-stone-100 p-1 dark:bg-stone-900">
+      {/* Tab bar — underline style */}
+      <div className="flex items-center gap-5 border-b border-stone-200 dark:border-stone-800">
         <button
           type="button"
           onClick={() => setActiveTab("projects")}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+          className={`-mb-px border-b-2 pb-2 text-xs font-medium transition-colors ${
             activeTab === "projects"
-              ? "bg-white text-stone-900 shadow-sm dark:bg-stone-800 dark:text-stone-100"
-              : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+              ? "border-stone-900 text-stone-900 dark:border-stone-100 dark:text-stone-100"
+              : "border-transparent text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
           }`}
         >
-          My Projects
+          My projects
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("discover")}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+          className={`-mb-px border-b-2 pb-2 text-xs font-medium transition-colors ${
             activeTab === "discover"
-              ? "bg-white text-stone-900 shadow-sm dark:bg-stone-800 dark:text-stone-100"
-              : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+              ? "border-stone-900 text-stone-900 dark:border-stone-100 dark:text-stone-100"
+              : "border-transparent text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
           }`}
         >
           Discover
@@ -123,50 +123,50 @@ export default function ProjectsPage() {
       {activeTab === "projects" ? (
         <>
           {showForm && (
-            <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-950">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-2 text-sm">
+            <div className="rounded-md border border-stone-200 bg-white/70 p-4 dark:border-stone-800 dark:bg-stone-950/60">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="space-y-1 text-xs text-stone-500 dark:text-stone-400">
                   <span>Project name</span>
                   <input
                     aria-label="Project name"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    className="w-full rounded-xl border border-stone-200 bg-transparent px-3 py-2 outline-none focus:border-blue-400 dark:border-stone-700"
+                    className="w-full rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-sm text-stone-800 outline-none focus:border-stone-400 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
                   />
                 </label>
-                <label className="space-y-2 text-sm">
+                <label className="space-y-1 text-xs text-stone-500 dark:text-stone-400">
                   <span>Repository URL</span>
                   <input
                     aria-label="Repository URL"
                     value={repoUrl}
                     onChange={(event) => setRepoUrl(event.target.value)}
-                    className="w-full rounded-xl border border-stone-200 bg-transparent px-3 py-2 outline-none focus:border-blue-400 dark:border-stone-700"
+                    className="w-full rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-sm text-stone-800 outline-none focus:border-stone-400 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
                   />
                 </label>
-                <label className="space-y-2 text-sm">
+                <label className="space-y-1 text-xs text-stone-500 dark:text-stone-400">
                   <span>Language</span>
                   <input
                     aria-label="Language"
                     value={language}
                     onChange={(event) => setLanguage(event.target.value)}
-                    className="w-full rounded-xl border border-stone-200 bg-transparent px-3 py-2 outline-none focus:border-blue-400 dark:border-stone-700"
+                    className="w-full rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-sm text-stone-800 outline-none focus:border-stone-400 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
                   />
                 </label>
-                <label className="space-y-2 text-sm">
+                <label className="space-y-1 text-xs text-stone-500 dark:text-stone-400">
                   <span>Description</span>
                   <input
                     aria-label="Description"
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
-                    className="w-full rounded-xl border border-stone-200 bg-transparent px-3 py-2 outline-none focus:border-blue-400 dark:border-stone-700"
+                    className="w-full rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-sm text-stone-800 outline-none focus:border-stone-400 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
                   />
                 </label>
               </div>
-              <div className="mt-4 flex justify-end gap-2">
+              <div className="mt-3 flex justify-end gap-1.5">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 dark:border-stone-700 dark:text-stone-300"
+                  className="rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-600 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-400 dark:hover:bg-stone-900"
                 >
                   Cancel
                 </button>
@@ -181,10 +181,10 @@ export default function ProjectsPage() {
                       description,
                     })
                   }
-                  className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-stone-100 dark:text-stone-950"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-50 dark:bg-stone-100 dark:text-stone-900"
                 >
                   {createProject.isPending && (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={12} className="animate-spin" />
                   )}
                   Create project
                 </button>
@@ -199,12 +199,12 @@ export default function ProjectsPage() {
               setPage(1);
               setQuery(searchInput.trim());
             }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1.5"
           >
             <div className="relative flex-1">
               <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400"
               />
               <input
                 type="text"
@@ -212,7 +212,7 @@ export default function ProjectsPage() {
                 placeholder="Search projects by name, description, or repo URL…"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 bg-transparent py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-400 dark:border-stone-700"
+                className="w-full rounded-md border border-stone-200 bg-white/70 py-1.5 pl-8 pr-3 text-xs text-stone-700 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none dark:border-stone-800 dark:bg-stone-950/50 dark:text-stone-200 dark:focus:border-stone-600"
               />
             </div>
             {query && (
@@ -223,7 +223,7 @@ export default function ProjectsPage() {
                   setQuery("");
                   setPage(1);
                 }}
-                className="rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
+                className="rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-600 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-400 dark:hover:bg-stone-900"
               >
                 Clear
               </button>
@@ -231,53 +231,55 @@ export default function ProjectsPage() {
           </form>
 
           {isLoading ? (
-            <div className="py-12 text-sm text-stone-500">Loading projects...</div>
+            <div className="py-12 text-xs text-stone-400">Loading projects…</div>
           ) : projects.length === 0 ? (
-            <div className="rounded-[32px] border border-dashed border-stone-300 bg-white/70 px-6 py-16 text-center text-stone-500 dark:border-stone-700 dark:bg-stone-950/50 dark:text-stone-400">
-              <FolderGit2 className="mx-auto mb-4 h-10 w-10 opacity-50" />
-              <p className="text-base font-medium">
+            <div className="rounded-md border border-dashed border-stone-200 bg-white/50 px-6 py-16 text-center dark:border-stone-800 dark:bg-stone-950/40">
+              <FolderGit2 className="mx-auto mb-3 h-8 w-8 text-stone-300 dark:text-stone-700" />
+              <p className="text-sm text-stone-400 dark:text-stone-500">
                 {query ? `No projects match “${query}”` : "No tracked projects yet"}
               </p>
             </div>
           ) : (
             <>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {projects.map((project) => (
                   <div
                     key={project.id}
-                    className="group relative rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-md dark:border-stone-800 dark:bg-stone-950 dark:hover:border-stone-700"
+                    className="group relative flex min-h-[120px] flex-col rounded-md border border-stone-200 bg-white/70 p-3.5 transition-colors hover:border-stone-300 hover:bg-white dark:border-stone-800 dark:bg-stone-950/50 dark:hover:border-stone-700 dark:hover:bg-stone-950"
                   >
                     <button
                       type="button"
                       onClick={() => void openProject(project.id)}
-                      className="block w-full text-left"
+                      className="flex flex-1 flex-col text-left"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h2 className="truncate text-sm font-semibold text-stone-900 dark:text-stone-100">
                             {project.name}
                           </h2>
-                          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                          <p className="mt-0.5 truncate text-[11px] text-stone-400 dark:text-stone-500">
                             {project.language || "Unknown language"}
                           </p>
                         </div>
-                        <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs text-stone-600 dark:bg-stone-900 dark:text-stone-300">
+                        <span className="shrink-0 rounded border border-stone-200 bg-white px-1.5 py-0.5 text-[10px] text-stone-500 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-400">
                           {project.noteCount} {project.noteCount === 1 ? "note" : "notes"}
                         </span>
                       </div>
-                      <p className="mt-3 line-clamp-2 text-sm text-stone-500 dark:text-stone-400">
+                      <p className="mt-2 line-clamp-2 flex-1 text-xs text-stone-500 dark:text-stone-400">
                         {project.description || "No description yet."}
                       </p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {project.topTags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                      {project.topTags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {project.topTags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500 dark:bg-stone-900 dark:text-stone-400"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </button>
                     <button
                       type="button"
@@ -285,7 +287,7 @@ export default function ProjectsPage() {
                         e.stopPropagation();
                         router.push(`/projects/${project.id}?view=overview`);
                       }}
-                      className="absolute bottom-3 right-4 text-xs text-stone-400 opacity-0 transition-opacity hover:text-stone-700 group-hover:opacity-100 dark:hover:text-stone-200"
+                      className="absolute bottom-2 right-3 text-[10px] text-stone-400 opacity-0 transition-opacity hover:text-stone-700 group-hover:opacity-100 dark:hover:text-stone-200"
                     >
                       Overview →
                     </button>
@@ -295,32 +297,32 @@ export default function ProjectsPage() {
 
               {/* Pagination controls */}
               {totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-between text-sm">
-                  <span className="text-stone-500 dark:text-stone-400">
+                <div className="mt-5 flex items-center justify-between text-xs">
+                  <span className="text-stone-400 dark:text-stone-500">
                     Showing {(page - 1) * PAGE_SIZE + 1}–
                     {Math.min(page * PAGE_SIZE, total)} of {total}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       disabled={page <= 1}
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-3 py-1.5 text-stone-600 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
+                      className="inline-flex items-center gap-1 rounded-md border border-stone-200 bg-white px-2 py-1 text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-400 dark:hover:bg-stone-900"
                     >
-                      <ChevronLeft size={14} />
+                      <ChevronLeft size={12} />
                       Prev
                     </button>
-                    <span className="px-2 text-stone-500 dark:text-stone-400">
+                    <span className="px-1 text-stone-400 dark:text-stone-500">
                       Page {page} / {totalPages}
                     </span>
                     <button
                       type="button"
                       disabled={page >= totalPages}
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-3 py-1.5 text-stone-600 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
+                      className="inline-flex items-center gap-1 rounded-md border border-stone-200 bg-white px-2 py-1 text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-400 dark:hover:bg-stone-900"
                     >
                       Next
-                      <ChevronRight size={14} />
+                      <ChevronRight size={12} />
                     </button>
                   </div>
                 </div>
