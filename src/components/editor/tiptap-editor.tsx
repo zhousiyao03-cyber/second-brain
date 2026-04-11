@@ -14,6 +14,7 @@ import {
   useEditor,
   type Editor as TiptapEditorInstance,
 } from "@tiptap/react";
+import { useRouter } from "next/navigation";
 import { NodeSelection } from "@tiptap/pm/state";
 import { DOMParser as PMDOMParser, type Node as PMNode } from "@tiptap/pm/model";
 import { GripVertical, Plus } from "lucide-react";
@@ -46,6 +47,7 @@ import { createEditorExtensions } from "./editor-extensions";
 import { buildBlockActionItems } from "./editor-block-actions";
 import { createWikiLinkTriggerExtension } from "./wiki-link-trigger";
 import { WikiLinkSuggest } from "./wiki-link-suggest";
+import { WikiLinkPreview } from "./wiki-link-preview";
 import {
   parseEditorContent,
   extractPlainTextFromContent,
@@ -118,6 +120,7 @@ export function TiptapEditor({
   const [, setIsDragging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [linkTooltip, setLinkTooltip] = useState<{ href: string; top: number; left: number } | null>(null);
+  const [wikiLinkPreview, setWikiLinkPreview] = useState<{ noteId: string; top: number; left: number } | null>(null);
   const [wikiLinkCoords, setWikiLinkCoords] = useState<{ top: number; left: number } | null>(null);
   const [wikiLinkQuery, setWikiLinkQuery] = useState("");
   const [inlineAskAnchor, setInlineAskAnchor] =
@@ -127,11 +130,16 @@ export function TiptapEditor({
   const inlineAskOpenIdRef = useRef(0);
   const [inlineAskOpenId, setInlineAskOpenId] = useState(0);
   const linkTooltipTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const wikiPreviewShowTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const wikiPreviewHideTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TiptapEditorInstance | null>(null);
   const editorSurfaceRef = useRef<HTMLDivElement>(null);
   const onFocusTitleRef = useRef(onFocusTitle);
   onFocusTitleRef.current = onFocusTitle;
+  const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   const hoveredBlockRef = useRef<HoveredBlock | null>(null);
   const pendingImageInsertPositionRef = useRef<number | null>(null);
 
@@ -523,9 +531,19 @@ export function TiptapEditor({
           "notion-editor focus:outline-none min-h-[60vh] px-1 py-2 data-[placeholder]:text-stone-400",
       },
       handleClick(view, _pos, event) {
-        // Cmd/Ctrl+Click to open links in a new tab
+        // Cmd/Ctrl+Click to follow links (wiki-links navigate in-app, others open new tab)
         if (!(event.metaKey || event.ctrlKey)) return false;
         const target = event.target as HTMLElement;
+        const wikiEl = target.closest("[data-wiki-link]");
+        if (wikiEl) {
+          const noteId = wikiEl.getAttribute("data-note-id");
+          if (noteId) {
+            event.preventDefault();
+            routerRef.current.push(`/notes/${noteId}`);
+            return true;
+          }
+          return false;
+        }
         const anchor = target.closest("a");
         if (!anchor) return false;
         const href = anchor.getAttribute("href");
@@ -926,8 +944,24 @@ export function TiptapEditor({
         onMouseLeave={editable ? handleSurfaceMouseLeave : undefined}
         onMouseOver={(e) => {
           const target = e.target as HTMLElement;
+          const wikiEl = target.closest("[data-wiki-link]") as HTMLElement | null;
+          if (wikiEl) {
+            const noteId = wikiEl.getAttribute("data-note-id");
+            if (noteId) {
+              if (wikiPreviewHideTimerRef.current) clearTimeout(wikiPreviewHideTimerRef.current);
+              const rect = wikiEl.getBoundingClientRect();
+              // WikiLinkPreview uses `position: fixed`, so we pass viewport coords directly.
+              const top = rect.bottom + 6;
+              const left = rect.left;
+              if (wikiPreviewShowTimerRef.current) clearTimeout(wikiPreviewShowTimerRef.current);
+              wikiPreviewShowTimerRef.current = setTimeout(() => {
+                setWikiLinkPreview({ noteId, top, left });
+              }, 300);
+            }
+            return;
+          }
           const anchor = target.closest("a");
-          if (anchor) {
+          if (anchor && !anchor.hasAttribute("data-wiki-link")) {
             const href = anchor.getAttribute("href");
             if (href) {
               if (linkTooltipTimerRef.current) clearTimeout(linkTooltipTimerRef.current);
@@ -946,6 +980,14 @@ export function TiptapEditor({
         onMouseOut={(e) => {
           const target = e.target as HTMLElement;
           const related = e.relatedTarget as HTMLElement | null;
+          const wikiEl = target.closest("[data-wiki-link]");
+          if (wikiEl) {
+            if (wikiPreviewShowTimerRef.current) clearTimeout(wikiPreviewShowTimerRef.current);
+            if (!related?.closest?.("[data-wiki-link-preview]")) {
+              wikiPreviewHideTimerRef.current = setTimeout(() => setWikiLinkPreview(null), 200);
+            }
+            return;
+          }
           if (target.closest("a") && !related?.closest?.("[data-link-tooltip]")) {
             linkTooltipTimerRef.current = setTimeout(() => setLinkTooltip(null), 200);
           }
@@ -1030,6 +1072,21 @@ export function TiptapEditor({
           >
             打开
           </button>
+        </div>
+      )}
+
+      {wikiLinkPreview && (
+        <div
+          data-wiki-link-preview
+          onMouseEnter={() => {
+            if (wikiPreviewHideTimerRef.current) clearTimeout(wikiPreviewHideTimerRef.current);
+          }}
+          onMouseLeave={() => setWikiLinkPreview(null)}
+        >
+          <WikiLinkPreview
+            noteId={wikiLinkPreview.noteId}
+            position={{ top: wikiLinkPreview.top, left: wikiLinkPreview.left }}
+          />
         </div>
       )}
 
