@@ -81,6 +81,8 @@ function CodeBlockNodeView({
       <div className="code-block-header" contentEditable={false}>
         <button
           type="button"
+          tabIndex={-1}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setShowDropdown((prev) => !prev)}
         >
           {displayLabel}
@@ -91,6 +93,8 @@ function CodeBlockNodeView({
               <button
                 key={lang.value}
                 type="button"
+                tabIndex={-1}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   updateAttributes({ language: lang.value });
                   setShowDropdown(false);
