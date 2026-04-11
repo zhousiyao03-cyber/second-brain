@@ -4,12 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LogOut, Moon, Search, Settings, Sun } from "lucide-react";
+import {
+  LogOut,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings,
+  Sun,
+} from "lucide-react";
 import { logout } from "@/app/(app)/actions";
 import { AppBrand } from "./app-brand";
 import { navigationItems } from "./navigation";
 
-export function Sidebar({ workspaceLabel = "Workspace" }: { workspaceLabel?: string }) {
+const COLLAPSED_COOKIE = "sb_collapsed";
+
+export function Sidebar({
+  initialCollapsed = false,
+}: {
+  workspaceLabel?: string;
+  initialCollapsed?: boolean;
+}) {
   const pathname = usePathname();
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -20,6 +34,15 @@ export function Sidebar({ workspaceLabel = "Workspace" }: { workspaceLabel?: str
     }
     return false;
   });
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      document.cookie = `${COLLAPSED_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+      return next;
+    });
+  };
 
   const toggleDark = () => {
     const next = !dark;
@@ -28,35 +51,41 @@ export function Sidebar({ workspaceLabel = "Workspace" }: { workspaceLabel?: str
     localStorage.setItem("theme", next ? "dark" : "light");
   };
 
-  const openSearch = () => {
-    window.dispatchEvent(new Event("second-brain:open-search"));
-  };
-
   return (
-    <aside className="hidden h-full w-64 shrink-0 border-r border-stone-200/80 bg-stone-50/92 px-3 py-3 md:flex md:flex-col dark:border-stone-800 dark:bg-stone-950/88">
-      <div className="rounded-[20px] px-2 pb-4">
-        <div className="rounded-[18px] px-2 py-2">
-          <AppBrand />
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={openSearch}
-        className="mb-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-stone-500 transition-colors hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+    <aside
+      data-collapsed={collapsed ? "true" : "false"}
+      className={cn(
+        "group/sidebar hidden h-full shrink-0 flex-col border-r border-stone-200/70 bg-stone-50/80 backdrop-blur-xs transition-[width] duration-300 ease-out md:flex dark:border-stone-800/80 dark:bg-stone-950/70",
+        collapsed ? "w-[68px]" : "w-60"
+      )}
+    >
+      {/* Brand + collapse toggle */}
+      <div
+        className={cn(
+          "flex items-center gap-2 px-3 pt-4 pb-4",
+          collapsed && "flex-col gap-3"
+        )}
       >
-        <Search className="h-4 w-4" />
-        Search
-        <span className="ml-auto rounded-md border border-stone-200 px-1.5 py-0.5 text-[11px] text-stone-400 dark:border-stone-700 dark:text-stone-500">
-          Cmd K
-        </span>
-      </button>
-
-      <div className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-stone-400 dark:text-stone-500">
-        {workspaceLabel}
+        <div className={cn("min-w-0 flex-1", collapsed && "flex-none")}>
+          <AppBrand compact={collapsed} />
+        </div>
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-400 opacity-0 transition-all hover:bg-stone-200/70 hover:text-stone-700 focus:opacity-100 group-hover/sidebar:opacity-100 group-data-[collapsed=true]/sidebar:opacity-100 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-stone-200"
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <PanelLeftClose className="h-4 w-4" />
+          )}
+        </button>
       </div>
 
-      <nav className="flex-1 space-y-1">
+      {/* Nav */}
+      <nav className="flex-1 space-y-0.5 px-2 pt-1">
         {navigationItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -68,42 +97,68 @@ export function Sidebar({ workspaceLabel = "Workspace" }: { workspaceLabel?: str
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.label}
+              title={collapsed ? item.label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
+                "relative flex items-center rounded-lg text-[13px] font-medium transition-colors",
+                collapsed ? "h-9 justify-center" : "gap-2.5 px-3 py-2",
                 isActive
-                  ? "bg-white text-stone-900 shadow-[0_8px_24px_-18px_rgba(15,23,42,0.35)] ring-1 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-800"
-                  : "text-stone-600 hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+                  ? "bg-stone-200/70 text-stone-900 dark:bg-stone-800/80 dark:text-stone-100"
+                  : "text-stone-600 hover:bg-stone-200/50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800/60 dark:hover:text-stone-100"
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
+              {isActive && !collapsed && (
+                <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-stone-900 dark:bg-stone-100" />
+              )}
+              <Icon
+                className={cn(
+                  "h-[16px] w-[16px] shrink-0",
+                  isActive ? "text-stone-900 dark:text-stone-100" : ""
+                )}
+                strokeWidth={isActive ? 2.2 : 1.8}
+              />
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-4 border-t border-stone-200 px-2 pt-4 dark:border-stone-800">
+      {/* Bottom: icon-only utility row */}
+      <div
+        className={cn(
+          "mt-2 flex gap-1 px-3 pt-3 pb-4",
+          collapsed ? "flex-col items-center" : "items-center justify-start"
+        )}
+      >
         <Link
           href="/settings"
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+          aria-label="Account settings"
+          title="Account settings"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-200/60 hover:text-stone-800 dark:text-stone-500 dark:hover:bg-stone-800/70 dark:hover:text-stone-100"
         >
-          <Settings className="h-4 w-4" />
-          Account settings
+          <Settings className="h-[15px] w-[15px]" strokeWidth={1.8} />
         </Link>
         <button
+          type="button"
           onClick={toggleDark}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+          aria-label={dark ? "Light mode" : "Dark mode"}
+          title={dark ? "Light mode" : "Dark mode"}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-200/60 hover:text-stone-800 dark:text-stone-500 dark:hover:bg-stone-800/70 dark:hover:text-stone-100"
         >
-          {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          {dark ? "Light mode" : "Dark mode"}
+          {dark ? (
+            <Sun className="h-[15px] w-[15px]" strokeWidth={1.8} />
+          ) : (
+            <Moon className="h-[15px] w-[15px]" strokeWidth={1.8} />
+          )}
         </button>
-        <form action={logout}>
+        <form action={logout} className="contents">
           <button
             type="submit"
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-white/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+            aria-label="Sign out"
+            title="Sign out"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-200/60 hover:text-stone-800 dark:text-stone-500 dark:hover:bg-stone-800/70 dark:hover:text-stone-100"
           >
-            <LogOut className="h-4 w-4" />
-            Sign out
+            <LogOut className="h-[15px] w-[15px]" strokeWidth={1.8} />
           </button>
         </form>
       </div>
