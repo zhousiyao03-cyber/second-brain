@@ -26,7 +26,7 @@ export type CacheOptions = {
   ttlMs?: number;
 };
 
-export class NamedCache<T extends {}> {
+export class NamedCache<T extends NonNullable<unknown>> {
   readonly name: string;
   private readonly store: LRUCache<string, T>;
 

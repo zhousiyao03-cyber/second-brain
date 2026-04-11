@@ -31,7 +31,6 @@ type RedisPromise = Promise<RedisClientType | null>;
 
 // 在 dev 模式下把 client promise 挂在 globalThis 上，避免 HMR 反复建连接
 declare global {
-  // eslint-disable-next-line no-var
   var __redisClientPromise: RedisPromise | undefined;
 }
 

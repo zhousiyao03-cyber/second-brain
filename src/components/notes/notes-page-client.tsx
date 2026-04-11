@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -192,7 +192,7 @@ export function NotesPageClient() {
   const [offset, setOffset] = useState(0);
   const [allItems, setAllItems] = useState<NoteItem[]>([]);
   const [hasMore, setHasMore] = useState(true);
-  const prevKeyRef = useRef("");
+  const [lastSyncedKey, setLastSyncedKey] = useState("");
 
   const queryInput: {
     limit: number;
@@ -211,25 +211,26 @@ export function NotesPageClient() {
 
   const { data, isLoading, isFetching } = trpc.notes.list.useQuery(queryInput);
 
-  useEffect(() => {
-    if (!data) return;
+  // Sync paginated data into local accumulator during render (React 19 pattern:
+  // compare previous key via state, not ref, to avoid the no-ref-in-render rule).
+  if (data) {
     const currentKey = `${queryKey}|${offset}`;
-    if (prevKeyRef.current === currentKey) return;
-    prevKeyRef.current = currentKey;
-
-    if (offset === 0) {
-      setAllItems(data.items as NoteItem[]);
-    } else {
-      setAllItems((prev) => [...prev, ...(data.items as NoteItem[])]);
+    if (lastSyncedKey !== currentKey) {
+      setLastSyncedKey(currentKey);
+      if (offset === 0) {
+        setAllItems(data.items as NoteItem[]);
+      } else {
+        setAllItems((prev) => [...prev, ...(data.items as NoteItem[])]);
+      }
+      setHasMore(data.hasMore);
     }
-    setHasMore(data.hasMore);
-  }, [data, queryKey, offset]);
+  }
 
   const resetAndRefresh = useCallback(() => {
     setOffset(0);
     setAllItems([]);
     setHasMore(true);
-    prevKeyRef.current = "";
+    setLastSyncedKey("");
   }, []);
 
   const handleFolderChange = useCallback(

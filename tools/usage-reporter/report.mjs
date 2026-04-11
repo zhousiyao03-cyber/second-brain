@@ -372,10 +372,6 @@ function spawnClaudeForChat({ prompt, systemPrompt, model, onText }) {
     const stderrChunks = [];
     let finalResult = "";
     let lineBuf = "";
-    // Running accumulator so we can emit the final canonical text and detect
-    // drift. With --include-partial-messages the CLI emits content_block_delta
-    // events; we forward only the incremental .text to onText (true delta).
-    let partialText = "";
 
     child.stdout.on("data", (chunk) => {
       lineBuf += chunk.toString("utf8");
@@ -390,31 +386,20 @@ function spawnClaudeForChat({ prompt, systemPrompt, model, onText }) {
           // Real-time partial deltas (only with --include-partial-messages).
           if (event.type === "stream_event" && event.event) {
             const se = event.event;
-            if (se.type === "message_start") {
-              partialText = "";
-            } else if (
+            if (
               se.type === "content_block_delta" &&
               se.delta?.type === "text_delta" &&
               typeof se.delta.text === "string"
             ) {
-              const chunk = se.delta.text;
-              partialText += chunk;
-              onText(chunk);
+              onText(se.delta.text);
             }
             continue;
           }
 
-          if (event.type === "assistant" && event.message?.content) {
-            for (const block of event.message.content) {
-              if (block.type === "text" && typeof block.text === "string") {
-                // Final full assistant message. Update the accumulator so the
-                // resolve value is canonical. Don't call onText here —
-                // handleChatTask sends a text_final with the full text after
-                // the process exits, so emitting it here would double-count.
-                partialText = block.text;
-              }
-            }
-          }
+          // Final full assistant message blocks arrive via event.type === "assistant".
+          // We intentionally don't call onText here — handleChatTask sends a
+          // text_final with the full text after the process exits, so emitting
+          // it here would double-count.
 
           if (event.type === "result" && typeof event.result === "string") {
             finalResult = event.result;

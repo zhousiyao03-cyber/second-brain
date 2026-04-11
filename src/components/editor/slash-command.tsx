@@ -110,7 +110,6 @@ interface SlashCommandMenuProps {
   query: string;
   items: EditorCommandItem[];
   groups?: EditorCommandGroup[];
-  variant?: "default" | "insert";
   deleteTrigger?: boolean;
   onSelectItem?: (item: EditorCommandItem, editor: Editor) => void;
   testId?: string;
@@ -123,7 +122,6 @@ export function SlashCommandMenu({
   query,
   items,
   groups,
-  variant = "default",
   deleteTrigger = true,
   onSelectItem,
   testId,
@@ -149,7 +147,6 @@ export function SlashCommandMenu({
   const sections = useMemo(() => {
     const filteredIds = new Set(filtered.map((item) => item.id));
 
-    // For insert variant or default with groups, show grouped
     if (groups) {
       return groups
         .map((group) => ({

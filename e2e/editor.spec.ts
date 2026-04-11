@@ -1,7 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-const uid = () => Math.random().toString(36).slice(2, 8);
-
 // 1x1 transparent PNG for image tests
 const tinyPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==",

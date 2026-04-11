@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -237,11 +237,14 @@ function DayDrillDown({ date, timeZone }: { date: string; timeZone: string }) {
   const appGroups = useMemo(() => buildAppGroups(dailySessions ?? [], dailyStats?.totalSecs ?? 0), [dailySessions, dailyStats?.totalSecs]);
   const selectedApp = useMemo(() => getSelectedAppDetails(selectedAppName, dailySessions ?? []), [selectedAppName, dailySessions]);
 
-  useEffect(() => {
-    const def = getDefaultSelectedApp(appGroups);
-    if (!def) { if (selectedAppName) setSelectedAppName(null); return; }
-    if (!selectedAppName || !appGroups.some((g) => g.appName === selectedAppName)) setSelectedAppName(def);
-  }, [appGroups, selectedAppName]);
+  // Keep selectedAppName valid when appGroups changes (React 19 pattern:
+  // render-time setState for data-derived state instead of effect).
+  const defaultApp = getDefaultSelectedApp(appGroups);
+  if (!defaultApp) {
+    if (selectedAppName) setSelectedAppName(null);
+  } else if (!selectedAppName || !appGroups.some((g) => g.appName === selectedAppName)) {
+    setSelectedAppName(defaultApp);
+  }
 
   const filteredRows = useMemo(() => {
     if (!dailyStats?.nonWorkBreakdown) return [];
