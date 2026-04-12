@@ -241,6 +241,41 @@ export async function failJob(jobId: string, error: unknown) {
 }
 
 /**
+ * 回收卡死的 running jobs。
+ *
+ * Vercel function 可能因超时/崩溃导致 job 被 claim 后永远停在 running。
+ * 把超过 staleMinutes 的 running job 重置为 pending，让 worker 重新拾取。
+ */
+export async function reclaimStaleJobs(staleMinutes = 10) {
+  const cutoff = Math.floor(Date.now() / 1000) - staleMinutes * 60;
+
+  const result = await dbClient.execute({
+    sql: `
+      UPDATE knowledge_index_jobs
+      SET status = 'pending',
+          error = 'reclaimed: stale running job'
+      WHERE status = 'running'
+        AND queued_at <= ?
+      RETURNING id
+    `,
+    args: [cutoff],
+  });
+
+  if (result.rows.length > 0) {
+    logger.warn(
+      {
+        event: "job.reclaim_stale",
+        count: result.rows.length,
+        cutoffMinutes: staleMinutes,
+      },
+      `reclaimed ${result.rows.length} stale running jobs`
+    );
+  }
+
+  return result.rows.length;
+}
+
+/**
  * 查询队列统计 — 用于 /api/metrics。
  * 只聚合 4 个状态的计数，成本很低（有 status 索引）。
  */

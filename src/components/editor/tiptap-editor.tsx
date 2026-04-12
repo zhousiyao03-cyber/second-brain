@@ -104,7 +104,7 @@ export function TiptapEditor({
   onEditorReady,
   onFocusTitle,
   editable = true,
-  placeholder = "输入 / 以插入命令...",
+  placeholder = "Type / for commands...",
 }: TiptapEditorProps) {
   const [slashCoords, setSlashCoords] = useState<{
     top: number;
@@ -274,14 +274,14 @@ export function TiptapEditor({
 
   const insertImageFromUrl = useCallback(() => {
     const currentEditor = editorRef.current;
-    const url = window.prompt("输入图片地址：")?.trim();
+    const url = window.prompt("Enter image URL:")?.trim();
     const insertPosition = pendingImageInsertPositionRef.current ?? undefined;
     pendingImageInsertPositionRef.current = null;
 
     if (!url || !currentEditor) return;
 
     if (!/^https?:\/\//.test(url) && !url.startsWith("data:image/")) {
-      reportError("请输入有效的图片地址。");
+      reportError("Please enter a valid image URL.");
       return;
     }
 
@@ -290,7 +290,7 @@ export function TiptapEditor({
       return;
     }
 
-    currentEditor.chain().focus().setImage({ src: url, alt: "插入图片" }).run();
+    currentEditor.chain().focus().setImage({ src: url, alt: "Insert image" }).run();
   }, [reportError]);
 
   const handleFileSelection = useCallback(() => {
@@ -620,7 +620,7 @@ export function TiptapEditor({
 
           insertImagesIntoView(view, sources);
         })().catch((err: unknown) => {
-          reportError(err instanceof Error ? err.message : "插入图片失败，请重试。");
+          reportError(err instanceof Error ? err.message : "Failed to insert image. Please try again.");
         });
 
         return true;
@@ -716,7 +716,7 @@ export function TiptapEditor({
 
           insertImagesIntoView(view, sources, coordinates?.pos);
         })().catch((err: unknown) => {
-          reportError(err instanceof Error ? err.message : "插入图片失败，请重试。");
+          reportError(err instanceof Error ? err.message : "Failed to insert image. Please try again.");
         });
 
         event.preventDefault();
@@ -899,7 +899,7 @@ export function TiptapEditor({
 
         insertImagesIntoView(currentEditor.view, sources, insertPosition);
       } catch (err: unknown) {
-        reportError(err instanceof Error ? err.message : "插入图片失败，请重试。");
+        reportError(err instanceof Error ? err.message : "Failed to insert image. Please try again.");
       } finally {
         event.target.value = "";
       }
@@ -1017,8 +1017,8 @@ export function TiptapEditor({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                aria-label="插入块"
-                title="在下方插入块（按住 Option 在上方插入）"
+                aria-label="Insert block"
+                title="Insert block below (hold Option to insert above)"
                 data-testid="editor-insert-trigger"
                 onClick={(event) => {
                   handleOpenInsertMenu(event.altKey ? "above" : "below");
@@ -1030,8 +1030,8 @@ export function TiptapEditor({
               <button
                 type="button"
                 draggable="true"
-                aria-label="块菜单"
-                title="拖拽移动块 / 点击打开菜单"
+                aria-label="Block menu"
+                title="Drag to move / Click to open menu"
                 data-testid="editor-block-menu-trigger"
                 onClick={() => {
                   handleOpenBlockActionMenu();
@@ -1070,7 +1070,7 @@ export function TiptapEditor({
             }}
             className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
           >
-            打开
+            Open
           </button>
         </div>
       )}

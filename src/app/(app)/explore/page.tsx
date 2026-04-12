@@ -41,12 +41,12 @@ export default function ExplorePage() {
       const res = await fetch("/api/explore", { method: "POST" });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "请求失败");
+        throw new Error(data.error || "Request failed");
       }
       const data = await res.json();
       setResult(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "探索失败");
+      setError(e instanceof Error ? e.message : "Explore failed");
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ export default function ExplorePage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">AI 探索</h1>
+        <h1 className="text-2xl font-bold text-gray-900">AI Explore</h1>
         <button
           onClick={handleExplore}
           disabled={loading}
@@ -80,21 +80,21 @@ export default function ExplorePage() {
           ) : (
             <Sparkles size={16} />
           )}
-          {result ? "重新探索" : "开始探索"}
+          {result ? "Re-explore" : "Start exploring"}
         </button>
       </div>
 
       {!result && !loading && !error && (
         <div className="text-center py-12 text-gray-400">
           <Compass size={48} className="mx-auto mb-3 opacity-50" />
-          <p>AI 会分析你的笔记、收藏和待办</p>
-          <p className="text-sm mt-1">为你推荐感兴趣的学习资源和话题</p>
+          <p>AI will analyze your notes, bookmarks, and todos</p>
+          <p className="text-sm mt-1">to recommend learning resources and topics you may find interesting</p>
         </div>
       )}
 
       {error && (
         <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg mb-4">
-          {error}。请检查当前 AI provider 配置是否正确。
+          {error}. Please check your AI provider configuration.
         </div>
       )}
 
@@ -103,7 +103,7 @@ export default function ExplorePage() {
           {/* Interests */}
           <div>
             <h2 className="text-sm font-medium text-gray-500 mb-2">
-              你可能感兴趣的方向
+              Topics you might like
             </h2>
             <div className="flex flex-wrap gap-2">
               {result.interests.map((interest, i) => (
@@ -121,7 +121,7 @@ export default function ExplorePage() {
           {/* Recommendations */}
           <div>
             <h2 className="text-sm font-medium text-gray-500 mb-3">
-              推荐内容
+              Recommended
             </h2>
             <div className="space-y-3">
               {result.recommendations.map((rec, i) => (
@@ -149,7 +149,7 @@ export default function ExplorePage() {
                     onClick={() => handleSave(rec, i)}
                     disabled={saving === i}
                     className="p-2 text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-100"
-                    title="收藏"
+                    title="Bookmark"
                   >
                     {saving === i ? (
                       <Loader2 size={16} className="animate-spin" />

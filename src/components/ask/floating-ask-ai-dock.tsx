@@ -44,25 +44,25 @@ const QUICK_PROMPTS: Array<{
   scope: AskAiSourceScope;
 }> = [
   {
-    title: "搜索最近笔记",
+    title: "Search recent notes",
     icon: Sparkles,
     prompt: "Summarize my recent notes",
     scope: "notes",
   },
   {
-    title: "回顾收藏内容",
+    title: "Review bookmarks",
     icon: BookOpen,
     prompt: "What is worth revisiting from my recent bookmarks?",
     scope: "bookmarks",
   },
   {
-    title: "梳理当前项目",
+    title: "Review current project",
     icon: Layers,
     prompt: "What is the current tech stack of this project?",
     scope: "all",
   },
   {
-    title: "帮我写点什么",
+    title: "Help me write something",
     icon: Wand2,
     prompt: "Help me draft something",
     scope: "direct",
@@ -105,7 +105,7 @@ function ScopeDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title={`范围：${current.label}`}
+        title={`Scope: ${current.label}`}
         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
       >
         <SlidersHorizontal size={16} />
@@ -113,7 +113,7 @@ function ScopeDropdown({
       {open && (
         <div className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-xl border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-800 dark:bg-stone-950">
           <div className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-stone-400 dark:text-stone-500">
-            知识范围
+            Knowledge Scope
           </div>
           {VISIBLE_SCOPE_OPTIONS.map((option) => (
             <button
@@ -262,7 +262,7 @@ export function FloatingAskAiDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="打开 AI 助手"
+          aria-label="Open AI assistant"
           className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-lg transition-all hover:scale-105 hover:border-stone-300 hover:shadow-xl dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200 dark:hover:border-stone-700"
         >
           <Sparkles size={20} />
@@ -278,20 +278,20 @@ export function FloatingAskAiDock() {
           {/* Top bar */}
           <div className="flex items-center justify-between border-b border-stone-100 px-3 py-2 dark:border-stone-800">
             <div className="flex items-center gap-1.5 text-sm font-medium text-stone-900 dark:text-stone-100">
-              <span>新建 AI 对话</span>
+              <span>New AI chat</span>
             </div>
             <div className="flex items-center gap-0.5 text-stone-500 dark:text-stone-400">
               <button
                 type="button"
                 onClick={handleNewChat}
-                title="新建对话"
+                title="New chat"
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-stone-100 hover:text-stone-900 dark:hover:bg-stone-900 dark:hover:text-stone-100"
               >
                 <Pencil size={14} />
               </button>
               <Link
                 href="/ask"
-                title="在整页打开"
+                title="Open full page"
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-stone-100 hover:text-stone-900 dark:hover:bg-stone-900 dark:hover:text-stone-100"
               >
                 <ExternalLink size={14} />
@@ -299,7 +299,7 @@ export function FloatingAskAiDock() {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                title="最小化"
+                title="Minimize"
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-stone-100 hover:text-stone-900 dark:hover:bg-stone-900 dark:hover:text-stone-100"
               >
                 <Minus size={14} />
@@ -318,7 +318,7 @@ export function FloatingAskAiDock() {
                   />
                 </div>
                 <h2 className="mt-5 text-2xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-                  今日事，我来帮。
+                  Your daily AI assistant.
                 </h2>
                 <div className="mt-6 space-y-0.5">
                   {QUICK_PROMPTS.map((prompt) => (
@@ -359,7 +359,7 @@ export function FloatingAskAiDock() {
                   return (
                     <article key={message.id} className="min-w-0">
                       <div className="whitespace-pre-wrap text-[14px] leading-6 text-stone-800 dark:text-stone-100">
-                        {cleanText || (isLoading ? "正在思考..." : "")}
+                        {cleanText || (isLoading ? "Thinking..." : "")}
                       </div>
                       {isLatestAssistant && cleanText && sources.length > 0 && (
                         <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1">
@@ -384,13 +384,13 @@ export function FloatingAskAiDock() {
                   messages[messages.length - 1]?.role === "user" && (
                     <div className="flex items-center gap-2 text-sm text-stone-400 dark:text-stone-500">
                       <Loader2 size={14} className="animate-spin" />
-                      正在思考...
+                      Thinking...
                     </div>
                   )}
 
                 {error && (
                   <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-                    出错了：{error.message || "未知错误"}
+                    Error: {error.message || "Unknown error"}
                   </div>
                 )}
               </div>
@@ -421,7 +421,7 @@ export function FloatingAskAiDock() {
                   onCompositionEnd={() => {
                     isComposingRef.current = false;
                   }}
-                  placeholder="使用 AI 处理各种任务..."
+                  placeholder="Ask AI anything..."
                   rows={1}
                   disabled={isLoading}
                   className="min-h-[24px] w-full resize-none border-none bg-transparent text-[14px] leading-6 text-stone-900 outline-none placeholder:text-stone-400 dark:text-stone-100 dark:placeholder:text-stone-500"
@@ -432,7 +432,7 @@ export function FloatingAskAiDock() {
                   <button
                     type="button"
                     disabled
-                    title="附件（即将推出）"
+                    title="Attachments (coming soon)"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-400 disabled:cursor-not-allowed dark:text-stone-600"
                   >
                     <Plus size={14} />
@@ -444,7 +444,7 @@ export function FloatingAskAiDock() {
                     <button
                       type="button"
                       onClick={handleNewChat}
-                      title="清空对话"
+                      title="Clear chat"
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
                     >
                       <Trash2 size={13} />
@@ -456,7 +456,7 @@ export function FloatingAskAiDock() {
                   <button
                     type="button"
                     disabled
-                    title="语音输入（即将推出）"
+                    title="Voice input (coming soon)"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-400 disabled:cursor-not-allowed dark:text-stone-600"
                   >
                     <Mic size={13} />
@@ -465,7 +465,7 @@ export function FloatingAskAiDock() {
                     <button
                       type="button"
                       onClick={() => stop()}
-                      title="停止"
+                      title="Stop"
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-stone-900 text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-stone-300"
                     >
                       <Square size={12} />
@@ -474,7 +474,7 @@ export function FloatingAskAiDock() {
                     <button
                       type="submit"
                       disabled={!input.trim()}
-                      aria-label="发送"
+                      aria-label="Send"
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-stone-900 text-white transition-colors hover:bg-stone-700 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-stone-300 dark:disabled:bg-stone-800 dark:disabled:text-stone-500"
                     >
                       <ArrowUp size={13} />

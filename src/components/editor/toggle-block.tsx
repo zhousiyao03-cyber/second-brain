@@ -13,7 +13,7 @@ import { ChevronRight, ListTree } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function ToggleBlockView({ node, updateAttributes }: NodeViewProps) {
-  const summary = node.attrs.summary ?? "折叠列表";
+  const summary = node.attrs.summary ?? "Toggle list";
   const isOpen = node.attrs.open !== false;
 
   return (
@@ -27,7 +27,7 @@ function ToggleBlockView({ node, updateAttributes }: NodeViewProps) {
         <button
           type="button"
           className={cn("notion-toggle-chevron", isOpen && "is-open")}
-          title={isOpen ? "折叠" : "展开"}
+          title={isOpen ? "Collapse" : "Expand"}
           onClick={() => updateAttributes({ open: !isOpen })}
         >
           <ChevronRight size={16} />
@@ -39,7 +39,7 @@ function ToggleBlockView({ node, updateAttributes }: NodeViewProps) {
             updateAttributes({ summary: event.target.value });
           }}
           className="notion-toggle-summary"
-          placeholder="折叠列表"
+          placeholder="Toggle list"
         />
       </div>
       <div className={cn("notion-toggle-body", !isOpen && "hidden")}>
@@ -63,7 +63,7 @@ export const ToggleBlock = Node.create({
   addAttributes() {
     return {
       summary: {
-        default: "折叠列表",
+        default: "Toggle list",
       },
       open: {
         default: true,
@@ -101,7 +101,7 @@ export function createToggleBlockNode(editor: Editor) {
 
   return toggleNodeType.create(
     {
-      summary: "折叠列表",
+      summary: "Toggle list",
       open: true,
     },
     [paragraphNodeType.create()]

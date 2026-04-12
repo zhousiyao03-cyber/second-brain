@@ -432,8 +432,8 @@ export function SearchBar({ editor, isOpen, onClose }: SearchBarProps) {
         {/* Toggle replace button */}
         <button
           type="button"
-          aria-label={showReplace ? "隐藏替换" : "显示替换"}
-          title={showReplace ? "隐藏替换" : "显示替换"}
+          aria-label={showReplace ? "Hide replace" : "Show replace"}
+          title={showReplace ? "Hide replace" : "Show replace"}
           onClick={() => setShowReplace(!showReplace)}
           className={cn(
             "flex h-6 w-6 shrink-0 items-center justify-center rounded",
@@ -458,7 +458,7 @@ export function SearchBar({ editor, isOpen, onClose }: SearchBarProps) {
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="搜索..."
+            placeholder="Search..."
             data-testid="editor-search-input"
             className={cn(
               "h-7 w-full rounded border bg-white pl-7 pr-2 text-sm outline-none",
@@ -478,15 +478,15 @@ export function SearchBar({ editor, isOpen, onClose }: SearchBarProps) {
           {query
             ? matchInfo.total > 0
               ? `${matchInfo.current}/${matchInfo.total}`
-              : "无匹配"
+              : "No matches"
             : ""}
         </span>
 
         {/* Navigation buttons */}
         <button
           type="button"
-          aria-label="上一个匹配"
-          title="上一个匹配 (Shift+Enter)"
+          aria-label="Previous match"
+          title="Previous match (Shift+Enter)"
           onClick={handlePrev}
           disabled={matchInfo.total === 0}
           className={cn(
@@ -500,8 +500,8 @@ export function SearchBar({ editor, isOpen, onClose }: SearchBarProps) {
         </button>
         <button
           type="button"
-          aria-label="下一个匹配"
-          title="下一个匹配 (Enter)"
+          aria-label="Next match"
+          title="Next match (Enter)"
           onClick={handleNext}
           disabled={matchInfo.total === 0}
           className={cn(
@@ -517,8 +517,8 @@ export function SearchBar({ editor, isOpen, onClose }: SearchBarProps) {
         {/* Close button */}
         <button
           type="button"
-          aria-label="关闭搜索"
-          title="关闭搜索 (Escape)"
+          aria-label="Close search"
+          title="Close search (Escape)"
           onClick={() => {
             onClose();
             editor.commands.focus();
@@ -546,7 +546,7 @@ export function SearchBar({ editor, isOpen, onClose }: SearchBarProps) {
             value={replaceText}
             onChange={(e) => setReplaceText(e.target.value)}
             onKeyDown={handleReplaceKeyDown}
-            placeholder="替换..."
+            placeholder="Replace..."
             data-testid="editor-replace-input"
             className={cn(
               "h-7 flex-1 rounded border bg-white pl-2.5 pr-2 text-sm outline-none",
@@ -560,8 +560,8 @@ export function SearchBar({ editor, isOpen, onClose }: SearchBarProps) {
           {/* Replace button */}
           <button
             type="button"
-            aria-label="替换"
-            title="替换当前匹配 (Enter)"
+            aria-label="Replace"
+            title="Replace current match (Enter)"
             onClick={handleReplace}
             disabled={matchInfo.total === 0}
             data-testid="editor-replace-button"
@@ -578,8 +578,8 @@ export function SearchBar({ editor, isOpen, onClose }: SearchBarProps) {
           {/* Replace All button */}
           <button
             type="button"
-            aria-label="全部替换"
-            title="替换所有匹配"
+            aria-label="Replace all"
+            title="Replace all matches"
             onClick={handleReplaceAll}
             disabled={matchInfo.total === 0}
             data-testid="editor-replace-all-button"

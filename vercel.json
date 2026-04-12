@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/portfolio-news",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/jobs/tick?max=50",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

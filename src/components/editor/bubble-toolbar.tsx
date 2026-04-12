@@ -16,15 +16,15 @@ import {
 } from "lucide-react";
 
 const TEXT_COLORS = [
-  { label: "默认", value: "" },
-  { label: "红色", value: "#dc2626" },
-  { label: "橙色", value: "#ea580c" },
-  { label: "黄色", value: "#ca8a04" },
-  { label: "绿色", value: "#16a34a" },
-  { label: "蓝色", value: "#2563eb" },
-  { label: "紫色", value: "#9333ea" },
-  { label: "粉色", value: "#db2777" },
-  { label: "灰色", value: "#6b7280" },
+  { label: "Default", value: "" },
+  { label: "Red", value: "#dc2626" },
+  { label: "Orange", value: "#ea580c" },
+  { label: "Yellow", value: "#ca8a04" },
+  { label: "Green", value: "#16a34a" },
+  { label: "Blue", value: "#2563eb" },
+  { label: "Purple", value: "#9333ea" },
+  { label: "Pink", value: "#db2777" },
+  { label: "Gray", value: "#6b7280" },
 ];
 
 function BubbleButton({
@@ -124,7 +124,7 @@ export function BubbleToolbar({ editor }: BubbleToolbarProps) {
       return;
     }
 
-    const url = window.prompt("输入链接地址：");
+    const url = window.prompt("Enter link URL:");
     if (url) {
       editor.chain().focus().setLink({ href: url }).run();
     }
@@ -166,49 +166,49 @@ export function BubbleToolbar({ editor }: BubbleToolbarProps) {
       <BubbleButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         isActive={editor.isActive("bold")}
-        title="粗体"
+        title="Bold"
       >
         <Bold size={iconSize} className="text-gray-300" />
       </BubbleButton>
       <BubbleButton
         onClick={() => editor.chain().focus().toggleItalic().run()}
         isActive={editor.isActive("italic")}
-        title="斜体"
+        title="Italic"
       >
         <Italic size={iconSize} className="text-gray-300" />
       </BubbleButton>
       <BubbleButton
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         isActive={editor.isActive("underline")}
-        title="下划线"
+        title="Underline"
       >
         <UnderlineIcon size={iconSize} className="text-gray-300" />
       </BubbleButton>
       <BubbleButton
         onClick={() => editor.chain().focus().toggleStrike().run()}
         isActive={editor.isActive("strike")}
-        title="删除线"
+        title="Strikethrough"
       >
         <Strikethrough size={iconSize} className="text-gray-300" />
       </BubbleButton>
       <BubbleButton
         onClick={() => editor.chain().focus().toggleCode().run()}
         isActive={editor.isActive("code")}
-        title="行内代码"
+        title="Inline code"
       >
         <Code size={iconSize} className="text-gray-300" />
       </BubbleButton>
       <BubbleButton
         onClick={() => editor.chain().focus().toggleHighlight().run()}
         isActive={editor.isActive("highlight")}
-        title="高亮"
+        title="Highlight"
       >
         <Highlighter size={iconSize} className="text-gray-300" />
       </BubbleButton>
       <BubbleButton
         onClick={setLink}
         isActive={editor.isActive("link")}
-        title={editor.isActive("link") ? "移除链接" : "链接"}
+        title={editor.isActive("link") ? "Remove link" : "Link"}
       >
         <LinkIcon size={iconSize} className="text-gray-300" />
       </BubbleButton>
@@ -219,7 +219,7 @@ export function BubbleToolbar({ editor }: BubbleToolbarProps) {
         <BubbleButton
           onClick={() => setColorPickerOpen((open) => !open)}
           isActive={editor.isActive("textStyle")}
-          title="文字颜色"
+          title="Text color"
         >
           <Palette size={iconSize} className="text-gray-300" />
         </BubbleButton>

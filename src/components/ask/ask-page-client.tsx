@@ -42,25 +42,25 @@ const QUICK_PROMPTS: Array<{
   scope: AskAiSourceScope;
 }> = [
   {
-    title: "总结最近笔记",
+    title: "Summarize recent notes",
     icon: Sparkles,
     prompt: "Summarize my recent notes",
     scope: "notes",
   },
   {
-    title: "回顾收藏内容",
+    title: "Review bookmarks",
     icon: BookOpen,
     prompt: "What is worth revisiting from my recent bookmarks?",
     scope: "bookmarks",
   },
   {
-    title: "梳理当前项目",
+    title: "Review current project",
     icon: Layers,
     prompt: "What is the current tech stack of this project?",
     scope: "all",
   },
   {
-    title: "帮我写点什么",
+    title: "Help me write something",
     icon: Wand2,
     prompt: "Help me draft something",
     scope: "direct",
@@ -206,7 +206,7 @@ function ScopeDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title={`范围：${current.label}`}
+        title={`Scope: ${current.label}`}
         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
       >
         <SlidersHorizontal size={14} />
@@ -214,7 +214,7 @@ function ScopeDropdown({
       {open && (
         <div className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-md border border-stone-200 bg-white py-1 shadow-md dark:border-stone-800 dark:bg-stone-950">
           <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
-            知识范围
+            Knowledge Scope
           </div>
           {VISIBLE_SCOPE_OPTIONS.map((option) => (
             <button
@@ -443,7 +443,7 @@ function AskPageStream() {
               </div>
 
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-                今日事，我来帮。
+                Your daily AI assistant.
               </h1>
             </section>
           ) : (
@@ -472,7 +472,7 @@ function AskPageStream() {
                       <MarkdownRenderer content={cleanText} />
                     ) : isLoading ? (
                       <div className="text-sm leading-7 text-stone-600 dark:text-stone-300">
-                        正在思考…
+                        Thinking...
                       </div>
                     ) : null}
 
@@ -480,7 +480,7 @@ function AskPageStream() {
                       <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-stone-500">
                         <IconActionButton
                           icon={Save}
-                          label="保存为笔记"
+                          label="Save as note"
                           onClick={handleSaveAnswer}
                           disabled={
                             !latestAnswer.cleanText.trim() ||
@@ -489,7 +489,7 @@ function AskPageStream() {
                         />
                         <IconActionButton
                           icon={RefreshCcw}
-                          label={`重新生成（${currentScope.label}）`}
+                          label={`Regenerate (${currentScope.label})`}
                           onClick={() => handleRegenerateWithScope(scope)}
                           disabled={!lastUserMessage || isLoading}
                         />
@@ -518,13 +518,13 @@ function AskPageStream() {
               {isLoading && messages[messages.length - 1]?.role === "user" && (
                 <div className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500">
                   <Loader2 size={13} className="animate-spin" />
-                  正在思考…
+                  Thinking...
                 </div>
               )}
 
               {errorMessage && (
                 <div className="rounded-md border border-red-200 bg-red-50/70 px-3 py-2 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-                  出错了：{errorMessage}
+                  Error: {errorMessage}
                 </div>
               )}
             </section>
@@ -561,7 +561,7 @@ function AskPageStream() {
                 onCompositionEnd={() => {
                   isComposingRef.current = false;
                 }}
-                placeholder="使用 AI 处理各种任务…"
+                placeholder="Ask AI anything..."
                 rows={1}
                 className="min-h-[24px] w-full resize-none border-none bg-transparent text-sm leading-6 text-stone-900 outline-none placeholder:text-stone-400 dark:text-stone-100 dark:placeholder:text-stone-500"
                 disabled={isLoading}
@@ -573,7 +573,7 @@ function AskPageStream() {
                 <button
                   type="button"
                   disabled
-                  title="附件（即将推出）"
+                  title="Attachments (coming soon)"
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-400 disabled:cursor-not-allowed dark:text-stone-600"
                 >
                   <Plus size={14} />
@@ -589,7 +589,7 @@ function AskPageStream() {
                       clearError();
                       setMessages([]);
                     }}
-                    title="清空对话"
+                    title="Clear chat"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-stone-500 dark:hover:bg-stone-900 dark:hover:text-stone-200"
                   >
                     <Trash2 size={13} />
@@ -603,7 +603,7 @@ function AskPageStream() {
                 <button
                   type="button"
                   disabled
-                  title="语音输入（即将推出）"
+                  title="Voice input (coming soon)"
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-400 disabled:cursor-not-allowed dark:text-stone-600"
                 >
                   <Mic size={13} />
@@ -613,7 +613,7 @@ function AskPageStream() {
                   <button
                     type="button"
                     onClick={() => stop()}
-                    title="停止"
+                    title="Stop"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-stone-900 text-white hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
                   >
                     <Square size={12} />
@@ -622,7 +622,7 @@ function AskPageStream() {
                   <button
                     type="submit"
                     disabled={!input.trim()}
-                    aria-label="发送"
+                    aria-label="Send"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-stone-900 text-white transition-colors hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white dark:disabled:bg-stone-800 dark:disabled:text-stone-600"
                   >
                     <ArrowUp size={13} />
@@ -634,14 +634,14 @@ function AskPageStream() {
 
           {messages.length > 0 ? (
             <div className="mt-2 text-center text-[11px] text-stone-400 dark:text-stone-500">
-              AI 可能出错，请核对关键信息
+              AI may be inaccurate. Verify critical information.
             </div>
           ) : null}
 
           {messages.length === 0 && (
             <div className="mt-6">
               <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
-                立即开始
+                Get started
               </div>
               <div className="grid gap-1.5 sm:grid-cols-2">
                 {QUICK_PROMPTS.map((prompt) => (
@@ -741,7 +741,7 @@ function AskPageDaemon() {
               </div>
 
               <h2 className="mt-4 text-2xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-                今日事，我来帮。
+                Your daily AI assistant.
               </h2>
             </section>
           ) : (
@@ -772,7 +772,7 @@ function AskPageDaemon() {
                       <MarkdownRenderer content={cleanText} />
                     ) : isLoading ? (
                       <div className="text-sm leading-7 text-stone-600 dark:text-stone-300">
-                        正在思考…
+                        Thinking...
                       </div>
                     ) : null}
 
@@ -780,7 +780,7 @@ function AskPageDaemon() {
                       <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-stone-500">
                         <IconActionButton
                           icon={RefreshCcw}
-                          label={`重新生成（${currentScope.label}）`}
+                          label={`Regenerate (${currentScope.label})`}
                           onClick={() => {
                             if (!lastUserMessage || isLoading) return;
                             const lastQ = getMessageText(lastUserMessage.parts);
@@ -814,13 +814,13 @@ function AskPageDaemon() {
               {isLoading && messages[messages.length - 1]?.role === "user" && (
                 <div className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500">
                   <Loader2 size={13} className="animate-spin" />
-                  正在思考…
+                  Thinking...
                 </div>
               )}
 
               {errorMessage && (
                 <div className="rounded-md border border-red-200 bg-red-50/70 px-3 py-2 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-                  出错了：{errorMessage}
+                  Error: {errorMessage}
                 </div>
               )}
             </section>
@@ -857,7 +857,7 @@ function AskPageDaemon() {
                 onCompositionEnd={() => {
                   isComposingRef.current = false;
                 }}
-                placeholder="使用 AI 处理各种任务…"
+                placeholder="Ask AI anything..."
                 rows={1}
                 className="min-h-[24px] w-full resize-none border-none bg-transparent text-sm leading-6 text-stone-900 outline-none placeholder:text-stone-400 dark:text-stone-100 dark:placeholder:text-stone-500"
                 disabled={isLoading}
@@ -869,7 +869,7 @@ function AskPageDaemon() {
                 <button
                   type="button"
                   disabled
-                  title="附件（即将推出）"
+                  title="Attachments (coming soon)"
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-400 disabled:cursor-not-allowed dark:text-stone-600"
                 >
                   <Plus size={14} />
@@ -882,7 +882,7 @@ function AskPageDaemon() {
                   <button
                     type="button"
                     onClick={() => reset()}
-                    title="清空对话"
+                    title="Clear chat"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-stone-500 dark:hover:bg-stone-900 dark:hover:text-stone-200"
                   >
                     <Trash2 size={13} />
@@ -896,7 +896,7 @@ function AskPageDaemon() {
                 <button
                   type="button"
                   disabled
-                  title="语音输入（即将推出）"
+                  title="Voice input (coming soon)"
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-400 disabled:cursor-not-allowed dark:text-stone-600"
                 >
                   <Mic size={13} />
@@ -906,7 +906,7 @@ function AskPageDaemon() {
                   <button
                     type="button"
                     onClick={() => stop()}
-                    title="停止"
+                    title="Stop"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-stone-900 text-white hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
                   >
                     <Square size={12} />
@@ -915,7 +915,7 @@ function AskPageDaemon() {
                   <button
                     type="submit"
                     disabled={!input.trim()}
-                    aria-label="发送"
+                    aria-label="Send"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-stone-900 text-white transition-colors hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white dark:disabled:bg-stone-800 dark:disabled:text-stone-600"
                   >
                     <ArrowUp size={13} />
@@ -927,14 +927,14 @@ function AskPageDaemon() {
 
           {messages.length > 0 ? (
             <div className="mt-2 text-center text-[11px] text-stone-400 dark:text-stone-500">
-              AI 可能出错，请核对关键信息
+              AI may be inaccurate. Verify critical information.
             </div>
           ) : null}
 
           {messages.length === 0 && (
             <div className="mt-6">
               <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
-                立即开始
+                Get started
               </div>
               <div className="grid gap-1.5 sm:grid-cols-2">
                 {QUICK_PROMPTS.map((prompt) => (

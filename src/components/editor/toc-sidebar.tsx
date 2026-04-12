@@ -103,7 +103,7 @@ export function TocSidebar({ editor }: TocSidebarProps) {
       <div className="flex items-center justify-between pb-2">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           <List size={14} />
-          <span>目录</span>
+          <span>Contents</span>
         </div>
         <button
           type="button"
@@ -119,7 +119,7 @@ export function TocSidebar({ editor }: TocSidebarProps) {
       <nav className="space-y-px">
         {headings.length === 0 && (
           <p className="px-2 py-1 text-xs text-stone-400 dark:text-stone-500">
-            暂无标题
+            No headings
           </p>
         )}
         {headings.map((h, i) => (

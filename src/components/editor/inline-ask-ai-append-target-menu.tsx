@@ -43,7 +43,7 @@ export function InlineAskAiAppendTargetMenu({
     if (!data) return [];
     return (data.notes ?? []).map((n) => ({
       id: n.id,
-      title: n.title || "未命名笔记",
+      title: n.title || "Untitled note",
     }));
   }, [data]);
 
@@ -84,18 +84,18 @@ export function InlineAskAiAppendTargetMenu({
           autoFocus
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="搜索要追加到的 note..."
+          placeholder="Search notes to append to..."
           className="w-full bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400 dark:text-stone-100 dark:placeholder:text-stone-500"
         />
       </div>
       <div className="max-h-52 overflow-y-auto py-1">
         {isLoading && items.length === 0 ? (
           <div className="flex items-center gap-2 px-3 py-3 text-sm text-stone-500 dark:text-stone-400">
-            <Loader2 size={13} className="animate-spin" /> 搜索中…
+            <Loader2 size={13} className="animate-spin" /> Searching...
           </div>
         ) : items.length === 0 ? (
           <div className="px-3 py-3 text-sm text-stone-500 dark:text-stone-400">
-            没有匹配的 note
+            No matching notes
           </div>
         ) : (
           <ul

@@ -21,22 +21,22 @@ const CALLOUT_TONES = [
   {
     id: "tip",
     icon: Lightbulb,
-    label: "提示",
+    label: "Tip",
   },
   {
     id: "pinned",
     icon: Pin,
-    label: "重点",
+    label: "Important",
   },
   {
     id: "warning",
     icon: AlertTriangle,
-    label: "提醒",
+    label: "Warning",
   },
   {
     id: "success",
     icon: CheckCircle2,
-    label: "完成",
+    label: "Done",
   },
 ] as const;
 
@@ -66,7 +66,7 @@ function CalloutBlockView({ node, updateAttributes }: NodeViewProps) {
         type="button"
         contentEditable={false}
         className="notion-callout-trigger"
-        title={`切换为${nextTone.label}`}
+        title={`Switch to ${nextTone.label}`}
         onClick={() => updateAttributes({ tone: nextTone.id })}
       >
         <ToneIcon size={16} />

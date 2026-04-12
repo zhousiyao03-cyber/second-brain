@@ -49,34 +49,34 @@ export const learningRouter = router({
   seedPresets: protectedProcedure.mutation(async ({ ctx }) => {
     const presets = [
       {
-        title: "数据库设计与优化",
-        description: "从关系型数据库基础到索引优化、事务、分库分表",
+        title: "Database Design & Optimization",
+        description: "From relational database fundamentals to index optimization, transactions, and sharding",
         category: "database" as const,
       },
       {
-        title: "API 设计与 Node.js 后端",
-        description: "RESTful 与 tRPC、中间件、认证、错误处理",
+        title: "API Design & Node.js Backend",
+        description: "RESTful & tRPC, middleware, authentication, error handling",
         category: "backend" as const,
       },
       {
-        title: "DevOps 基础",
-        description: "Docker、CI/CD、监控、日志、部署策略",
+        title: "DevOps Fundamentals",
+        description: "Docker, CI/CD, monitoring, logging, deployment strategies",
         category: "devops" as const,
       },
       {
-        title: "AI Agent 开发",
-        description: "LLM API、Prompt Engineering、RAG、Tool Use、Agent 架构",
+        title: "AI Agent Development",
+        description: "LLM API, Prompt Engineering, RAG, Tool Use, Agent architecture",
         category: "ai" as const,
       },
       {
-        title: "系统设计",
-        description: "架构模式、可扩展性、缓存、消息队列、微服务",
+        title: "System Design",
+        description: "Architecture patterns, scalability, caching, message queues, microservices",
         category: "system-design" as const,
       },
     ];
 
     const existing = await db.select().from(learningPaths).where(eq(learningPaths.userId, ctx.userId));
-    if (existing.length > 0) return { seeded: false, message: "已有学习路径" };
+    if (existing.length > 0) return { seeded: false, message: "Learning paths already exist" };
 
     for (const preset of presets) {
       const id = crypto.randomUUID();

@@ -67,7 +67,7 @@ async function resolvePinnedSources(
     for (const row of rows) {
       items.push({
         id: row.id,
-        title: row.title ?? "未命名笔记",
+        title: row.title ?? "Untitled note",
         type: "note",
         content: row.content ?? "",
       });
@@ -97,7 +97,7 @@ async function resolvePinnedSources(
         (row.url ?? "");
       items.push({
         id: row.id,
-        title: row.title ?? row.url ?? "未命名收藏",
+        title: row.title ?? row.url ?? "Untitled bookmark",
         type: "bookmark",
         content: body,
       });

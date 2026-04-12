@@ -71,7 +71,7 @@ export function createEditorCommandGroups(
         {
           id: "ask-ai",
           title: "Ask AI",
-          description: "用 AI 帮你写或回答",
+          description: "Use AI to write or answer",
           keywords: ["ai", "ask", "gpt", "claude", "问 ai", "人工智能", "写作"],
           icon: Sparkles,
           shortcutHint: "/ai",
@@ -94,12 +94,12 @@ export function createEditorCommandGroups(
     },
     {
       id: "basic",
-      label: "基础块",
+      label: "Basic",
       items: [
         {
           id: "paragraph",
-          title: "正文",
-          description: "普通段落文本",
+          title: "Body text",
+          description: "Plain paragraph text",
           keywords: ["text", "paragraph", "正文", "段落"],
           icon: Type,
           shortcutHint: "T",
@@ -111,8 +111,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "heading-1",
-          title: "标题 1",
-          description: "页面大标题",
+          title: "Heading 1",
+          description: "Page title",
           keywords: ["h1", "heading", "标题", "大标题"],
           icon: Heading1,
           shortcutHint: "#",
@@ -124,8 +124,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "heading-2",
-          title: "标题 2",
-          description: "章节标题",
+          title: "Heading 2",
+          description: "Section title",
           keywords: ["h2", "heading", "标题", "章节"],
           icon: Heading2,
           shortcutHint: "##",
@@ -137,8 +137,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "heading-3",
-          title: "标题 3",
-          description: "小节标题",
+          title: "Heading 3",
+          description: "Subsection",
           keywords: ["h3", "heading", "标题", "小节"],
           icon: Heading3,
           shortcutHint: "###",
@@ -150,8 +150,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "heading-4",
-          title: "标题 4",
-          description: "段落标题",
+          title: "Heading 4",
+          description: "Paragraph heading",
           keywords: ["h4", "heading", "标题"],
           icon: Heading4,
           shortcutHint: "####",
@@ -163,8 +163,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "heading-5",
-          title: "标题 5",
-          description: "细分标题",
+          title: "Heading 5",
+          description: "Minor heading",
           keywords: ["h5", "heading", "标题"],
           icon: Heading5,
           shortcutHint: "#####",
@@ -176,8 +176,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "heading-6",
-          title: "标题 6",
-          description: "最小标题",
+          title: "Heading 6",
+          description: "Smallest heading",
           keywords: ["h6", "heading", "标题"],
           icon: Heading6,
           shortcutHint: "######",
@@ -191,12 +191,12 @@ export function createEditorCommandGroups(
     },
     {
       id: "lists",
-      label: "列表",
+      label: "Lists",
       items: [
         {
           id: "bullet-list",
-          title: "无序列表",
-          description: "用圆点列出项目",
+          title: "Bullet list",
+          description: "List items with bullets",
           keywords: ["list", "bullet", "列表", "无序"],
           icon: List,
           shortcutHint: "-",
@@ -208,8 +208,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "ordered-list",
-          title: "有序列表",
-          description: "用数字列出项目",
+          title: "Ordered list",
+          description: "List items with numbers",
           keywords: ["list", "ordered", "列表", "有序"],
           icon: ListOrdered,
           shortcutHint: "1.",
@@ -221,8 +221,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "task-list",
-          title: "待办列表",
-          description: "用复选框追踪任务",
+          title: "Task list",
+          description: "Track tasks with checkboxes",
           keywords: ["todo", "task", "checkbox", "待办", "任务"],
           icon: CheckSquare,
           shortcutHint: "[]",
@@ -235,12 +235,12 @@ export function createEditorCommandGroups(
     },
     {
       id: "blocks",
-      label: "块",
+      label: "Blocks",
       items: [
         {
           id: "blockquote",
-          title: "引用",
-          description: "引用块",
+          title: "Quote",
+          description: "Blockquote",
           keywords: ["quote", "blockquote", "引用"],
           icon: Quote,
           shortcutHint: ">",
@@ -253,7 +253,7 @@ export function createEditorCommandGroups(
         {
           id: "callout-block",
           title: "Callout",
-          description: "带强调语气的提示块",
+          description: "Highlighted callout block",
           keywords: ["callout", "tip", "提示", "强调"],
           icon: Lightbulb,
           run: (editor) => {
@@ -265,8 +265,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "toggle-block",
-          title: "折叠列表",
-          description: "可展开/折叠的内容块",
+          title: "Toggle list",
+          description: "Expandable/collapsible content block",
           keywords: ["toggle", "collapse", "折叠", "展开"],
           icon: ListTree,
           run: (editor) => {
@@ -278,8 +278,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "code-block",
-          title: "代码块",
-          description: "带语法高亮的代码块",
+          title: "Code block",
+          description: "Code block with syntax highlighting",
           keywords: ["code", "代码", "代码块"],
           icon: Code2,
           shortcutHint: "```",
@@ -291,8 +291,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "table",
-          title: "表格",
-          description: "插入表格",
+          title: "Table",
+          description: "Insert a table",
           keywords: ["table", "表格", "grid"],
           icon: Table,
           run: (editor) => {
@@ -306,8 +306,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "excalidraw",
-          title: "画板",
-          description: "插入画板（流程图/思维导图/架构图）",
+          title: "Canvas",
+          description: "Insert a canvas (flowcharts/mind maps/architecture diagrams)",
           keywords: ["draw", "excalidraw", "diagram", "画板", "画图", "流程图", "思维导图", "架构图"],
           icon: PenTool,
           run: (editor) => {
@@ -317,8 +317,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "mermaid",
-          title: "Mermaid 图表",
-          description: "插入 Mermaid 图表（流程图/序列图/甘特图）",
+          title: "Mermaid diagram",
+          description: "Insert a Mermaid diagram (flowcharts/sequence/Gantt)",
           keywords: ["mermaid", "diagram", "flowchart", "sequence", "gantt", "图表", "流程图", "序列图", "甘特图", "时序图"],
           icon: GitBranch,
           run: (editor) => {
@@ -328,8 +328,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "toc",
-          title: "目录",
-          description: "自动生成文档目录",
+          title: "Table of contents",
+          description: "Auto-generated table of contents",
           keywords: ["toc", "table of contents", "目录", "大纲", "outline"],
           icon: TableOfContents,
           run: (editor) => {
@@ -339,8 +339,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "horizontal-rule",
-          title: "分割线",
-          description: "插入水平分割线",
+          title: "Divider",
+          description: "Insert a horizontal divider",
           keywords: ["divider", "hr", "line", "分割线"],
           icon: Minus,
           shortcutHint: "---",
@@ -352,12 +352,12 @@ export function createEditorCommandGroups(
     },
     {
       id: "media",
-      label: "媒体",
+      label: "Media",
       items: [
         {
           id: "image-upload",
-          title: "上传图片",
-          description: "从本地文件插入图片",
+          title: "Upload image",
+          description: "Insert an image from a local file",
           keywords: ["image", "upload", "图片", "上传"],
           icon: ImagePlus,
           run: () => {
@@ -366,8 +366,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "image-url",
-          title: "图片链接",
-          description: "通过 URL 嵌入图片",
+          title: "Image URL",
+          description: "Embed an image via URL",
           keywords: ["image", "url", "embed", "图片", "链接"],
           icon: ImageUp,
           run: () => {
@@ -376,8 +376,8 @@ export function createEditorCommandGroups(
         },
         {
           id: "image-row",
-          title: "并排图片",
-          description: "多张图片并排展示，可调整大小",
+          title: "Image row",
+          description: "Display multiple images side by side, resizable",
           keywords: ["image", "gallery", "row", "并排", "图片行", "多图", "横排", "gallery"],
           icon: Columns2,
           run: (editor) => {

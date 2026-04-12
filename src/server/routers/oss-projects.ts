@@ -73,7 +73,7 @@ async function collectProjectMetaBatch(
       if (tagList.includes(project.name)) {
         noteCount++;
         for (const t of tagList) {
-          if (t !== project.name && t !== "源码阅读") {
+          if (t !== project.name && t !== "Source Reading") {
             tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
           }
         }

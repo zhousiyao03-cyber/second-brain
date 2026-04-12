@@ -122,7 +122,7 @@ export default function WorkflowsPage() {
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 mb-4"
         >
           <ArrowLeft size={14} />
-          返回工作流列表
+          Back to workflows
         </button>
 
         <div className="flex items-center justify-between mb-6">
@@ -145,7 +145,7 @@ export default function WorkflowsPage() {
                   : "bg-gray-100 text-gray-500"
               )}
             >
-              {selectedWorkflow.status === "active" ? "活跃" : "草稿"}
+              {selectedWorkflow.status === "active" ? "Active" : "Draft"}
             </span>
             <button
               onClick={() => handleRun(selectedWorkflow.id)}
@@ -157,7 +157,7 @@ export default function WorkflowsPage() {
               ) : (
                 <Play size={14} />
               )}
-              运行
+              Run
             </button>
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function WorkflowsPage() {
 
         {nodes.length === 0 && (
           <div className="text-center py-8 text-gray-400 text-sm">
-            此工作流还没有节点
+            This workflow has no nodes yet
           </div>
         )}
       </div>
@@ -203,7 +203,7 @@ export default function WorkflowsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">工作流</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
         <div className="flex items-center gap-2">
           {workflowsList.length === 0 && (
             <button
@@ -216,7 +216,7 @@ export default function WorkflowsPage() {
               ) : (
                 <Sparkles size={16} />
               )}
-              加载模板
+              Load template
             </button>
           )}
           <button
@@ -224,7 +224,7 @@ export default function WorkflowsPage() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
           >
             <Plus size={16} />
-            新建
+            New
           </button>
         </div>
       </div>
@@ -239,14 +239,14 @@ export default function WorkflowsPage() {
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="工作流名称"
+              placeholder="Workflow name"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
               type="text"
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
-              placeholder="描述（可选）"
+              placeholder="Description (optional)"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="flex gap-2">
@@ -255,14 +255,14 @@ export default function WorkflowsPage() {
                 disabled={!newName.trim() || createWorkflow.isPending}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
               >
-                创建
+                Create
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreateForm(false)}
                 className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-100"
               >
-                取消
+                Cancel
               </button>
             </div>
           </div>
@@ -270,11 +270,11 @@ export default function WorkflowsPage() {
       )}
 
       {isLoading ? (
-        <p className="text-gray-500 text-sm">加载中...</p>
+        <p className="text-gray-500 text-sm">Loading...</p>
       ) : workflowsList.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Workflow size={48} className="mx-auto mb-3 opacity-50" />
-          <p>还没有工作流，创建一个或加载模板</p>
+          <p>No workflows yet. Create one or load a template.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -298,7 +298,7 @@ export default function WorkflowsPage() {
                         : "bg-gray-100 text-gray-500"
                     )}
                   >
-                    {wf.status === "active" ? "活跃" : "草稿"}
+                    {wf.status === "active" ? "Active" : "Draft"}
                   </span>
                 </div>
                 {wf.description && (
@@ -314,7 +314,7 @@ export default function WorkflowsPage() {
                 }}
                 disabled={running === wf.id}
                 className="p-1.5 text-gray-400 hover:text-green-600 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-100"
-                title="运行"
+                title="Run"
               >
                 {running === wf.id ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -328,7 +328,7 @@ export default function WorkflowsPage() {
                   deleteWorkflow.mutate({ id: wf.id });
                 }}
                 className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                title="删除"
+                title="Delete"
               >
                 <Trash2 size={16} />
               </button>

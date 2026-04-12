@@ -47,12 +47,12 @@ export function InlineAskAiMentionMenu({ query, onSelect, onClose }: Props) {
       ...(data.notes ?? []).map((n) => ({
         id: n.id,
         type: "note" as const,
-        title: n.title || "未命名笔记",
+        title: n.title || "Untitled note",
       })),
       ...(data.bookmarks ?? []).map((b) => ({
         id: b.id,
         type: "bookmark" as const,
-        title: b.title || b.url || "未命名收藏",
+        title: b.title || b.url || "Untitled bookmark",
       })),
     ];
   }, [data]);
@@ -98,11 +98,11 @@ export function InlineAskAiMentionMenu({ query, onSelect, onClose }: Props) {
     >
       {isLoading && items.length === 0 ? (
         <div className="flex items-center gap-2 px-3 py-3 text-stone-500 dark:text-stone-400">
-          <Loader2 size={13} className="animate-spin" /> 搜索中…
+          <Loader2 size={13} className="animate-spin" /> Searching...
         </div>
       ) : items.length === 0 ? (
         <div className="px-3 py-3 text-stone-500 dark:text-stone-400">
-          没有匹配的 source
+          No matching sources
         </div>
       ) : (
         <ul role="listbox" aria-label="mention results" className="text-stone-800 dark:text-stone-100">
@@ -129,7 +129,7 @@ export function InlineAskAiMentionMenu({ query, onSelect, onClose }: Props) {
                   <Icon size={13} className="shrink-0 text-stone-400" />
                   <span className="truncate">{item.title}</span>
                   <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide text-stone-400 dark:text-stone-500">
-                    {item.type === "note" ? "笔记" : "收藏"}
+                    {item.type === "note" ? "Note" : "Bookmark"}
                   </span>
                 </button>
               </li>
