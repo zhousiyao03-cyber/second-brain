@@ -293,6 +293,10 @@ Key feature modules:
 - Portfolio: `src/app/(app)/portfolio/**` + `src/server/routers/portfolio.ts`
 - Editor Extensions: `src/components/editor/` (mermaid-block, excalidraw-block, image-row-block, toc-block, toc-sidebar, markdown-table-paste, callout-block, toggle-block, etc.)
 
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+
 ## Development Progress
 
 ### V1 Convergence (Completed)
