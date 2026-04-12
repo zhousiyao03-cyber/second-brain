@@ -1,4 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { after } from "next/server";
 import { z } from "zod/v4";
 import { ASK_AI_SOURCE_SCOPES } from "@/lib/ask-ai";
 import { retrieveAgenticContext } from "@/server/ai/agentic-rag";
@@ -20,6 +21,8 @@ import { bookmarks, notes } from "@/server/db/schema";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
 import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
+import { observe } from "@langfuse/tracing";
+import { langfuseSpanProcessor } from "@/instrumentation";
 
 export const maxDuration = 30;
 
@@ -177,36 +180,40 @@ export async function POST(req: Request) {
     let context: RetrievedKnowledgeItem[] = [];
 
     if (!skipRag) {
-      // SECURITY: RAG must be scoped to the current user. Both
-      // retrieveAgenticContext and retrieveContext are fail-closed and
-      // will return [] if userId is null (e.g. AUTH_BYPASS E2E runs).
-      const agenticContext = await retrieveAgenticContext(userQuery, {
-        scope: sourceScope,
-        userId,
-      });
+      const tracedRetrieval = observe(async () => {
+        const tracedAgenticRag = observe(
+          () => retrieveAgenticContext(userQuery, { scope: sourceScope, userId }),
+          { name: "agentic-rag" },
+        );
+        const agenticContext = await tracedAgenticRag();
 
-      context =
-        agenticContext.length > 0
-          ? agenticContext.map((item) => ({
-              chunkId: item.chunkId,
-              chunkIndex: item.chunkIndex,
-              content: item.content,
-              id: item.sourceId,
-              sectionPath: item.sectionPath,
-              title: item.sourceTitle,
-              type: item.sourceType,
-            }))
-          : (
-              await retrieveContext(userQuery, {
-                scope: sourceScope,
-                userId,
-              })
-            ).map((item) => ({
-              content: item.content,
-              id: item.id,
-              title: item.title,
-              type: item.type,
-            }));
+        if (agenticContext.length > 0) {
+          return agenticContext.map((item) => ({
+            chunkId: item.chunkId,
+            chunkIndex: item.chunkIndex,
+            content: item.content,
+            id: item.sourceId,
+            sectionPath: item.sectionPath,
+            title: item.sourceTitle,
+            type: item.sourceType,
+          }));
+        }
+
+        const tracedKeywordRag = observe(
+          () => retrieveContext(userQuery, { scope: sourceScope, userId }),
+          { name: "keyword-rag-fallback" },
+        );
+        const fallbackContext = await tracedKeywordRag();
+
+        return fallbackContext.map((item) => ({
+          content: item.content,
+          id: item.id,
+          title: item.title,
+          type: item.type,
+        }));
+      }, { name: "rag-retrieval" });
+
+      context = await tracedRetrieval();
     }
 
     const pinnedSources = await resolvePinnedSources(
@@ -229,6 +236,9 @@ export async function POST(req: Request) {
     if (process.env.AUTH_BYPASS !== "true" && userId) {
       void recordAiUsage(userId).catch(() => undefined);
     }
+
+    // Flush Langfuse traces after response is sent
+    after(langfuseSpanProcessor.forceFlush());
 
     return response;
   } catch (error) {
