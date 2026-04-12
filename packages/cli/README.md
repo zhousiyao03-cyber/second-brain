@@ -26,7 +26,7 @@ Press Ctrl+C to stop.
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--url <url>` | Second Brain server URL | `https://second-brain-self-alpha.vercel.app` |
+| `--url <url>` | Second Brain server URL | `https://www.knosi.xyz` |
 | `--model <model>` | Override Claude model | (from task) |
 | `--once` | Process one round then exit | `false` |
 | `--claude-bin <path>` | Path to Claude CLI binary | `claude` |

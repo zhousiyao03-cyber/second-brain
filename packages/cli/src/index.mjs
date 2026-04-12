@@ -20,7 +20,7 @@ function getArg(flag) {
   return idx !== -1 && idx + 1 < args.length ? args[idx + 1] : undefined;
 }
 
-const serverUrl = getArg("--url") || "https://second-brain-self-alpha.vercel.app";
+const serverUrl = getArg("--url") || "https://www.knosi.xyz";
 const isOnce = args.includes("--once");
 const claudeBinArg = getArg("--claude-bin") || "claude";
 
