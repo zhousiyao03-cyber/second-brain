@@ -106,6 +106,7 @@ export default async function DashboardPage() {
     recentProjectNotes,
     pendingTodos,
     todayTodos,
+    tokenStats: null,
   };
 
   return (
