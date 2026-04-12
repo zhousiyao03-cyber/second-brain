@@ -68,11 +68,11 @@ function TocNodeView({ editor }: NodeViewProps) {
   return (
     <NodeViewWrapper data-toc-block="true" contentEditable={false}>
       <div className="notion-toc">
-        <div className="notion-toc-title">目录</div>
+        <div className="notion-toc-title">Table of Contents</div>
 
         {entries.length === 0 ? (
           <p className="notion-toc-item" style={{ cursor: "default" }}>
-            暂无标题
+            No headings
           </p>
         ) : (
           entries.map((entry) => (
@@ -82,7 +82,7 @@ function TocNodeView({ editor }: NodeViewProps) {
               className={`notion-toc-item ${indentClass(entry.level)}`}
               onClick={() => handleClick(entry.pos)}
             >
-              {entry.text || "（空标题）"}
+              {entry.text || "(empty heading)"}
             </button>
           ))
         )}

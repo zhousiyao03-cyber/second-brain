@@ -30,17 +30,17 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <TrendingUp className="mb-4 h-8 w-8 text-stone-300 dark:text-stone-700" />
       <p className="mb-2 text-sm text-stone-400 dark:text-stone-500">
-        还没有持仓
+        No holdings yet
       </p>
       <p className="mb-6 text-xs text-stone-400 dark:text-stone-500">
-        添加你的第一个持仓标的开始追踪
+        Add your first holding to start tracking
       </p>
       <button
         onClick={onAdd}
         className="inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
       >
         <Plus className="h-3.5 w-3.5" />
-        添加持仓
+        Add Holding
       </button>
     </div>
   );
@@ -78,15 +78,15 @@ function AddHoldingModal({
     const qty = parseFloat(draft.quantity);
     const cost = parseFloat(draft.costPrice);
     if (!draft.symbol || !draft.name) {
-      setError("标的代码和名称不能为空");
+      setError("Symbol and name are required");
       return;
     }
     if (isNaN(qty) || qty <= 0) {
-      setError("数量必须大于 0");
+      setError("Quantity must be greater than 0");
       return;
     }
     if (isNaN(cost) || cost <= 0) {
-      setError("成本价必须大于 0");
+      setError("Cost price must be greater than 0");
       return;
     }
     addMutation.mutate({
@@ -103,7 +103,7 @@ function AddHoldingModal({
       <div className="w-full max-w-md rounded-md border border-stone-200 bg-white p-6 shadow-xl dark:border-stone-800 dark:bg-stone-900">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            添加持仓
+            Add Holding
           </h2>
           <button onClick={onClose} className="text-stone-400 transition-colors hover:text-stone-600">
             <X className="h-4 w-4" />
@@ -113,7 +113,7 @@ function AddHoldingModal({
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="symbol" className="mb-1 block text-[11px] text-stone-500">标的代码 *</label>
+              <label htmlFor="symbol" className="mb-1 block text-[11px] text-stone-500">Symbol *</label>
               <input
                 id="symbol"
                 className="w-full rounded-md border border-stone-200 bg-white/70 px-3 py-1.5 text-sm uppercase focus:border-stone-400 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -123,7 +123,7 @@ function AddHoldingModal({
               />
             </div>
             <div>
-              <label htmlFor="assetType" className="mb-1 block text-[11px] text-stone-500">类型 *</label>
+              <label htmlFor="assetType" className="mb-1 block text-[11px] text-stone-500">Type *</label>
               <select
                 id="assetType"
                 className="w-full rounded-md border border-stone-200 bg-white/70 px-3 py-1.5 text-sm focus:border-stone-400 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -132,14 +132,14 @@ function AddHoldingModal({
                   setDraft((d) => ({ ...d, assetType: e.target.value as AssetType }))
                 }
               >
-                <option value="stock">美股</option>
-                <option value="crypto">加密货币</option>
+                <option value="stock">Stock</option>
+                <option value="crypto">Crypto</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label htmlFor="name" className="mb-1 block text-[11px] text-stone-500">名称 *</label>
+            <label htmlFor="name" className="mb-1 block text-[11px] text-stone-500">Name *</label>
             <input
               id="name"
               className="w-full rounded-md border border-stone-200 bg-white/70 px-3 py-1.5 text-sm focus:border-stone-400 focus:outline-none dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -151,7 +151,7 @@ function AddHoldingModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="quantity" className="mb-1 block text-[11px] text-stone-500">数量 *</label>
+              <label htmlFor="quantity" className="mb-1 block text-[11px] text-stone-500">Quantity *</label>
               <input
                 id="quantity"
                 type="number"
@@ -164,7 +164,7 @@ function AddHoldingModal({
               />
             </div>
             <div>
-              <label htmlFor="costPrice" className="mb-1 block text-[11px] text-stone-500">成本价 (USD) *</label>
+              <label htmlFor="costPrice" className="mb-1 block text-[11px] text-stone-500">Cost Price (USD) *</label>
               <input
                 id="costPrice"
                 type="number"
@@ -185,7 +185,7 @@ function AddHoldingModal({
             disabled={addMutation.isPending}
             className="w-full rounded-md bg-stone-900 py-1.5 text-xs font-medium text-white transition-colors hover:bg-stone-800 disabled:opacity-50 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
           >
-            {addMutation.isPending ? "保存中..." : "保存"}
+            {addMutation.isPending ? "Saving..." : "保存"}
           </button>
         </form>
       </div>
@@ -224,12 +224,12 @@ function EditHoldingModal({
     const costPrice = parseFloat(draft.costPrice);
 
     if (Number.isNaN(quantity) || quantity <= 0) {
-      setError("数量必须大于 0");
+      setError("Quantity must be greater than 0");
       return;
     }
 
     if (Number.isNaN(costPrice) || costPrice <= 0) {
-      setError("成本价必须大于 0");
+      setError("Cost price must be greater than 0");
       return;
     }
 
@@ -261,7 +261,7 @@ function EditHoldingModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="edit-quantity" className="mb-1 block text-[11px] text-stone-500">
-                数量 *
+                Quantity *
               </label>
               <input
                 id="edit-quantity"
@@ -275,7 +275,7 @@ function EditHoldingModal({
             </div>
             <div>
               <label htmlFor="edit-cost-price" className="mb-1 block text-[11px] text-stone-500">
-                成本价 (USD) *
+                Cost Price (USD) *
               </label>
               <input
                 id="edit-cost-price"
@@ -296,7 +296,7 @@ function EditHoldingModal({
             disabled={updateMutation.isPending}
             className="w-full rounded-md bg-stone-900 py-1.5 text-xs font-medium text-white transition-colors hover:bg-stone-800 disabled:opacity-50 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
           >
-            {updateMutation.isPending ? "保存中..." : "保存修改"}
+            {updateMutation.isPending ? "Saving..." : "保存修改"}
           </button>
         </form>
       </div>
@@ -978,7 +978,7 @@ export function PortfolioClient() {
               className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-stone-200 py-2 text-xs text-stone-400 transition-colors hover:border-stone-300 hover:text-stone-600 dark:border-stone-800 dark:hover:border-stone-700 dark:hover:text-stone-300"
             >
               <Plus className="h-3.5 w-3.5" />
-              添加持仓
+              Add Holding
             </button>
           </div>
 

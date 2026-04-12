@@ -8,7 +8,7 @@
  *   pnpm usage:report                          # 单次同步
  *
  * 环境变量（可选）：
- *   SECOND_BRAIN_URL — 线上地址（默认 https://second-brain-self-alpha.vercel.app）
+ *   SECOND_BRAIN_URL — 线上地址（默认 https://www.knosi.xyz）
  */
 
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, unlinkSync } from "fs";
@@ -20,7 +20,7 @@ import {
   getNextDailyPingAt,
 } from "./daily-ping-scheduler.mjs";
 
-const SERVER_URL = process.env.SECOND_BRAIN_URL || "https://second-brain-self-alpha.vercel.app";
+const SERVER_URL = process.env.SECOND_BRAIN_URL || "https://www.knosi.xyz";
 const SCAN_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const IS_ONCE = process.argv.includes("--once");
 

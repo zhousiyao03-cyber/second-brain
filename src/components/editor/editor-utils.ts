@@ -84,11 +84,11 @@ export function extractPlainTextFromContent(content?: JSONContent) {
 
 export function validateImageFile(file: File) {
   if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-    return "当前只支持 PNG、JPG、WEBP 和 GIF 图片。";
+    return "Only PNG, JPG, WEBP and GIF images are supported.";
   }
 
   if (file.size > MAX_IMAGE_FILE_SIZE) {
-    return "单张图片不能超过 5MB。";
+    return "Image must be under 5MB.";
   }
 
   return null;
@@ -104,15 +104,15 @@ export async function uploadImageFile(file: File): Promise<string> {
   });
 
   if (!response.ok) {
-    if (response.status === 401) throw new Error("请先登录后再上传图片。");
-    if (response.status === 413) throw new Error("单张图片不能超过 5MB。");
+    if (response.status === 401) throw new Error("Please sign in to upload images.");
+    if (response.status === 413) throw new Error("Image must be under 5MB.");
     if (response.status === 415)
-      throw new Error("当前只支持 PNG、JPG、WEBP 和 GIF 图片。");
-    throw new Error("图片上传失败，请重试。");
+      throw new Error("Only PNG, JPG, WEBP and GIF images are supported.");
+    throw new Error("Image upload failed. Please try again.");
   }
 
   const data = (await response.json()) as { url?: string };
-  if (!data.url) throw new Error("图片上传失败，请重试。");
+  if (!data.url) throw new Error("Image upload failed. Please try again.");
   return data.url;
 }
 
@@ -132,7 +132,7 @@ export function insertImagesIntoView(
   for (const source of sources) {
     const imageNode = imageNodeType.create({
       src: source,
-      alt: "插入图片",
+      alt: "Insert image",
     });
 
     transaction = transaction.insert(insertPosition, imageNode);

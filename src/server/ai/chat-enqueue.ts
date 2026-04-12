@@ -9,6 +9,7 @@ import {
   type RetrievedKnowledgeItem,
 } from "@/server/ai/chat-system-prompt";
 import type { AskAiSourceScope } from "@/lib/ask-ai";
+import { observe, updateActiveObservation } from "@langfuse/tracing";
 
 const SKIP_RAG_KEYWORDS = ["不用搜索", "直接回答", "不需要搜索", "不要搜索"];
 
@@ -35,34 +36,53 @@ export async function enqueueChatTask({
   let context: RetrievedKnowledgeItem[] = [];
 
   if (!skipRag) {
-    // SECURITY: scope RAG to this user. Fail-closed inside the helpers.
-    const agenticContext = await retrieveAgenticContext(userQuery, {
-      scope: sourceScope,
-      userId,
-    });
+    const tracedRetrieval = observe(async () => {
+      updateActiveObservation({ input: { query: userQuery, sourceScope } }, { asType: "retriever" });
 
-    if (agenticContext.length > 0) {
-      context = agenticContext.map((item) => ({
-        chunkId: item.chunkId,
-        chunkIndex: item.chunkIndex,
-        content: item.content,
-        id: item.sourceId,
-        sectionPath: item.sectionPath,
-        title: item.sourceTitle,
-        type: item.sourceType,
-      }));
-    } else {
-      const fallbackContext = await retrieveContext(userQuery, {
-        scope: sourceScope,
-        userId,
-      });
-      context = fallbackContext.map((item) => ({
+      const tracedAgenticRag = observe(
+        () => retrieveAgenticContext(userQuery, { scope: sourceScope, userId }),
+        { name: "agentic-rag", asType: "retriever" },
+      );
+      const agenticContext = await tracedAgenticRag();
+
+      if (agenticContext.length > 0) {
+        const results = agenticContext.map((item) => ({
+          chunkId: item.chunkId,
+          chunkIndex: item.chunkIndex,
+          content: item.content,
+          id: item.sourceId,
+          score: item.score,
+          sectionPath: item.sectionPath,
+          title: item.sourceTitle,
+          type: item.sourceType,
+        }));
+        updateActiveObservation({
+          output: results.map(({ content, ...meta }) => meta),
+          metadata: { method: "agentic", chunkCount: results.length },
+        }, { asType: "retriever" });
+        return results;
+      }
+
+      const tracedKeywordRag = observe(
+        () => retrieveContext(userQuery, { scope: sourceScope, userId }),
+        { name: "keyword-rag-fallback", asType: "retriever" },
+      );
+      const fallbackContext = await tracedKeywordRag();
+
+      const results = fallbackContext.map((item) => ({
         content: item.content,
         id: item.id,
         title: item.title,
         type: item.type,
       }));
-    }
+      updateActiveObservation({
+        output: results.map(({ content, ...meta }) => meta),
+        metadata: { method: "keyword-fallback", chunkCount: results.length },
+      }, { asType: "retriever" });
+      return results;
+    }, { name: "rag-retrieval", asType: "retriever" });
+
+    context = await tracedRetrieval();
   }
 
   const systemPrompt = buildSystemPrompt(context, sourceScope);

@@ -122,7 +122,7 @@ export function TableToolbar({ editor }: TableToolbarProps) {
       {/* Add row above */}
       <TableToolbarButton
         onClick={() => editor.chain().focus().addRowBefore().run()}
-        title="在上方插入行"
+        title="Insert row above"
       >
         <div className="relative">
           <Rows3 size={iconSize} className="text-gray-300" />
@@ -137,7 +137,7 @@ export function TableToolbar({ editor }: TableToolbarProps) {
       {/* Add row below */}
       <TableToolbarButton
         onClick={() => editor.chain().focus().addRowAfter().run()}
-        title="在下方插入行"
+        title="Insert row below"
       >
         <div className="relative">
           <Rows3 size={iconSize} className="text-gray-300" />
@@ -154,7 +154,7 @@ export function TableToolbar({ editor }: TableToolbarProps) {
       {/* Add column before */}
       <TableToolbarButton
         onClick={() => editor.chain().focus().addColumnBefore().run()}
-        title="在左侧插入列"
+        title="Insert column left"
       >
         <div className="relative">
           <Columns3 size={iconSize} className="text-gray-300" />
@@ -169,7 +169,7 @@ export function TableToolbar({ editor }: TableToolbarProps) {
       {/* Add column after */}
       <TableToolbarButton
         onClick={() => editor.chain().focus().addColumnAfter().run()}
-        title="在右侧插入列"
+        title="Insert column right"
       >
         <div className="relative">
           <Columns3 size={iconSize} className="text-gray-300" />
@@ -186,7 +186,7 @@ export function TableToolbar({ editor }: TableToolbarProps) {
       {/* Delete row */}
       <TableToolbarButton
         onClick={() => editor.chain().focus().deleteRow().run()}
-        title="删除行"
+        title="Delete row"
         danger
       >
         <Rows3 size={iconSize} className="text-gray-300" />
@@ -195,7 +195,7 @@ export function TableToolbar({ editor }: TableToolbarProps) {
       {/* Delete column */}
       <TableToolbarButton
         onClick={() => editor.chain().focus().deleteColumn().run()}
-        title="删除列"
+        title="Delete column"
         danger
       >
         <Columns3 size={iconSize} className="text-gray-300" />
@@ -206,7 +206,7 @@ export function TableToolbar({ editor }: TableToolbarProps) {
       {/* Toggle header row */}
       <TableToolbarButton
         onClick={() => editor.chain().focus().toggleHeaderRow().run()}
-        title="切换表头行"
+        title="Toggle header row"
       >
         <TableProperties size={iconSize} className="text-gray-300" />
       </TableToolbarButton>
@@ -214,7 +214,7 @@ export function TableToolbar({ editor }: TableToolbarProps) {
       {/* Delete table */}
       <TableToolbarButton
         onClick={() => editor.chain().focus().deleteTable().run()}
-        title="删除表格"
+        title="Delete table"
         danger
       >
         <Trash2 size={iconSize} className="text-gray-300" />

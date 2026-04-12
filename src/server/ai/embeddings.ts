@@ -1,9 +1,11 @@
 import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { embedMany } from "ai";
 
-type EmbeddingProviderMode = "none" | "openai" | "local";
+type EmbeddingProviderMode = "none" | "openai" | "google" | "local";
 
 const DEFAULT_OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
+const DEFAULT_GOOGLE_EMBEDDING_MODEL = "gemini-embedding-001";
 const DEFAULT_LOCAL_EMBEDDING_MODEL = "nomic-embed-text";
 const DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:11434/v1";
 
@@ -16,7 +18,13 @@ function getEmbeddingProviderMode(): EmbeddingProviderMode {
 
   if (explicitMode === "none") return "none";
   if (explicitMode === "openai") return "openai";
+  if (explicitMode === "google" || explicitMode === "gemini") return "google";
   if (explicitMode === "local") return "local";
+
+  // Auto-detect: prefer Google (free tier), then OpenAI, then local
+  if (resolveValue(process.env.GOOGLE_GENERATIVE_AI_API_KEY)) {
+    return "google";
+  }
 
   if (resolveValue(process.env.OPENAI_API_KEY)) {
     return "openai";
@@ -30,6 +38,15 @@ function getEmbeddingProviderMode(): EmbeddingProviderMode {
 }
 
 function getEmbeddingModelId(mode: Exclude<EmbeddingProviderMode, "none">) {
+  if (mode === "google") {
+    return (
+      resolveValue(
+        process.env.GOOGLE_EMBEDDING_MODEL,
+        process.env.EMBEDDING_MODEL
+      ) ?? DEFAULT_GOOGLE_EMBEDDING_MODEL
+    );
+  }
+
   if (mode === "openai") {
     return (
       resolveValue(
@@ -48,21 +65,35 @@ function getEmbeddingModelId(mode: Exclude<EmbeddingProviderMode, "none">) {
   );
 }
 
-function createEmbeddingProvider(mode: Exclude<EmbeddingProviderMode, "none">) {
+function createEmbeddingModel(mode: Exclude<EmbeddingProviderMode, "none">) {
+  const modelId = getEmbeddingModelId(mode);
+
+  if (mode === "google") {
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
+    if (!apiKey) {
+      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY for embeddings.");
+    }
+
+    const provider = createGoogleGenerativeAI({ apiKey });
+    return provider.textEmbeddingModel(modelId);
+  }
+
   if (mode === "openai") {
     if (!process.env.OPENAI_API_KEY?.trim()) {
       throw new Error("Missing OPENAI_API_KEY for embeddings.");
     }
 
-    return createOpenAI({
+    const provider = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
       baseURL: resolveValue(process.env.OPENAI_BASE_URL),
       organization: resolveValue(process.env.OPENAI_ORGANIZATION),
       project: resolveValue(process.env.OPENAI_PROJECT),
     });
+    return provider.embeddingModel(modelId);
   }
 
-  return createOpenAI({
+  // local
+  const provider = createOpenAI({
     name: "local-ai",
     baseURL:
       resolveValue(process.env.AI_BASE_URL, process.env.LOCAL_AI_BASE_URL) ??
@@ -71,6 +102,7 @@ function createEmbeddingProvider(mode: Exclude<EmbeddingProviderMode, "none">) {
       resolveValue(process.env.AI_API_KEY, process.env.LOCAL_AI_API_KEY) ??
       "local",
   });
+  return provider.embeddingModel(modelId);
 }
 
 function normalizeVector(vector: number[]) {
@@ -85,16 +117,16 @@ function normalizeVector(vector: number[]) {
   return vector.map((value) => value / magnitude);
 }
 
-function toVectorBuffer(vector: number[]) {
-  return Buffer.from(new Float32Array(vector).buffer);
-}
-
 export function isEmbeddingEnabled() {
   return getEmbeddingProviderMode() !== "none";
 }
 
 export function getEmbeddingSetupHint() {
   const mode = getEmbeddingProviderMode();
+
+  if (mode === "google") {
+    return "请检查 GOOGLE_GENERATIVE_AI_API_KEY 和 GOOGLE_EMBEDDING_MODEL 是否配置正确。";
+  }
 
   if (mode === "openai") {
     return "请检查 OPENAI_API_KEY 和 OPENAI_EMBEDDING_MODEL 是否配置正确。";
@@ -118,15 +150,14 @@ export async function embedTexts(texts: string[]) {
     return null;
   }
 
-  const provider = createEmbeddingProvider(mode);
-  const modelId = getEmbeddingModelId(mode);
+  const model = createEmbeddingModel(mode);
   const { embeddings } = await embedMany({
-    model: provider.embeddingModel(modelId),
+    model,
     values: texts,
   });
 
   return {
-    model: modelId,
+    model: getEmbeddingModelId(mode),
     vectors: embeddings.map((embedding) => normalizeVector(embedding)),
   };
 }
@@ -145,7 +176,7 @@ export function vectorBufferToArray(buffer: Buffer | Uint8Array | null) {
 }
 
 export function vectorArrayToBuffer(vector: number[]) {
-  return toVectorBuffer(vector);
+  return Buffer.from(new Float32Array(vector).buffer);
 }
 
 export function dotProduct(left: number[], right: number[]) {

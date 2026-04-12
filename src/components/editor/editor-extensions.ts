@@ -48,7 +48,7 @@ export function createEditorExtensions({
     Placeholder.configure({
       placeholder: ({ node }) => {
         if (node.type.name === "heading") {
-          return `标题 ${node.attrs.level}`;
+          return `Heading ${node.attrs.level}`;
         }
 
         return placeholder;

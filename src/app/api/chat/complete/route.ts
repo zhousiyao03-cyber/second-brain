@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { chatTasks } from "@/server/db/schema";
+import { verifyCliToken } from "@/server/ai/cli-auth";
 
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get("authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  if (!token || !(await verifyCliToken(token))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const body = (await request.json()) as {
     taskId: string;
     totalText?: string;

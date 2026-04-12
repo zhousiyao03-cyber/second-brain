@@ -19,7 +19,7 @@
  */
 
 import { logger } from "../logger";
-import { claimNextJob, completeJob, failJob } from "./queue";
+import { claimNextJob, completeJob, failJob, reclaimStaleJobs } from "./queue";
 import { runIndexJobFor } from "../ai/indexer";
 import type { JobSourceType } from "./queue";
 
@@ -66,6 +66,9 @@ export async function processOneJob(): Promise<ProcessResult> {
  * 适合 cron 或手动 tick：一次消费掉一小批，避免长时间占用请求。
  */
 export async function processJobs(max = 10) {
+  // 每次 tick 先回收卡死超过 10 分钟的 running jobs
+  await reclaimStaleJobs(10);
+
   let processed = 0;
   let errors = 0;
   for (let i = 0; i < max; i++) {

@@ -9,6 +9,7 @@ import {
   osProjects,
 } from "@/server/db/schema";
 import { markdownToTiptap } from "@/lib/markdown-to-tiptap";
+import { verifyCliToken } from "@/server/ai/cli-auth";
 
 const SOURCE_READING_FOLDER_NAME = "源码阅读";
 
@@ -51,6 +52,12 @@ async function resolveSourceReadingFolderId(userId: string): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get("authorization") ?? "";
+  const cliToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  if (!cliToken || !(await verifyCliToken(cliToken))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = (await request.json()) as {
     taskId: string;
     result?: string;

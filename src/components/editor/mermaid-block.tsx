@@ -56,7 +56,7 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
         .catch((err) => {
           if (!cancelled) {
             setSvgHtml(null);
-            setError(err instanceof Error ? err.message : "Mermaid 渲染失败");
+            setError(err instanceof Error ? err.message : "Mermaid render failed");
           }
         });
     }, delay);
@@ -173,7 +173,7 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
               onClick={handleStopEditing}
               className="mermaid-block-done-btn"
             >
-              完成
+              Done
             </button>
           </div>
           <textarea
@@ -181,7 +181,7 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
             value={code}
             onChange={handleCodeChange}
             className="mermaid-block-textarea"
-            placeholder={`graph TD\n    A[开始] --> B{判断}\n    B -->|是| C[执行]\n    B -->|否| D[结束]`}
+            placeholder={`graph TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Execute]\n    B -->|No| D[End]`}
             rows={8}
             spellCheck={false}
           />
@@ -209,7 +209,7 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
               }}
             >
               <GitBranch size={20} />
-              <span>点击编辑 Mermaid 图表</span>
+              <span>Click to edit Mermaid diagram</span>
             </div>
           ) : error ? (
             <div className="mermaid-block-error">{error}</div>
@@ -225,7 +225,7 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
                 <button
                   type="button"
                   onClick={openFullscreen}
-                  title="放大查看"
+                  title="Zoom in"
                 >
                   <Maximize2 size={14} />
                 </button>
@@ -233,7 +233,7 @@ function MermaidNodeView({ node, updateAttributes, editor }: NodeViewProps) {
                   <button
                     type="button"
                     onClick={handleStartEditing}
-                    title="编辑代码"
+                    title="Edit code"
                   >
                     <Pencil size={14} />
                   </button>

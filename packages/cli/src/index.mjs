@@ -3,6 +3,7 @@ import { runAuthLogin } from "./commands/auth-login.mjs";
 import { runInstallSkill } from "./commands/install-skill.mjs";
 import { runSaveAiNote } from "./commands/save-ai-note.mjs";
 import { runDaemon } from "./daemon.mjs";
+import { clearConfig } from "./config.mjs";
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -20,6 +21,17 @@ async function main() {
 
   if (command === "auth" && subcommand === "login") {
     await runAuthLogin(rest);
+    return;
+  }
+
+  if (command === "login") {
+    await runAuthLogin(args.slice(1));
+    return;
+  }
+
+  if (command === "logout") {
+    await clearConfig();
+    console.log("✓ Removed saved Knosi CLI credentials.");
     return;
   }
 

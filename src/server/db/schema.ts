@@ -898,3 +898,26 @@ export const daemonHeartbeats = sqliteTable("daemon_heartbeats", {
   lastSeenAt: integer("last_seen_at", { mode: "timestamp" }).notNull(),
   version: text("version"),
 });
+
+// ── CLI Auth Tokens ──────────────────────────────
+// Each user's local CLI daemon authenticates with a personal token.
+// Tokens are generated via the web UI and stored locally by the CLI.
+
+export const cliTokens = sqliteTable(
+  "cli_tokens",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    name: text("name").notNull().default("CLI Daemon"),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+    revokedAt: integer("revoked_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("cli_tokens_hash_idx").on(table.tokenHash),
+    index("cli_tokens_user_idx").on(table.userId),
+  ]
+);

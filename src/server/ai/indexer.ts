@@ -198,7 +198,12 @@ async function syncSourceIndex({
     await db.insert(knowledgeChunks).values(insertedChunks);
 
     const embedded = await embedTexts(nextChunks.map((chunk) => chunk.text)).catch(
-      () => null
+      (error) => {
+        console.warn(
+          `[indexer] embedding failed for ${sourceType}:${sourceId} — ${error instanceof Error ? error.message : String(error)}`
+        );
+        return null;
+      }
     );
 
     if (embedded) {

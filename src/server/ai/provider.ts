@@ -749,6 +749,11 @@ export async function streamChatResponse({
       model: provider(resolveAiSdkModelId("chat", mode)),
       messages,
       system,
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "chat",
+        metadata: { mode },
+      },
     });
 
     return result.toTextStreamResponse();

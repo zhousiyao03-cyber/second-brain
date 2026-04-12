@@ -79,17 +79,17 @@ export const workflowsRouter = router({
   // Seed preset workflow templates
   seedPresets: protectedProcedure.mutation(async ({ ctx }) => {
     const existing = await db.select().from(workflows).where(eq(workflows.userId, ctx.userId));
-    if (existing.length > 0) return { seeded: false, message: "已有工作流" };
+    if (existing.length > 0) return { seeded: false, message: "Workflows already exist" };
 
     const presets = [
       {
-        name: "URL 内容抓取 + 摘要",
-        description: "抓取 URL 内容，自动生成摘要和标签，保存到收藏箱",
+        name: "URL Fetch + Summarize",
+        description: "Fetch URL content, auto-generate summary and tags, save to bookmarks",
         nodes: JSON.stringify([
-          { id: "1", type: "trigger", label: "输入 URL", config: {} },
-          { id: "2", type: "fetch", label: "抓取内容", config: {} },
-          { id: "3", type: "summarize", label: "AI 摘要", config: {} },
-          { id: "4", type: "save", label: "保存收藏", config: {} },
+          { id: "1", type: "trigger", label: "Input URL", config: {} },
+          { id: "2", type: "fetch", label: "Fetch Content", config: {} },
+          { id: "3", type: "summarize", label: "AI Summary", config: {} },
+          { id: "4", type: "save", label: "Save Bookmark", config: {} },
         ]),
         edges: JSON.stringify([
           { from: "1", to: "2" },
@@ -98,13 +98,13 @@ export const workflowsRouter = router({
         ]),
       },
       {
-        name: "每日笔记整理",
-        description: "读取今日笔记，生成摘要，提取待办事项",
+        name: "Daily Note Digest",
+        description: "Read today's notes, generate summary, extract action items",
         nodes: JSON.stringify([
-          { id: "1", type: "trigger", label: "定时触发", config: {} },
-          { id: "2", type: "query", label: "查询今日笔记", config: {} },
-          { id: "3", type: "summarize", label: "AI 整理", config: {} },
-          { id: "4", type: "save", label: "生成日报", config: {} },
+          { id: "1", type: "trigger", label: "Scheduled Trigger", config: {} },
+          { id: "2", type: "query", label: "Query Today's Notes", config: {} },
+          { id: "3", type: "summarize", label: "AI Digest", config: {} },
+          { id: "4", type: "save", label: "Generate Report", config: {} },
         ]),
         edges: JSON.stringify([
           { from: "1", to: "2" },
@@ -113,13 +113,13 @@ export const workflowsRouter = router({
         ]),
       },
       {
-        name: "内容分类归档",
-        description: "对未分类的收藏内容自动分类、打标签",
+        name: "Content Categorization",
+        description: "Auto-categorize and tag uncategorized bookmarks",
         nodes: JSON.stringify([
-          { id: "1", type: "trigger", label: "新收藏触发", config: {} },
-          { id: "2", type: "classify", label: "AI 分类", config: {} },
-          { id: "3", type: "tag", label: "自动打标签", config: {} },
-          { id: "4", type: "save", label: "更新收藏", config: {} },
+          { id: "1", type: "trigger", label: "New Bookmark Trigger", config: {} },
+          { id: "2", type: "classify", label: "AI Classify", config: {} },
+          { id: "3", type: "tag", label: "Auto Tag", config: {} },
+          { id: "4", type: "save", label: "Update Bookmark", config: {} },
         ]),
         edges: JSON.stringify([
           { from: "1", to: "2" },

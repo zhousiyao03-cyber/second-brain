@@ -30,16 +30,16 @@ import {
 const transport = new TextStreamChatTransport({ api: "/api/chat" });
 
 const REWRITE_QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
-  { label: "更简洁", prompt: "让它更简洁，保留核心信息" },
-  { label: "更易读", prompt: "改写得更清晰易读，分段或列表更合适" },
-  { label: "翻译为中文", prompt: "翻译为自然的中文" },
-  { label: "翻译为英文", prompt: "翻译为自然的英文" },
+  { label: "More concise", prompt: "Make it more concise, keep the key information" },
+  { label: "More readable", prompt: "Rewrite to be clearer and more readable, use paragraphs or lists as appropriate" },
+  { label: "Translate to Chinese", prompt: "Translate to natural Chinese" },
+  { label: "Translate to English", prompt: "Translate to natural English" },
 ];
 
 const ASK_QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
-  { label: "总结这篇笔记", prompt: "帮我用 3-5 个要点总结这篇笔记的主要内容" },
-  { label: "列出待办", prompt: "从这篇笔记里抽出所有可操作的 TODO，用 bullet list 输出" },
-  { label: "下一步建议", prompt: "基于这篇笔记的内容，给我 3 个具体的下一步建议" },
+  { label: "Summarize this note", prompt: "Summarize the main content of this note in 3-5 key points" },
+  { label: "Extract TODOs", prompt: "Extract all actionable TODOs from this note, output as a bullet list" },
+  { label: "Next steps", prompt: "Based on the content of this note, give me 3 specific next-step suggestions" },
 ];
 
 export interface InlineAskAiAnchor {
@@ -188,7 +188,7 @@ export function InlineAskAiPopover({
   const sendPrompt = (instruction: string) => {
     if (!instruction.trim() || isLoading) return;
     const finalPrompt = isRewrite
-      ? `请根据下面的指令改写给定文本。只输出改写后的文本本身，不要加任何解释、前言或 markdown 标题。\n\n指令：${instruction}\n\n原文：\n${anchor.selectedText}`
+      ? `Rewrite the given text according to the instruction below. Only output the rewritten text itself, without any explanation, preamble, or markdown headings.\n\nInstruction: ${instruction}\n\nOriginal text:\n${anchor.selectedText}`
       : instruction;
 
     sendMessage(
@@ -333,7 +333,7 @@ export function InlineAskAiPopover({
     } catch (err) {
       setAppendStatus({
         state: "error",
-        message: err instanceof Error ? err.message : "追加失败",
+        message: err instanceof Error ? err.message : "Failed to append",
       });
     }
   };
@@ -375,7 +375,7 @@ export function InlineAskAiPopover({
     >
       <div className="flex items-center gap-2 border-b border-stone-100 px-3 py-2 text-xs text-stone-500 dark:border-stone-800 dark:text-stone-400">
         <Sparkles size={14} />
-        {isRewrite ? "改写选中文本" : "Ask AI"}
+        {isRewrite ? "Rewrite selection" : "Ask AI"}
       </div>
 
       {!lastAssistantText && !isLoading && (
@@ -416,7 +416,7 @@ export function InlineAskAiPopover({
                 <button
                   type="button"
                   onClick={() => handleRemovePinned(source.id)}
-                  aria-label={`移除 ${source.title}`}
+                  aria-label={`Remove ${source.title}`}
                   className="ml-0.5 shrink-0 rounded-full p-0.5 text-sky-600 hover:bg-sky-100 dark:text-sky-300 dark:hover:bg-sky-900/40"
                 >
                   <X size={11} />
@@ -441,8 +441,8 @@ export function InlineAskAiPopover({
           }}
           placeholder={
             isRewrite
-              ? "想怎么改写？（例如：更简洁、翻译为英文、改成列表）"
-              : "问点什么，或用 @ 钉住 note/bookmark 作为上下文..."
+              ? "How to rewrite? (e.g., more concise, translate to English, make a list)"
+              : "Ask anything, or use @ to pin a note/bookmark as context..."
           }
           rows={2}
           disabled={isLoading}
@@ -464,7 +464,7 @@ export function InlineAskAiPopover({
           ) : (
             <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
               <Loader2 size={14} className="animate-spin" />
-              正在思考...
+              Thinking...
             </div>
           )}
         </div>
@@ -472,7 +472,7 @@ export function InlineAskAiPopover({
 
       {error && (
         <div className="border-t border-red-100 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:text-red-400">
-          出错了：{error.message || "未知错误"}
+          Error: {error.message || "Unknown error"}
         </div>
       )}
 
@@ -487,20 +487,20 @@ export function InlineAskAiPopover({
           )}
         >
           {appendStatus.state === "appending" && (
-            <>正在追加到「{appendStatus.title}」…</>
+            <>Appending to "{appendStatus.title}"...</>
           )}
           {appendStatus.state === "appended" && (
-            <>已追加到「{appendStatus.title}」✓</>
+            <>Appended to "{appendStatus.title}" ✓</>
           )}
           {appendStatus.state === "error" && (
-            <>追加失败：{appendStatus.message}</>
+            <>Failed to append: {appendStatus.message}</>
           )}
         </div>
       )}
 
       <div className="flex items-center justify-between gap-2 border-t border-stone-100 px-3 py-2 dark:border-stone-800">
         <div className="text-[11px] text-stone-400 dark:text-stone-500">
-          Enter 发送 · Esc 关闭
+          Enter to send · Esc to close
         </div>
         <div className="flex items-center gap-1.5">
           {isLoading && (
@@ -509,7 +509,7 @@ export function InlineAskAiPopover({
               onClick={() => stop()}
               className="inline-flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
             >
-              <Square size={12} /> 停止
+              <Square size={12} /> Stop
             </button>
           )}
           {lastAssistantText && !isLoading && (
@@ -518,8 +518,8 @@ export function InlineAskAiPopover({
                 type="button"
                 onClick={handleCopy}
                 data-inline-ask-ai-copy
-                aria-label="复制"
-                title={copyStatus === "copied" ? "已复制" : "复制"}
+                aria-label="Copy"
+                title={copyStatus === "copied" ? "Copied" : "Copy"}
                 className="inline-flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
               >
                 {copyStatus === "copied" ? (
@@ -527,14 +527,14 @@ export function InlineAskAiPopover({
                 ) : (
                   <Copy size={12} />
                 )}
-                <span>{copyStatus === "copied" ? "已复制" : "复制"}</span>
+                <span>{copyStatus === "copied" ? "Copied" : "Copy"}</span>
               </button>
               <button
                 type="button"
                 onClick={handleDiscard}
                 className="rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
               >
-                丢弃
+                Discard
               </button>
               {!isRewrite && (
                 <button
@@ -543,7 +543,7 @@ export function InlineAskAiPopover({
                   data-inline-ask-ai-append
                   className="rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
                 >
-                  追加到末尾
+                  Append to end
                 </button>
               )}
               {!isRewrite && (
@@ -557,7 +557,7 @@ export function InlineAskAiPopover({
                     data-inline-ask-ai-append-to-other
                     className="rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900"
                   >
-                    追加到…
+                    Append to...
                   </button>
                   {appendMenuOpen && (
                     <InlineAskAiAppendTargetMenu
@@ -580,7 +580,7 @@ export function InlineAskAiPopover({
                   "dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-stone-300"
                 )}
               >
-                {isRewrite ? "替换" : "插入"}
+                {isRewrite ? "Replace" : "Insert"}
               </button>
             </>
           )}
@@ -589,7 +589,7 @@ export function InlineAskAiPopover({
               type="button"
               onClick={handleSubmit}
               disabled={!input.trim()}
-              aria-label="发送"
+              aria-label="Send"
               className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-stone-900 text-white transition-colors hover:bg-stone-700 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-stone-300 dark:disabled:bg-stone-800 dark:disabled:text-stone-500"
             >
               <ArrowUp size={13} />

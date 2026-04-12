@@ -51,9 +51,9 @@ export function buildBlockActionItems(
   if (block.index > 0) {
     items.push({
       id: "move-up",
-      title: "上移",
-      description: "将当前块向上移动一行",
-      keywords: ["move", "up", "上移"],
+      title: "Move up",
+      description: "Move current block up one row",
+      keywords: ["move", "up"],
       icon: ArrowUp,
       run: (ed) => {
         moveTopLevelBlock(ed, state.targetPos, "up");
@@ -64,9 +64,9 @@ export function buildBlockActionItems(
   if (block.index < editor.state.doc.childCount - 1) {
     items.push({
       id: "move-down",
-      title: "下移",
-      description: "将当前块向下移动一行",
-      keywords: ["move", "down", "下移"],
+      title: "Move down",
+      description: "Move current block down one row",
+      keywords: ["move", "down"],
       icon: ArrowDown,
       run: (ed) => {
         moveTopLevelBlock(ed, state.targetPos, "down");
@@ -84,9 +84,9 @@ export function buildBlockActionItems(
       if (nextNode && (nextNode.type.name === "image" || nextNode.type.name === "imageRowBlock")) {
         items.push({
           id: "merge-with-next",
-          title: "与下方图片并排",
-          description: "合并为并排图片行",
-          keywords: ["merge", "row", "并排"],
+          title: "Merge with image below",
+          description: "Merge into image row",
+          keywords: ["merge", "row"],
           icon: Columns2,
           run: (ed) => {
             const curBlock = getTopLevelBlockContext(ed, state.targetPos);
@@ -124,9 +124,9 @@ export function buildBlockActionItems(
       if (prevNode && (prevNode.type.name === "image" || prevNode.type.name === "imageRowBlock")) {
         items.push({
           id: "merge-with-prev",
-          title: "与上方图片并排",
-          description: "合并为并排图片行",
-          keywords: ["merge", "row", "并排"],
+          title: "Merge with image above",
+          description: "Merge into image row",
+          keywords: ["merge", "row"],
           icon: Columns2,
           run: (ed) => {
             // Re-find prev block at run time
@@ -164,9 +164,9 @@ export function buildBlockActionItems(
   items.push(
     {
       id: "duplicate-block",
-      title: "复制块",
-      description: "复制当前块内容",
-      keywords: ["duplicate", "copy", "复制"],
+      title: "Duplicate block",
+      description: "Duplicate current block content",
+      keywords: ["duplicate", "copy"],
       icon: Copy,
       run: (ed) => {
         duplicateTopLevelBlock(ed, state.targetPos);
@@ -174,9 +174,9 @@ export function buildBlockActionItems(
     },
     {
       id: "delete-block",
-      title: "删除块",
-      description: "删除当前块",
-      keywords: ["delete", "remove", "删除"],
+      title: "Delete block",
+      description: "Delete current block",
+      keywords: ["delete", "remove"],
       icon: Trash2,
       run: (ed) => {
         deleteTopLevelBlock(ed, state.targetPos);
@@ -206,8 +206,8 @@ export function buildBlockActionItems(
       .map((item) => ({
         ...item,
         id: `transform-${item.id}`,
-        title: `转为${item.title}`,
-        description: `将当前块转换为${item.title}`,
+        title: `Convert to ${item.title}`,
+        description: `Convert current block to ${item.title}`,
         run: (ed: TiptapEditorInstance) => {
           focusTopLevelBlock(ed, state.targetPos);
           item.run(ed);

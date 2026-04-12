@@ -11,6 +11,9 @@
     "src/",
     "templates/"
   ],
+  "dependencies": {
+    "open": "^10.1.0"
+  },
   "engines": {
     "node": ">=20"
   },

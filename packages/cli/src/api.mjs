@@ -3,18 +3,32 @@
  */
 
 let serverUrl = "";
+let authToken = "";
 
 export function configure(url) {
   serverUrl = url.replace(/\/+$/, "");
 }
 
+export function setAuthToken(token) {
+  authToken = token;
+}
+
+function authHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+  return headers;
+}
+
 export async function claimTask(taskType) {
   const res = await fetch(`${serverUrl}/api/chat/claim`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ taskType }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("AUTH_FAILED");
+    return null;
+  }
   const data = await res.json();
   return data.task ?? null;
 }
@@ -23,7 +37,7 @@ export async function pushChatProgress(taskId, messages) {
   if (messages.length === 0) return;
   await fetch(`${serverUrl}/api/chat/progress`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ taskId, messages }),
   });
 }
@@ -38,7 +52,7 @@ export async function completeTask(taskId, { totalText, structuredResult, error 
   }
   const res = await fetch(`${serverUrl}/api/chat/complete`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -49,7 +63,25 @@ export async function completeTask(taskId, { totalText, structuredResult, error 
 export async function sendHeartbeat(kind) {
   await fetch(`${serverUrl}/api/daemon/ping`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ kind, version: "@knosi/cli" }),
   }).catch(() => {});
+}
+
+export async function createAuthSession(serverUrl) {
+  const res = await fetch(`${serverUrl}/api/cli/auth/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ serverUrl }),
+  });
+  if (!res.ok) throw new Error(`Failed to create auth session: ${res.status}`);
+  return res.json();
+}
+
+export async function pollAuthSession(serverUrl, sessionId) {
+  const res = await fetch(
+    `${serverUrl}/api/cli/auth/poll?session_id=${encodeURIComponent(sessionId)}`
+  );
+  if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
+  return res.json();
 }

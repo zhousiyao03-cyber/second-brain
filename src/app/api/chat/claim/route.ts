@@ -2,10 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, and, lt } from "drizzle-orm";
 import { db } from "@/server/db";
 import { chatTasks } from "@/server/db/schema";
+import { verifyCliToken } from "@/server/ai/cli-auth";
 
 const ZOMBIE_TIMEOUT_MS = 5 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
+  // Authenticate the daemon via CLI token
+  const authHeader = request.headers.get("authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+
+  const userId = token ? await verifyCliToken(token) : null;
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Invalid or missing CLI token. Run `knosi` to authenticate." },
+      { status: 401 }
+    );
+  }
+
   let taskType: "chat" | "structured" = "chat";
   try {
     const body = await request.json();
@@ -14,7 +29,7 @@ export async function POST(request: NextRequest) {
     // empty body = default to chat
   }
 
-  // Reclaim zombies for this task type
+  // Reclaim zombies for this task type (scoped to this user)
   const zombieCutoff = new Date(Date.now() - ZOMBIE_TIMEOUT_MS);
   await db
     .update(chatTasks)
@@ -23,14 +38,22 @@ export async function POST(request: NextRequest) {
       and(
         eq(chatTasks.status, "running"),
         eq(chatTasks.taskType, taskType),
+        eq(chatTasks.userId, userId),
         lt(chatTasks.startedAt, zombieCutoff)
       )
     );
 
+  // Only claim tasks belonging to the authenticated user
   const [task] = await db
     .select()
     .from(chatTasks)
-    .where(and(eq(chatTasks.status, "queued"), eq(chatTasks.taskType, taskType)))
+    .where(
+      and(
+        eq(chatTasks.status, "queued"),
+        eq(chatTasks.taskType, taskType),
+        eq(chatTasks.userId, userId)
+      )
+    )
     .orderBy(chatTasks.createdAt)
     .limit(1);
 

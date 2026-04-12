@@ -262,7 +262,7 @@ function ImageRowNodeView({ node, updateAttributes, editor, getPos }: NodeViewPr
             }}
           >
             <ImagePlus size={20} />
-            <span>添加图片</span>
+            <span>Add image</span>
           </button>
         )}
       </div>

@@ -19,7 +19,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { processJobs } from "@/server/jobs/worker";
 
-export async function POST(request: Request) {
+async function handle(request: Request) {
   if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -32,14 +32,20 @@ export async function POST(request: Request) {
   return NextResponse.json(result);
 }
 
+export const GET = handle;
+export const POST = handle;
+
 async function isAuthorized(request: Request): Promise<boolean> {
   if (process.env.AUTH_BYPASS === "true") return true;
 
+  const header = request.headers.get("authorization");
+
+  // Vercel Cron 自动注入 CRON_SECRET
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && header === `Bearer ${cronSecret}`) return true;
+
   const token = process.env.JOBS_TICK_TOKEN;
-  if (token) {
-    const header = request.headers.get("authorization");
-    if (header === `Bearer ${token}`) return true;
-  }
+  if (token && header === `Bearer ${token}`) return true;
 
   const session = await auth();
   return !!session?.user?.id;

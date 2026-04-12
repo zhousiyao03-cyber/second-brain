@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
-import { configure, claimTask, sendHeartbeat } from "./api.mjs";
+import { configure, claimTask, sendHeartbeat, setAuthToken } from "./api.mjs";
+import { getDefaultBaseUrl, loadConfig } from "./config.mjs";
 import { setClaudeBin } from "./spawn-claude.mjs";
 import { handleChatTask } from "./handler-chat.mjs";
 import { handleStructuredTask } from "./handler-structured.mjs";
@@ -27,7 +28,8 @@ function ts() {
 }
 
 export async function runDaemon(args) {
-  const serverUrl = getArg(args, "--url") || "https://second-brain-self-alpha.vercel.app";
+  const config = await loadConfig();
+  const serverUrl = getArg(args, "--url") || config?.baseUrl || getDefaultBaseUrl();
   const isOnce = args.includes("--once");
   const claudeBinArg = getArg(args, "--claude-bin") || "claude";
 
@@ -37,7 +39,13 @@ export async function runDaemon(args) {
   const MAX_CONCURRENT_CHAT = 3;
   const MAX_CONCURRENT_STRUCTURED = 5;
 
+  if (!config?.accessToken) {
+    console.error("✗ Not authenticated. Run `knosi auth login` first.");
+    process.exit(1);
+  }
+
   configure(serverUrl);
+  setAuthToken(config.accessToken);
   setClaudeBin(claudeBinArg);
 
   if (!checkClaude(claudeBinArg)) process.exit(1);

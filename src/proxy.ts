@@ -16,7 +16,6 @@ export default auth((req) => {
     pathname === "/register" ||
     pathname.startsWith("/oauth/authorize") ||
     pathname.startsWith("/share/") ||
-    pathname === "/manifest.webmanifest" ||
     pathname.startsWith("/icon") ||
     pathname.startsWith("/apple-icon") ||
     pathname.startsWith("/149e9513-01fa-4fb0-aad4-566afd725d1b/") ||
@@ -35,6 +34,7 @@ export default auth((req) => {
     pathname === "/api/chat/progress" ||
     pathname === "/api/chat/complete" ||
     pathname.startsWith("/api/cron/") ||
+    pathname.startsWith("/api/jobs/") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 
@@ -51,5 +51,7 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|webmanifest)$).*)",
+  ],
 };

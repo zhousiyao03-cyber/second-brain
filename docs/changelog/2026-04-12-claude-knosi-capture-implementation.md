@@ -16,7 +16,7 @@ Key changes:
   - new `oauth_authorization_codes`, `oauth_refresh_tokens`, `oauth_access_tokens` tables
   - `src/server/integrations/oauth-clients.ts`
   - `src/server/integrations/oauth.ts`
-  - local Drizzle migration `drizzle/0029_claude_knosi_capture.sql`
+  - local Drizzle migration `drizzle/0030_claude_knosi_capture.sql`
   - production rollout artifacts:
     - `scripts/db/2026-04-12-claude-knosi-capture.sql`
     - `scripts/db/apply-2026-04-12-claude-knosi-capture-rollout.mjs`
@@ -85,8 +85,8 @@ Files touched:
 - `src/server/integrations/knowledge-read.test.mjs`
 - `src/server/integrations/mcp-tools.ts`
 - `src/server/integrations/mcp-tools.test.mjs`
-- `drizzle/0029_claude_knosi_capture.sql`
-- `drizzle/meta/0029_snapshot.json`
+- `drizzle/0030_claude_knosi_capture.sql`
+- `drizzle/meta/0030_snapshot.json`
 - `drizzle/meta/_journal.json`
 - `scripts/db/2026-04-12-claude-knosi-capture.sql`
 - `scripts/db/apply-2026-04-12-claude-knosi-capture-rollout.mjs`

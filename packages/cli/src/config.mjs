@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -33,4 +33,12 @@ export async function updateConfig(patch) {
   const next = { ...current, ...patch };
   await saveConfig(next);
   return next;
+}
+
+export async function clearConfig() {
+  try {
+    await unlink(CONFIG_PATH);
+  } catch {
+    // ignore cleanup failures
+  }
 }

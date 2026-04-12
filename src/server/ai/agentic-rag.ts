@@ -1,4 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
+import MiniSearch from "minisearch";
 import type { AskAiSourceScope } from "@/lib/ask-ai";
 import { db } from "../db";
 import {
@@ -7,6 +8,7 @@ import {
 } from "../db/schema";
 import { dotProduct, embedTexts, vectorBufferToArray } from "./embeddings";
 import { ensureKnowledgeBaseSeeded } from "./indexer";
+import { tokenize, tokenizeForIndex } from "./tokenizer";
 
 export interface AgenticRetrievalResult {
   blockType: string | null;
@@ -25,99 +27,20 @@ interface QueryProfile {
   preferredType: "note" | "bookmark" | null;
   prefersRecent: boolean;
   prefersSummary: boolean;
-  terms: string[];
+  tokens: string[];
 }
 
 const KEYWORD_LIMIT = 18;
 const SEMANTIC_LIMIT = 18;
 const SEED_LIMIT = 8;
 const FINAL_LIMIT = 16;
-const MIN_TERM_LENGTH = 2;
-const MAX_CJK_TERM_LENGTH = 4;
 const RECENT_QUERY_REGEX = /最近|最新|近期|刚刚|这几天|最近的/;
 const SUMMARY_QUERY_REGEX = /总结|概括|汇总|回顾|梳理|整理|盘点|归纳/;
 const NOTES_QUERY_REGEX = /笔记|note/;
 const BOOKMARKS_QUERY_REGEX = /收藏|书签|链接|网址|bookmark/;
-const LATIN_TERM_REGEX = /[a-z0-9][a-z0-9-]{1,}/gi;
-const CJK_SEGMENT_REGEX = /[\u3400-\u9fff]+/g;
-
-const QUERY_NOISE_PATTERNS = [
-  /帮我/g,
-  /一下/g,
-  /请问/g,
-  /麻烦/g,
-  /可以/g,
-  /能够/g,
-  /能不能/g,
-  /一下子/g,
-  /我的/g,
-  /这个/g,
-  /那个/g,
-  /请/g,
-];
-
-const GENERIC_CJK_TERMS = new Set([
-  "一下",
-  "帮我",
-  "请问",
-  "麻烦",
-  "可以",
-  "能够",
-  "最近",
-  "这个",
-  "那个",
-  "我的",
-  "一下子",
-]);
 
 function normalizeText(text: string | null | undefined) {
   return (text ?? "").toLowerCase().replace(/\s+/g, " ").trim();
-}
-
-function uniqueTerms(terms: string[]) {
-  return [...new Set(terms.filter((term) => term.length >= MIN_TERM_LENGTH))]
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 18);
-}
-
-function extractAsciiTerms(query: string) {
-  return uniqueTerms(query.match(LATIN_TERM_REGEX) ?? []);
-}
-
-function cleanCjkSegment(segment: string) {
-  let cleaned = segment;
-
-  for (const pattern of QUERY_NOISE_PATTERNS) {
-    cleaned = cleaned.replace(pattern, "");
-  }
-
-  return cleaned.trim();
-}
-
-function extractCjkTerms(query: string) {
-  const segments = query.match(CJK_SEGMENT_REGEX) ?? [];
-  const terms: string[] = [];
-
-  for (const rawSegment of segments) {
-    const segment = cleanCjkSegment(rawSegment);
-    if (segment.length < MIN_TERM_LENGTH) continue;
-
-    if (!GENERIC_CJK_TERMS.has(segment)) {
-      terms.push(segment);
-    }
-
-    const maxLength = Math.min(MAX_CJK_TERM_LENGTH, segment.length);
-    for (let size = maxLength; size >= MIN_TERM_LENGTH; size -= 1) {
-      for (let index = 0; index <= segment.length - size; index += 1) {
-        const term = segment.slice(index, index + size);
-        if (!GENERIC_CJK_TERMS.has(term)) {
-          terms.push(term);
-        }
-      }
-    }
-  }
-
-  return uniqueTerms(terms);
 }
 
 function buildQueryProfile(query: string): QueryProfile {
@@ -127,10 +50,7 @@ function buildQueryProfile(query: string): QueryProfile {
 
   return {
     normalized,
-    terms: uniqueTerms([
-      ...extractAsciiTerms(normalized),
-      ...extractCjkTerms(query),
-    ]),
+    tokens: tokenize(query),
     prefersRecent: RECENT_QUERY_REGEX.test(query),
     prefersSummary: SUMMARY_QUERY_REGEX.test(query),
     preferredType:
@@ -174,57 +94,6 @@ function matchesScope(
   return false;
 }
 
-function scoreKeywordMatch(
-  chunk: typeof knowledgeChunks.$inferSelect,
-  profile: QueryProfile
-) {
-  const normalizedTitle = normalizeText(chunk.sourceTitle);
-  const normalizedText = normalizeText(chunk.text);
-  const sectionPathText = normalizeText(parseSectionPath(chunk.sectionPath).join(" "));
-  let score = 0;
-  let matchedTerms = 0;
-
-  if (
-    profile.normalized &&
-    (normalizedTitle.includes(profile.normalized) ||
-      sectionPathText.includes(profile.normalized))
-  ) {
-    score += 18;
-  }
-
-  for (const term of profile.terms) {
-    const inTitle = normalizedTitle.includes(term);
-    const inSection = sectionPathText.includes(term);
-    const inText = normalizedText.includes(term);
-
-    if (!inTitle && !inSection && !inText) continue;
-
-    matchedTerms += 1;
-    const lengthBoost = Math.min(term.length, 6);
-    score += inTitle || inSection ? 8 + lengthBoost : 3 + lengthBoost / 2;
-  }
-
-  if (matchedTerms === 0) {
-    return 0;
-  }
-
-  score += matchedTerms * 2;
-
-  if (profile.preferredType === chunk.sourceType) {
-    score += 3;
-  }
-
-  if (profile.prefersRecent) {
-    score += getRecentBoost(chunk.sourceUpdatedAt);
-  }
-
-  if (profile.prefersSummary && chunk.text.length >= 160) {
-    score += 2;
-  }
-
-  return score;
-}
-
 function addRrfScore(
   scoreMap: Map<string, number>,
   ids: string[],
@@ -265,9 +134,6 @@ export async function retrieveAgenticContext(
   await ensureKnowledgeBaseSeeded();
 
   const profile = buildQueryProfile(query);
-  // Scope at the SQL layer using the indexed user_id column. Rows written
-  // before the rollout have user_id backfilled by the rollout script and
-  // indexer.ts now always sets it on insert.
   const allChunks = await db
     .select()
     .from(knowledgeChunks)
@@ -280,21 +146,73 @@ export async function retrieveAgenticContext(
     return [] satisfies AgenticRetrievalResult[];
   }
 
-  const keywordMatches = scopedChunks
-    .map((chunk) => ({
-      chunk,
-      score: scoreKeywordMatch(chunk, profile),
-    }))
-    .filter((result) => result.score > 0)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, KEYWORD_LIMIT);
+  // --- BM25 keyword retrieval via MiniSearch ---
+  const miniSearch = new MiniSearch<{
+    id: string;
+    title: string;
+    section: string;
+    text: string;
+  }>({
+    fields: ["title", "section", "text"],
+    storeFields: [],
+    tokenize: tokenizeForIndex,
+    searchOptions: {
+      tokenize,
+      boost: { title: 3, section: 2, text: 1 },
+    },
+  });
 
+  const chunkMap = new Map(scopedChunks.map((chunk) => [chunk.id, chunk]));
+
+  miniSearch.addAll(
+    scopedChunks.map((chunk) => ({
+      id: chunk.id,
+      title: chunk.sourceTitle,
+      section: parseSectionPath(chunk.sectionPath).join(" "),
+      text: chunk.text,
+    }))
+  );
+
+  const bm25Results = miniSearch.search(query, {
+    tokenize,
+    boost: { title: 3, section: 2, text: 1 },
+  });
+
+  const keywordMatches = bm25Results
+    .slice(0, KEYWORD_LIMIT)
+    .map((result) => {
+      const chunk = chunkMap.get(String(result.id))!;
+      let score = result.score;
+
+      // Source type preference boost
+      if (profile.preferredType === chunk.sourceType) {
+        score += 1.5;
+      }
+      // Recency boost
+      if (profile.prefersRecent) {
+        score += getRecentBoost(chunk.sourceUpdatedAt) * 0.5;
+      }
+      // Summary preference boost
+      if (profile.prefersSummary && chunk.text.length >= 160) {
+        score += 1;
+      }
+
+      return { chunk, score };
+    })
+    .filter((result) => result.score > 0);
+
+  // --- Semantic retrieval (embedding-based, if available) ---
   let semanticMatches: Array<{
     chunk: typeof knowledgeChunks.$inferSelect;
     score: number;
   }> = [];
 
-  const embeddedQuery = await embedTexts([query]).catch(() => null);
+  const embeddedQuery = await embedTexts([query]).catch((error) => {
+    console.warn(
+      `[rag] query embedding failed — ${error instanceof Error ? error.message : String(error)}`
+    );
+    return null;
+  });
   if (embeddedQuery) {
     const chunkIds = scopedChunks.map((chunk) => chunk.id);
     const embeddingRows =
@@ -305,7 +223,6 @@ export async function retrieveAgenticContext(
             .where(inArray(knowledgeChunkEmbeddings.chunkId, chunkIds))
         : [];
 
-    const chunkMap = new Map(scopedChunks.map((chunk) => [chunk.id, chunk]));
     const queryVector = embeddedQuery.vectors[0] ?? [];
 
     semanticMatches = embeddingRows

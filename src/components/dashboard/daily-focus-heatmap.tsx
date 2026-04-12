@@ -10,7 +10,7 @@ import {
 } from "@/components/focus/focus-shared";
 
 const DAYS = 30;
-const WEEK_LABELS = ["一", "二", "三", "四", "五", "六", "日"]; // Monday-first
+const WEEK_LABELS = ["M", "T", "W", "T", "F", "S", "S"]; // Monday-first
 
 type DayStat = {
   date: string;
@@ -44,10 +44,11 @@ function getDayOfWeekIndex(dateStr: string) {
 function formatTooltipDate(dateStr: string) {
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
-  const weekday = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][
+  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
     date.getUTCDay()
   ];
-  return `${month}月${day}日 (${weekday})`;
+  const monthName = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month - 1];
+  return `${monthName} ${day} (${weekday})`;
 }
 
 // 把 30 天按周切成列（Monday-first），首列顶部可能有 empty 占位
@@ -161,38 +162,38 @@ export function DailyFocusHeatmap() {
       <div className="mb-3 flex items-start justify-between gap-3">
         <h2 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
           <Activity className="h-3 w-3" />
-          最近 30 天工作时长
+          Last 30 Days Focus
         </h2>
         <Link
           href="/focus"
           className="inline-flex shrink-0 items-center gap-0.5 text-[11px] text-stone-400 transition-colors hover:text-stone-900 dark:text-stone-500 dark:hover:text-stone-100"
         >
-          Focus 详情 <ArrowRight className="h-3 w-3" />
+          Focus Details <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
 
       {/* 汇总数字 */}
       <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
         <SummaryStat
-          label="总计"
+          label="Total"
           value={isLoading ? "—" : formatFocusDuration(totalSecs)}
         />
         <SummaryStat
-          label="工作日均"
+          label="Weekday Avg"
           value={isLoading ? "—" : formatFocusDuration(weekdayAvgSecs)}
-          hint={weekdayActiveDays > 0 ? `${weekdayActiveDays} 天` : undefined}
+          hint={weekdayActiveDays > 0 ? `${weekdayActiveDays} days` : undefined}
         />
         <SummaryStat
-          label="周末日均"
+          label="Weekend Avg"
           value={isLoading ? "—" : formatFocusDuration(weekendAvgSecs)}
-          hint={weekendActiveDays > 0 ? `${weekendActiveDays} 天` : undefined}
+          hint={weekendActiveDays > 0 ? `${weekendActiveDays} days` : undefined}
         />
         <SummaryStat
-          label="连续"
-          value={isLoading ? "—" : `${streak} 天`}
+          label="Streak"
+          value={isLoading ? "—" : `${streak} days`}
         />
         <SummaryStat
-          label="峰值"
+          label="Peak"
           value={
             isLoading || !bestDay
               ? "—"
@@ -222,13 +223,13 @@ export function DailyFocusHeatmap() {
         <div
           className="flex flex-1 gap-1 overflow-x-auto"
           role="grid"
-          aria-label="最近 30 天工作时长热力图"
+          aria-label="Last 30 days focus heatmap"
         >
           {isLoading ? (
             <HeatmapSkeleton />
           ) : columns.length === 0 ? (
             <div className="flex h-[140px] flex-1 items-center justify-center text-xs text-stone-400">
-              暂无专注数据
+              No focus data
             </div>
           ) : (
             columns.map((col, ci) => (
@@ -261,14 +262,14 @@ export function DailyFocusHeatmap() {
 
       {/* 图例 */}
       <div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-stone-400 dark:text-stone-500">
-        <span>少</span>
+        <span>Less</span>
         <span className="h-2.5 w-2.5 rounded-[2px] bg-stone-100 dark:bg-stone-900" />
         <span className="h-2.5 w-2.5 rounded-[2px] bg-stone-200 dark:bg-stone-800" />
         <span className="h-2.5 w-2.5 rounded-[2px] bg-stone-400 dark:bg-stone-700" />
         <span className="h-2.5 w-2.5 rounded-[2px] bg-stone-500 dark:bg-stone-500" />
         <span className="h-2.5 w-2.5 rounded-[2px] bg-stone-700 dark:bg-stone-300" />
         <span className="h-2.5 w-2.5 rounded-[2px] bg-stone-900 dark:bg-stone-100" />
-        <span>多</span>
+        <span>More</span>
       </div>
     </section>
   );

@@ -20,6 +20,7 @@ import { bookmarks, notes } from "@/server/db/schema";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
 import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
+import { observe, updateActiveObservation } from "@langfuse/tracing";
 
 export const maxDuration = 30;
 
@@ -67,7 +68,7 @@ async function resolvePinnedSources(
     for (const row of rows) {
       items.push({
         id: row.id,
-        title: row.title ?? "未命名笔记",
+        title: row.title ?? "Untitled note",
         type: "note",
         content: row.content ?? "",
       });
@@ -97,7 +98,7 @@ async function resolvePinnedSources(
         (row.url ?? "");
       items.push({
         id: row.id,
-        title: row.title ?? row.url ?? "未命名收藏",
+        title: row.title ?? row.url ?? "Untitled bookmark",
         type: "bookmark",
         content: body,
       });
@@ -162,6 +163,7 @@ export async function POST(req: Request) {
       if (process.env.AUTH_BYPASS !== "true") {
         void recordAiUsage(userId).catch(() => undefined);
       }
+      // Traces flushed automatically by @vercel/otel
       return Response.json({ taskId, mode: "daemon" });
     }
     // ────────────────────────────────────────────────────────────────
@@ -177,36 +179,53 @@ export async function POST(req: Request) {
     let context: RetrievedKnowledgeItem[] = [];
 
     if (!skipRag) {
-      // SECURITY: RAG must be scoped to the current user. Both
-      // retrieveAgenticContext and retrieveContext are fail-closed and
-      // will return [] if userId is null (e.g. AUTH_BYPASS E2E runs).
-      const agenticContext = await retrieveAgenticContext(userQuery, {
-        scope: sourceScope,
-        userId,
-      });
+      const tracedRetrieval = observe(async () => {
+        updateActiveObservation({ input: { query: userQuery, sourceScope } }, { asType: "retriever" });
 
-      context =
-        agenticContext.length > 0
-          ? agenticContext.map((item) => ({
-              chunkId: item.chunkId,
-              chunkIndex: item.chunkIndex,
-              content: item.content,
-              id: item.sourceId,
-              sectionPath: item.sectionPath,
-              title: item.sourceTitle,
-              type: item.sourceType,
-            }))
-          : (
-              await retrieveContext(userQuery, {
-                scope: sourceScope,
-                userId,
-              })
-            ).map((item) => ({
-              content: item.content,
-              id: item.id,
-              title: item.title,
-              type: item.type,
-            }));
+        const tracedAgenticRag = observe(
+          () => retrieveAgenticContext(userQuery, { scope: sourceScope, userId }),
+          { name: "agentic-rag", asType: "retriever" },
+        );
+        const agenticContext = await tracedAgenticRag();
+
+        if (agenticContext.length > 0) {
+          const results = agenticContext.map((item) => ({
+            chunkId: item.chunkId,
+            chunkIndex: item.chunkIndex,
+            content: item.content,
+            id: item.sourceId,
+            score: item.score,
+            sectionPath: item.sectionPath,
+            title: item.sourceTitle,
+            type: item.sourceType,
+          }));
+          updateActiveObservation({
+            output: results.map(({ content, ...meta }) => meta),
+            metadata: { method: "agentic", chunkCount: results.length },
+          }, { asType: "retriever" });
+          return results;
+        }
+
+        const tracedKeywordRag = observe(
+          () => retrieveContext(userQuery, { scope: sourceScope, userId }),
+          { name: "keyword-rag-fallback", asType: "retriever" },
+        );
+        const fallbackContext = await tracedKeywordRag();
+
+        const results = fallbackContext.map((item) => ({
+          content: item.content,
+          id: item.id,
+          title: item.title,
+          type: item.type,
+        }));
+        updateActiveObservation({
+          output: results.map(({ content, ...meta }) => meta),
+          metadata: { method: "keyword-fallback", chunkCount: results.length },
+        }, { asType: "retriever" });
+        return results;
+      }, { name: "rag-retrieval", asType: "retriever" });
+
+      context = await tracedRetrieval();
     }
 
     const pinnedSources = await resolvePinnedSources(

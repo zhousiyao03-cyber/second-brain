@@ -6,9 +6,10 @@ import { extractWikiLinks } from "../notes/link-extractor";
 import { z } from "zod/v4";
 import crypto from "crypto";
 import {
-  enqueueNoteIndexJob,
   removeKnowledgeSourceIndex,
+  runIndexJobFor,
 } from "../ai/indexer";
+import { after } from "next/server";
 import {
   createJournalTemplate,
   formatJournalTitle,
@@ -169,8 +170,7 @@ export const notesRouter = router({
 
     await db.insert(notes).values({ id, userId: ctx.userId, ...journalInput });
 
-    // 入队而不是直接跑：worker 稍后会拾取并执行索引
-    void enqueueNoteIndexJob(id, "note-create").catch(() => undefined);
+    after(runIndexJobFor("note", id, "note-create"));
 
     invalidateDashboardForUser(ctx.userId);
     invalidateNotesListForUser(ctx.userId);
@@ -191,8 +191,7 @@ export const notesRouter = router({
     .mutation(async ({ input, ctx }) => {
       const id = crypto.randomUUID();
       await db.insert(notes).values({ id, userId: ctx.userId, ...input });
-      // 入队后台索引；wiki-link 同步仍走 fire-and-forget（轻量级）
-      void enqueueNoteIndexJob(id, "note-create").catch(() => undefined);
+      after(runIndexJobFor("note", id, "note-create"));
       void syncNoteLinks(id, input.content ?? null).catch(() => undefined);
       invalidateDashboardForUser(ctx.userId);
       invalidateNotesListForUser(ctx.userId);
@@ -214,27 +213,16 @@ export const notesRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
 
-      // 事务范围：只包 "写 notes" 和 "写 outbox(索引队列)"。
-      // - 二者必须一起成功或一起失败：否则会出现 "笔记已存但索引没排队"
-      //   或 "索引排了但笔记没变" 的数据不一致。
-      // - 事务外：Redis/Vercel Cache 的 invalidate（网络 IO，不该进事务）、
-      //   syncNoteLinks（自身是 fire-and-forget 的弱一致写）、回读 SELECT。
-      // 详见 docs/learn-backend/phase-b1.md 的 B1-1 段落。
-      await db.transaction(async (tx) => {
-        // version 单调递增（B1-3）——每次内容写入 +1。不做 CAS 冲突检测，
-        // 只是作为"这条 note 经历过多少次用户内容写入"的计数器，为未来
-        // 的编辑历史 / 事件溯源做铺垫。详见 docs/learn-backend/phase-b1.md。
-        await tx
-          .update(notes)
-          .set({
-            ...data,
-            updatedAt: new Date(),
-            version: sql`${notes.version} + 1`,
-          })
-          .where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
+      await db
+        .update(notes)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+          version: sql`${notes.version} + 1`,
+        })
+        .where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
 
-        await enqueueNoteIndexJob(id, "note-update", tx);
-      });
+      after(runIndexJobFor("note", id, "note-update"));
 
       if (input.content !== undefined) {
         const [updatedNote] = await db.select().from(notes).where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
@@ -390,23 +378,19 @@ export const notesRouter = router({
       const nextContent = JSON.stringify(doc);
       const nextPlainText = tiptapDocToPlainText(doc);
 
-      // 和 notes.update 对齐：事务里同步做 "写 content" + "入队索引" +
-      // "version++"。appendBlocks 是 "用户内容写入"的一种，所以递增版本号。
-      await db.transaction(async (tx) => {
-        await tx
-          .update(notes)
-          .set({
-            content: nextContent,
-            plainText: nextPlainText,
-            updatedAt: new Date(),
-            version: sql`${notes.version} + 1`,
-          })
-          .where(
-            and(eq(notes.id, input.noteId), eq(notes.userId, ctx.userId))
-          );
+      await db
+        .update(notes)
+        .set({
+          content: nextContent,
+          plainText: nextPlainText,
+          updatedAt: new Date(),
+          version: sql`${notes.version} + 1`,
+        })
+        .where(
+          and(eq(notes.id, input.noteId), eq(notes.userId, ctx.userId))
+        );
 
-        await enqueueNoteIndexJob(input.noteId, "note-append", tx);
-      });
+      after(runIndexJobFor("note", input.noteId, "note-append"));
 
       return { ok: true, blocksAppended: input.blocks.length };
     }),

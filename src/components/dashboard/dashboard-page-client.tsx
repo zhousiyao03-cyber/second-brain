@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Activity, ArrowRight, CircleDot, Circle, Zap } from "lucide-react";
+import { Activity, ArrowRight, Zap } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
@@ -31,7 +31,7 @@ function getUserDisplayName(name?: string | null, email?: string | null) {
 
 function formatDate(dateStr: string | Date | null | undefined) {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("zh-CN", {
+  return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
@@ -88,14 +88,14 @@ export function DashboardPageClient({
             disabled={openTodayJournal.isPending}
             className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-50 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300 dark:hover:bg-stone-900"
           >
-            {openTodayJournal.isPending ? "打开中…" : "今日日报"}
+            {openTodayJournal.isPending ? "Opening..." : "Today's Journal"}
             <ArrowRight className="h-3 w-3" />
           </button>
           <Link
             href="/notes"
             className="inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
           >
-            所有笔记 <ArrowRight className="h-3 w-3" />
+            All Notes <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       </section>
@@ -142,7 +142,7 @@ export function DashboardPageClient({
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
               <Activity className="h-3 w-3" />
-              今日专注
+              Today's Focus
             </div>
             <div className="mt-1.5 text-xl font-semibold tabular-nums text-stone-900 dark:text-stone-50">
               {focusStats ? formatFocusDuration(focusStats.totalSecs) : "—"}
@@ -176,121 +176,59 @@ export function DashboardPageClient({
             ))
           ) : (
             <span className="text-stone-400 dark:text-stone-500">
-              暂无专注数据
+              No focus data
             </span>
           )}
         </div>
       </Link>
 
-      {/* 最近 30 天工作时长热力图 */}
+      {/* Focus heatmap */}
       <DailyFocusHeatmap />
 
-      {/* Main Grid: Recent notes + Today's todos */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Recent notes */}
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
-              最近笔记
-            </h2>
-            <Link
-              href="/notes"
-              className="text-[11px] text-stone-400 transition-colors hover:text-stone-900 dark:text-stone-500 dark:hover:text-stone-100"
-            >
-              查看全部 →
-            </Link>
-          </div>
-          <div className="overflow-hidden rounded-md border border-stone-200 bg-white/60 dark:border-stone-800 dark:bg-stone-950/50">
-            {isLoading ? (
-              <div className="px-3 py-6 text-center text-xs text-stone-400">
-                加载中…
-              </div>
-            ) : !data?.recentNotes.length ? (
-              <div className="px-3 py-6 text-center text-xs text-stone-400">
-                暂无笔记
-              </div>
-            ) : (
-              data.recentNotes.map((note, idx) => (
-                <Link
-                  key={note.id}
-                  href={`/notes/${note.id}`}
-                  className={`flex items-center gap-2 px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-900/60 ${
-                    idx !== 0
-                      ? "border-t border-stone-100 dark:border-stone-900"
-                      : ""
-                  }`}
-                >
-                  <span className="min-w-0 flex-1 truncate text-sm text-stone-800 dark:text-stone-200">
-                    {note.title || "未命名"}
-                  </span>
-                  <span className="shrink-0 text-[11px] tabular-nums text-stone-400">
-                    {formatDate(note.updatedAt)}
-                  </span>
-                </Link>
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* Today's todos */}
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
-              今日待办
-            </h2>
-            <Link
-              href="/todos"
-              className="text-[11px] text-stone-400 transition-colors hover:text-stone-900 dark:text-stone-500 dark:hover:text-stone-100"
-            >
-              查看全部 →
-            </Link>
-          </div>
-          <div className="overflow-hidden rounded-md border border-stone-200 bg-white/60 dark:border-stone-800 dark:bg-stone-950/50">
-            {isLoading ? (
-              <div className="px-3 py-6 text-center text-xs text-stone-400">
-                加载中…
-              </div>
-            ) : !data?.todayTodos?.length ? (
-              <div className="px-3 py-6 text-center text-xs text-stone-400">
-                今天没有待办
-              </div>
-            ) : (
-              data.todayTodos.map((todo, idx) => {
-                const isInProgress = todo.status === "in_progress";
-                const Icon = isInProgress ? CircleDot : Circle;
-                return (
-                  <Link
-                    key={todo.id}
-                    href="/todos"
-                    className={`flex items-center gap-2 px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-900/60 ${
-                      idx !== 0
-                        ? "border-t border-stone-100 dark:border-stone-900"
-                        : ""
-                    }`}
-                  >
-                    <Icon
-                      className={`h-3 w-3 shrink-0 ${
-                        isInProgress
-                          ? "text-stone-700 dark:text-stone-300"
-                          : "text-stone-300 dark:text-stone-600"
-                      }`}
-                      strokeWidth={2}
-                    />
-                    <span className="min-w-0 flex-1 truncate text-sm text-stone-800 dark:text-stone-200">
-                      {todo.title}
-                    </span>
-                    {todo.priority && (
-                      <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500 dark:bg-stone-900 dark:text-stone-400">
-                        {todo.priority}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })
-            )}
-          </div>
-        </section>
-      </div>
+      {/* Recent notes */}
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
+            Recent Notes
+          </h2>
+          <Link
+            href="/notes"
+            className="text-[11px] text-stone-400 transition-colors hover:text-stone-900 dark:text-stone-500 dark:hover:text-stone-100"
+          >
+            View all →
+          </Link>
+        </div>
+        <div className="overflow-hidden rounded-md border border-stone-200 bg-white/60 dark:border-stone-800 dark:bg-stone-950/50">
+          {isLoading ? (
+            <div className="px-3 py-6 text-center text-xs text-stone-400">
+              Loading...
+            </div>
+          ) : !data?.recentNotes.length ? (
+            <div className="px-3 py-6 text-center text-xs text-stone-400">
+              No notes yet
+            </div>
+          ) : (
+            data.recentNotes.map((note, idx) => (
+              <Link
+                key={note.id}
+                href={`/notes/${note.id}`}
+                className={`flex items-center gap-2 px-3 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-900/60 ${
+                  idx !== 0
+                    ? "border-t border-stone-100 dark:border-stone-900"
+                    : ""
+                }`}
+              >
+                <span className="min-w-0 flex-1 truncate text-sm text-stone-800 dark:text-stone-200">
+                  {note.title || "Untitled"}
+                </span>
+                <span className="shrink-0 text-[11px] tabular-nums text-stone-400">
+                  {formatDate(note.updatedAt)}
+                </span>
+              </Link>
+            ))
+          )}
+        </div>
+      </section>
     </div>
   );
 }

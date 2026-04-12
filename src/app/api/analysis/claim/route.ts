@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { analysisPrompts, analysisTasks, osProjects } from "@/server/db/schema";
@@ -7,12 +7,14 @@ import {
   DEFAULT_FOLLOWUP_PROMPT,
   renderPrompt,
 } from "@/server/ai/default-analysis-prompts";
+import { verifyCliToken } from "@/server/ai/cli-auth";
 
 /**
  * The local daemon polls this endpoint to claim queued analysis tasks.
  *
  * Server-side responsibilities:
- *   - Atomically transition the oldest queued task to "running".
+ *   - Authenticate the daemon via CLI token.
+ *   - Atomically transition the oldest queued task (for this user) to "running".
  *   - Stamp `analysisStartedAt` on the project.
  *   - Resolve the user's customized prompt template (or fall back to the bundled
  *     default), substitute repo metadata, and ship the fully-rendered prompt
@@ -20,12 +22,19 @@ import {
  *     final string. This means prompt edits in Settings take effect on the very
  *     next claim with no daemon restart.
  */
-export async function POST() {
-  // Find the oldest queued task
+export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get("authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  const userId = token ? await verifyCliToken(token) : null;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Find the oldest queued task for this user
   const [task] = await db
     .select()
     .from(analysisTasks)
-    .where(eq(analysisTasks.status, "queued"))
+    .where(and(eq(analysisTasks.status, "queued"), eq(analysisTasks.userId, userId)))
     .orderBy(analysisTasks.createdAt)
     .limit(1);
 

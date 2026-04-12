@@ -2,61 +2,20 @@ import { z } from "zod/v4";
 import { router, protectedProcedure } from "../trpc";
 import { db } from "../db";
 import { notes, bookmarks, todos, osProjectNotes, osProjects, tokenUsageEntries } from "../db/schema";
-import { and, asc, count, desc, eq, gte, isNotNull, like, lt, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, like, or, sql } from "drizzle-orm";
 import { normalizeJournalTitlesForUser } from "../notes/journal-titles";
 import { dashboardStatsCache } from "../cache/instances";
 
-/**
- * 真正的 dashboard 统计计算逻辑。
- * 抽成独立函数让 cache 包装层保持简洁。
- */
 async function computeDashboardStats(userId: string) {
   await normalizeJournalTitlesForUser(userId);
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const startOfTomorrow = new Date(startOfToday);
-  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-
   const [noteCount] = await db.select({ count: count() }).from(notes).where(eq(notes.userId, userId));
-  const [todoCount] = await db.select({ count: count() }).from(todos).where(eq(todos.userId, userId));
-  const [doneCount] = await db
-    .select({ count: count() })
-    .from(todos)
-    .where(and(eq(todos.status, "done"), eq(todos.userId, userId)));
 
   const recentNotes = await db
     .select({ id: notes.id, title: notes.title, updatedAt: notes.updatedAt })
     .from(notes)
     .where(eq(notes.userId, userId))
     .orderBy(desc(notes.updatedAt))
-    .limit(5);
-
-  const pendingTodos = await db
-    .select({ id: todos.id, title: todos.title, priority: todos.priority })
-    .from(todos)
-    .where(and(eq(todos.status, "todo"), eq(todos.userId, userId)))
-    .orderBy(desc(todos.createdAt))
-    .limit(5);
-
-  const todayTodos = await db
-    .select({
-      id: todos.id,
-      title: todos.title,
-      priority: todos.priority,
-      status: todos.status,
-      dueDate: todos.dueDate,
-    })
-    .from(todos)
-    .where(
-      and(
-        gte(todos.dueDate, startOfToday),
-        lt(todos.dueDate, startOfTomorrow),
-        or(eq(todos.status, "todo"), eq(todos.status, "in_progress")),
-        eq(todos.userId, userId)
-      )
-    )
-    .orderBy(asc(todos.dueDate), desc(todos.updatedAt))
     .limit(5);
 
   // Recent folder notes (learning notes now live in notes table with folder set)
@@ -128,14 +87,10 @@ async function computeDashboardStats(userId: string) {
   return {
     counts: {
       notes: noteCount.count,
-      todos: todoCount.count,
-      todosDone: doneCount.count,
     },
     recentNotes,
     recentLearnNotes,
     recentProjectNotes,
-    pendingTodos,
-    todayTodos,
     tokenStats,
   };
 }
