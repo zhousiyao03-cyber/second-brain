@@ -20,7 +20,7 @@ import { bookmarks, notes } from "@/server/db/schema";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
 import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
-import { observe } from "@langfuse/tracing";
+import { observe, updateActiveObservation } from "@langfuse/tracing";
 
 export const maxDuration = 30;
 
@@ -180,37 +180,50 @@ export async function POST(req: Request) {
 
     if (!skipRag) {
       const tracedRetrieval = observe(async () => {
+        updateActiveObservation({ input: { query: userQuery, sourceScope } }, { asType: "retriever" });
+
         const tracedAgenticRag = observe(
           () => retrieveAgenticContext(userQuery, { scope: sourceScope, userId }),
-          { name: "agentic-rag" },
+          { name: "agentic-rag", asType: "retriever" },
         );
         const agenticContext = await tracedAgenticRag();
 
         if (agenticContext.length > 0) {
-          return agenticContext.map((item) => ({
+          const results = agenticContext.map((item) => ({
             chunkId: item.chunkId,
             chunkIndex: item.chunkIndex,
             content: item.content,
             id: item.sourceId,
+            score: item.score,
             sectionPath: item.sectionPath,
             title: item.sourceTitle,
             type: item.sourceType,
           }));
+          updateActiveObservation({
+            output: results.map(({ content, ...meta }) => meta),
+            metadata: { method: "agentic", chunkCount: results.length },
+          }, { asType: "retriever" });
+          return results;
         }
 
         const tracedKeywordRag = observe(
           () => retrieveContext(userQuery, { scope: sourceScope, userId }),
-          { name: "keyword-rag-fallback" },
+          { name: "keyword-rag-fallback", asType: "retriever" },
         );
         const fallbackContext = await tracedKeywordRag();
 
-        return fallbackContext.map((item) => ({
+        const results = fallbackContext.map((item) => ({
           content: item.content,
           id: item.id,
           title: item.title,
           type: item.type,
         }));
-      }, { name: "rag-retrieval" });
+        updateActiveObservation({
+          output: results.map(({ content, ...meta }) => meta),
+          metadata: { method: "keyword-fallback", chunkCount: results.length },
+        }, { asType: "retriever" });
+        return results;
+      }, { name: "rag-retrieval", asType: "retriever" });
 
       context = await tracedRetrieval();
     }
