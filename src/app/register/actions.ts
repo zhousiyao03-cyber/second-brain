@@ -60,8 +60,8 @@ export async function registerWithCredentials(formData: FormData) {
   await signIn("credentials", {
     email,
     password: parsed.data.password,
-    redirectTo: "/",
+    redirectTo: "/dashboard",
   });
 
-  redirect("/");
+  redirect("/dashboard");
 }

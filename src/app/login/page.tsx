@@ -21,7 +21,7 @@ export default async function LoginPage({
 }) {
   const session = await getRequestSession();
   if (session) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   await ensureDevTestAccount();
@@ -115,7 +115,7 @@ export default async function LoginPage({
           <form
             action={async () => {
               "use server";
-              await signIn("github", { redirectTo: "/" });
+              await signIn("github", { redirectTo: "/dashboard" });
             }}
           >
             <button
@@ -129,7 +129,7 @@ export default async function LoginPage({
           <form
             action={async () => {
               "use server";
-              await signIn("google", { redirectTo: "/" });
+              await signIn("google", { redirectTo: "/dashboard" });
             }}
           >
             <button

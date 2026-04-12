@@ -25,7 +25,7 @@ export async function loginWithCredentials(formData: FormData) {
     await signIn("credentials", {
       email: normalizeEmail(parsed.data.email),
       password: parsed.data.password,
-      redirectTo: "/",
+      redirectTo: "/dashboard",
     });
   } catch (error) {
     if (error instanceof AuthError && error.type === "CredentialsSignin") {
@@ -35,5 +35,5 @@ export async function loginWithCredentials(formData: FormData) {
     throw error;
   }
 
-  redirect("/");
+  redirect("/dashboard");
 }

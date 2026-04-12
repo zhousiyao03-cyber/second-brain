@@ -109,8 +109,8 @@ export function Sidebar({
               <div className="space-y-0.5">
                 {visibleItems.map((item) => {
                   const isActive =
-                    item.href === "/"
-                      ? pathname === "/"
+                    item.href === "/dashboard"
+                      ? pathname === "/dashboard"
                       : pathname.startsWith(item.href);
                   const Icon = item.icon;
 

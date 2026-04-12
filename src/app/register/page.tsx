@@ -18,7 +18,7 @@ export default async function RegisterPage({
 }) {
   const session = await getRequestSession();
   if (session) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   const params = await searchParams;
@@ -133,7 +133,7 @@ export default async function RegisterPage({
           <form
             action={async () => {
               "use server";
-              await signIn("github", { redirectTo: "/" });
+              await signIn("github", { redirectTo: "/dashboard" });
             }}
           >
             <button
@@ -147,7 +147,7 @@ export default async function RegisterPage({
           <form
             action={async () => {
               "use server";
-              await signIn("google", { redirectTo: "/" });
+              await signIn("google", { redirectTo: "/dashboard" });
             }}
           >
             <button

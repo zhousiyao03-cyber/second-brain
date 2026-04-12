@@ -26,7 +26,7 @@ export const navigationGroups: NavGroup[] = [
   {
     label: "CAPTURE",
     items: [
-      { href: "/", label: "Home", icon: LayoutDashboard },
+      { href: "/dashboard", label: "Home", icon: LayoutDashboard },
       { href: "/notes", label: "Notes", icon: FileText },
       { href: "/ask", label: "Ask AI", icon: MessageCircle },
     ],

@@ -15,6 +15,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await getRequestSession();
+  if (!session) {
+    const { redirect } = await import("next/navigation");
+    redirect("/login");
+  }
   const workspaceLabel = getWorkspaceLabel(
     session?.user?.name,
     session?.user?.email

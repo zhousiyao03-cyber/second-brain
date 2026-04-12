@@ -110,8 +110,8 @@ export function MobileNav({
                 .filter((item: NavItem) => !item.featureFlag || clientFeatureFlags[item.featureFlag])
                 .map((item) => {
                 const isActive =
-                  item.href === "/"
-                    ? pathname === "/"
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
                     : pathname.startsWith(item.href);
                 const Icon = item.icon;
 

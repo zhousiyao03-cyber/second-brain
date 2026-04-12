@@ -1,5 +1,4 @@
 import { and, asc, count, desc, eq, gte, isNotNull, lt, or } from "drizzle-orm";
-import { redirect } from "next/navigation";
 import { DashboardPageClient } from "@/components/dashboard/dashboard-page-client";
 import { getRequestSession } from "@/server/auth/request-session";
 import { db } from "@/server/db";
@@ -13,11 +12,7 @@ import { normalizeJournalTitlesForUser } from "@/server/notes/journal-titles";
 
 export default async function DashboardPage() {
   const session = await getRequestSession();
-  const userId = session?.user?.id;
-
-  if (!userId) {
-    redirect("/login");
-  }
+  const userId = session!.user!.id;
 
   await normalizeJournalTitlesForUser(userId);
 
