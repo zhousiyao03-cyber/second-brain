@@ -105,8 +105,17 @@ Verification commands and results:
   - ✅ 2 passing tests
 - `git diff --check -- packages/cli src/app src/server drizzle scripts/db`
   - ✅ passes
+- `set -a && source /Users/bytedance/second-brain/.env.turso-prod.local && set +a && node scripts/db/apply-2026-04-12-claude-knosi-capture-rollout.mjs`
+  - ✅ production Turso rollout applied; script verification confirmed `oauth_authorization_codes`, `oauth_refresh_tokens`, `oauth_access_tokens` tables and their token/code hash indexes exist
+- `set -a && source /Users/bytedance/second-brain/.env.turso-prod.local && set +a && node --input-type=module <<'EOF' ... EOF`
+  - ✅ independent production verification query returned `present` for:
+    - `oauth_authorization_codes`
+    - `oauth_refresh_tokens`
+    - `oauth_access_tokens`
+    - `oauth_authorization_codes_code_hash_idx`
+    - `oauth_refresh_tokens_token_hash_idx`
+    - `oauth_access_tokens_token_hash_idx`
 
 Remaining risks / follow-up:
-- Production Turso rollout was intentionally **not performed yet** in this implementation session. The rollout SQL/script are prepared, but production schema apply + verification remains a follow-up blocked on running against `.env.turso-prod.local`.
 - The remote MCP handler currently implements the minimal JSON-RPC methods needed for `initialize`, `tools/list`, and `tools/call`; if Claude’s connector runtime requires additional MCP protocol surfaces, we may need to extend it after real connector testing.
 - The CLI OAuth flow currently assumes a local callback on `127.0.0.1:6274` and uses the OS `open` / `xdg-open` command. This is fine for local development, but may need more fallback UX on headless environments.
