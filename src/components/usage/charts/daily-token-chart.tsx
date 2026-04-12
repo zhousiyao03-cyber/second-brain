@@ -27,8 +27,10 @@ const tokenChartConfig = {
 
 export function DailyTokenChart({ data }: { data: DailyTokenData[] }) {
   return (
-    <div className="rounded-lg border p-4">
-      <h4 className="text-xs font-medium text-muted-foreground mb-3">Daily Token Usage</h4>
+    <div className="rounded-md border border-stone-200 bg-white/70 p-4 dark:border-stone-800 dark:bg-stone-950/50">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500 mb-3">
+        Daily Token Usage
+      </div>
       <ChartContainer config={tokenChartConfig} className="aspect-[2.5/1] w-full">
         <AreaChart data={data} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
           <CartesianGrid vertical={false} />

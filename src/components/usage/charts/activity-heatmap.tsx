@@ -97,8 +97,10 @@ export function ActivityHeatmap({ usage }: { usage: UsageRecord[] }) {
   const svgHeight = 14 + 7 * (CELL_SIZE + CELL_GAP);
 
   return (
-    <div className="rounded-lg border p-4">
-      <h4 className="text-xs font-medium text-muted-foreground mb-3">Activity</h4>
+    <div className="rounded-md border border-stone-200 bg-white/70 p-4 dark:border-stone-800 dark:bg-stone-950/50">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500 mb-3">
+        Activity
+      </div>
       <div className="overflow-x-auto">
         <svg width={svgWidth} height={svgHeight} className="block">
           {monthLabels.map((m) => (
@@ -106,7 +108,7 @@ export function ActivityHeatmap({ usage }: { usage: UsageRecord[] }) {
               key={`${m.label}-${m.week}`}
               x={labelWidth + m.week * (CELL_SIZE + CELL_GAP)}
               y={10}
-              className="fill-muted-foreground"
+              className="fill-stone-400 dark:fill-stone-500"
               fontSize={9}
             >
               {m.label}
@@ -118,7 +120,7 @@ export function ActivityHeatmap({ usage }: { usage: UsageRecord[] }) {
                 key={i}
                 x={0}
                 y={14 + i * (CELL_SIZE + CELL_GAP) + CELL_SIZE - 1}
-                className="fill-muted-foreground"
+                className="fill-stone-400 dark:fill-stone-500"
                 fontSize={9}
               >
                 {label}
@@ -147,7 +149,7 @@ export function ActivityHeatmap({ usage }: { usage: UsageRecord[] }) {
         </svg>
       </div>
       {/* Legend */}
-      <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+      <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-stone-400 dark:text-stone-500">
         <span>Less</span>
         {[0, 1, 2, 3, 4].map((level) => (
           <div

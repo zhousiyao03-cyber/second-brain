@@ -30,8 +30,10 @@ export function ModelDistributionChart({ data }: { data: ModelDistribution[] }) 
   ) satisfies ChartConfig;
 
   return (
-    <div className="rounded-lg border p-4">
-      <h4 className="text-xs font-medium text-muted-foreground mb-3">Token Usage by Model</h4>
+    <div className="rounded-md border border-stone-200 bg-white/70 p-4 dark:border-stone-800 dark:bg-stone-950/50">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500 mb-3">
+        Token Usage by Model
+      </div>
       <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[200px]">
         <PieChart>
           <ChartTooltip
@@ -63,10 +65,10 @@ export function ModelDistributionChart({ data }: { data: ModelDistribution[] }) 
                 if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                   return (
                     <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                      <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-lg font-bold">
+                      <tspan x={viewBox.cx} y={viewBox.cy} className="fill-stone-900 dark:fill-stone-50 text-lg font-bold">
                         {formatTokens(totalTokens)}
                       </tspan>
-                      <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) + 18} className="fill-muted-foreground text-xs">
+                      <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) + 18} className="fill-stone-400 dark:fill-stone-500 text-xs">
                         tokens
                       </tspan>
                     </text>
@@ -87,9 +89,9 @@ export function ModelDistributionChart({ data }: { data: ModelDistribution[] }) 
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] }}
               />
-              <span className="truncate font-mono">{d.model}</span>
+              <span className="truncate font-mono text-stone-700 dark:text-stone-300">{d.model}</span>
             </div>
-            <div className="flex items-center gap-3 shrink-0 text-muted-foreground tabular-nums">
+            <div className="flex items-center gap-3 shrink-0 tabular-nums text-stone-400 dark:text-stone-500">
               <span>{formatTokens(d.tokens)}</span>
               {d.cost > 0 && <span>${d.cost.toFixed(2)}</span>}
             </div>
