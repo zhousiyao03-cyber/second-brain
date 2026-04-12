@@ -3,32 +3,53 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Zap, BookOpen, Search, BarChart3 } from "lucide-react";
+import {
+  Zap,
+  BookOpen,
+  Search,
+  BarChart3,
+  Clock,
+  PenTool,
+  Brain,
+  FolderOpen,
+} from "lucide-react";
 
 const features = [
   {
-    icon: Zap,
-    title: "Token \u2192 Knowledge",
+    icon: PenTool,
+    title: "Capture",
     description:
-      "Every AI conversation becomes a permanent note. Your $20/mo subscription stops evaporating.",
+      "A block editor that rivals Notion. Code blocks, Mermaid diagrams, Excalidraw, tables, callouts, image galleries. Turn raw AI output into structured, lasting documents.",
+  },
+  {
+    icon: Brain,
+    title: "Ask AI",
+    description:
+      "Chat with your entire knowledge base using your own Claude subscription. Hybrid RAG with semantic + keyword search, neighboring paragraph expansion, and source citations.",
   },
   {
     icon: BookOpen,
-    title: "Learning Notebooks",
+    title: "Learn",
     description:
-      "AI-generated outlines, blind-spot analysis, and review questions. Not just storage \u2014 comprehension.",
-  },
-  {
-    icon: Search,
-    title: "Hybrid RAG Search",
-    description:
-      "Semantic + keyword search across all your notes. Ask questions, get answers with source citations.",
+      "Pick a topic and AI generates outlines, surfaces gaps in your understanding, and creates review questions. Not just storage \u2014 comprehension.",
   },
   {
     icon: BarChart3,
-    title: "Token Usage Dashboard",
+    title: "Track",
     description:
-      'Track how much of your Claude subscription actually becomes knowledge. See your "conversion rate."',
+      'See your "conversion rate" \u2014 how much of your monthly token spend actually turned into permanent knowledge.',
+  },
+  {
+    icon: Clock,
+    title: "Focus",
+    description:
+      "Automatic time tracking across your apps, sessionized into focus data so you can see where your hours actually go.",
+  },
+  {
+    icon: FolderOpen,
+    title: "Projects",
+    description:
+      "Organized notes per open-source project you\u2019re studying or contributing to. Portfolio tracking with integrated news feeds.",
   },
 ];
 
@@ -69,15 +90,18 @@ export function LandingPage() {
       {/* Hero */}
       <section className="mx-auto max-w-3xl px-6 pt-24 pb-20 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-          Your Claude Max runs out.
-          <br />
+          Your subscription should{" "}
           <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">
-            Your notes don&apos;t.
+            compound
           </span>
+          ,
+          <br />
+          not evaporate.
         </h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg text-stone-400">
-          Turn every valuable AI conversation into a knowledge base you own
-          forever. Self-hosted, open-source.
+        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-stone-400">
+          You&apos;re already paying for Claude. Every token you spend should become
+          something permanent &mdash; a note, a connection, a piece of understanding
+          you can still search and build on six months from now.
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Link
@@ -102,21 +126,34 @@ export function LandingPage() {
             The problem
           </h2>
           <p className="mt-4 text-xl font-medium leading-relaxed text-stone-200">
-            You pay $20&ndash;200/month for Claude. Every brilliant insight, every
-            solved problem, every learning moment &mdash; gone the moment you close
-            the tab. Your tokens are{" "}
-            <span className="text-red-400">consumed</span>, not{" "}
+            I&apos;ve spent thousands on Claude this year. The conversations were
+            brilliant &mdash; and completely disposable. Every insight just vanished
+            into chat history. Meanwhile my Notion stayed empty. Tokens{" "}
+            <span className="text-red-400">consumed</span>, never{" "}
             <span className="text-cyan-300">converted</span>.
           </p>
         </div>
       </section>
 
+      {/* Core concept */}
+      <section className="mx-auto max-w-3xl px-6 py-8 text-center">
+        <div className="flex items-center justify-center gap-3 text-sm font-semibold uppercase tracking-wider text-stone-500">
+          <Zap className="h-4 w-4 text-cyan-400" />
+          Token &rarr; Knowledge
+        </div>
+        <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-stone-400">
+          Knosi bridges your existing Claude subscription through a local daemon &mdash;
+          no extra API costs. Your Claude Code sessions feed directly into Knosi,
+          and a usage tracker syncs token consumption in real time.
+        </p>
+      </section>
+
       {/* Features */}
       <section className="mx-auto max-w-4xl px-6 py-16">
         <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-wider text-stone-500">
-          The solution
+          What&apos;s inside
         </h2>
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
             <div
               key={f.title}
@@ -134,10 +171,23 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Self-hosted callout */}
+      <section className="mx-auto max-w-3xl px-6 py-8">
+        <div className="rounded-xl border border-stone-800 bg-stone-900/30 p-6 text-center">
+          <p className="text-sm leading-relaxed text-stone-400">
+            Self-hosted. Your data never leaves your machine.
+            <br />
+            <span className="text-stone-500">
+              Still a work in progress &mdash; but the core is working, and I use it every day.
+            </span>
+          </p>
+        </div>
+      </section>
+
       {/* Footer CTA */}
       <section className="mx-auto max-w-3xl px-6 pt-16 pb-24 text-center">
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Stop losing your best thinking.
+          Make every token count.
         </h2>
         <p className="mx-auto mt-4 max-w-md text-stone-400">
           Every Claude conversation is an investment. Knosi makes sure it compounds.
