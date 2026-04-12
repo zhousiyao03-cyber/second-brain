@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 export const size = {
   width: 64,
@@ -7,78 +9,27 @@ export const size = {
 
 export const contentType = "image/png";
 
-function BrandGlyph() {
-  return (
-    <svg
-      width="34"
-      height="34"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M9.5 7.5C9.5 5.84315 10.8431 4.5 12.5 4.5C14.1569 4.5 15.5 5.84315 15.5 7.5C15.5 9.15685 14.1569 10.5 12.5 10.5C10.8431 10.5 9.5 9.15685 9.5 7.5Z"
-        stroke="#292524"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M6.5 18.5C6.5 16.2909 8.29086 14.5 10.5 14.5H14C16.4853 14.5 18.5 12.4853 18.5 10V9"
-        stroke="#292524"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M6 10.5H6.01" stroke="#292524" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M18 18H18.01" stroke="#292524" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M6 18H6.01" stroke="#292524" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M18 6H18.01" stroke="#292524" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M7.2 10.8L9.8 9.3" stroke="#292524" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M15.2 9.3L16.8 7.8" stroke="#292524" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M8.4 16.6L6.9 17.5" stroke="#292524" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M16.2 15.8L17.4 17" stroke="#292524" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
+export default async function Icon() {
+  const logoData = await readFile(join(process.cwd(), "public", "knosi-logo.png"));
+  const logoSrc = `data:image/png;base64,${logoData.toString("base64")}`;
 
-function BrandTile({ radius, dotSize }: { radius: number; dotSize: number }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#f5f5f4",
-        borderRadius: radius,
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+  return new ImageResponse(
+    (
       <div
         style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(180deg, rgba(34,211,238,0.3) 0%, rgba(34,211,238,0) 42%)",
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0c0a09",
+          borderRadius: 18,
         }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          right: radius / 1.5,
-          top: radius / 1.5,
-          width: dotSize,
-          height: dotSize,
-          borderRadius: 999,
-          background: "#06b6d4",
-        }}
-      />
-      <BrandGlyph />
-    </div>
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logoSrc} alt="" width={56} height={56} style={{ borderRadius: 14 }} />
+      </div>
+    ),
+    size
   );
-}
-
-export default function Icon() {
-  return new ImageResponse(<BrandTile radius={18} dotSize={8} />, size);
 }

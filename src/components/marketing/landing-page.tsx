@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { BrainCircuit, Zap, BookOpen, Search, BarChart3 } from "lucide-react";
+import Image from "next/image";
+import { Zap, BookOpen, Search, BarChart3 } from "lucide-react";
 
 const features = [
   {
@@ -31,14 +33,27 @@ const features = [
 ];
 
 export function LandingPage() {
+  useEffect(() => {
+    const body = document.body;
+    const prev = body.style.backgroundColor;
+    body.style.backgroundColor = "#0c0a09";
+    return () => {
+      body.style.backgroundColor = prev;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100">
       {/* Nav */}
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-stone-900">
-            <BrainCircuit className="h-4 w-4" strokeWidth={2} />
-          </div>
+          <Image
+            src="/knosi-logo.png"
+            alt="Knosi"
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
           <span className="text-sm font-semibold tracking-tight">Knosi</span>
         </div>
         <div className="flex items-center gap-3">
@@ -53,9 +68,6 @@ export function LandingPage() {
 
       {/* Hero */}
       <section className="mx-auto max-w-3xl px-6 pt-24 pb-20 text-center">
-        <div className="mb-6 inline-block rounded-full border border-stone-800 px-3 py-1 text-xs text-stone-400">
-          Open source &middot; AGPL-3.0
-        </div>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
           Your Claude Max runs out.
           <br />
@@ -122,32 +134,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Tech Stack */}
-      <section className="mx-auto max-w-3xl px-6 py-16 text-center">
-        <h2 className="mb-6 text-sm font-semibold uppercase tracking-wider text-stone-500">
-          Built with
-        </h2>
-        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-stone-500">
-          {[
-            "Next.js 16",
-            "React 19",
-            "Tailwind CSS v4",
-            "tRPC v11",
-            "SQLite / Turso",
-            "Drizzle ORM",
-            "Vercel AI SDK",
-            "Tiptap v3",
-          ].map((t) => (
-            <span
-              key={t}
-              className="rounded-md border border-stone-800 px-2.5 py-1"
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      </section>
-
       {/* Footer CTA */}
       <section className="mx-auto max-w-3xl px-6 pt-16 pb-24 text-center">
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -174,7 +160,7 @@ export function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-stone-800 py-8 text-center text-xs text-stone-600">
-        Knosi &middot; AGPL-3.0
+        Knosi
       </footer>
     </div>
   );
