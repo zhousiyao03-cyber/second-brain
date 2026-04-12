@@ -8,8 +8,6 @@ import { logout } from "@/app/(app)/actions";
 import { cn } from "@/lib/utils";
 import { AppBrand } from "./app-brand";
 import { navigationItems } from "./navigation";
-import type { NavItem } from "./navigation";
-import { clientFeatureFlags } from "@/lib/feature-flags";
 
 function useDarkModeState() {
   return useState(() => {
@@ -106,9 +104,7 @@ export function MobileNav({
             </button>
 
             <nav className="flex-1 space-y-1">
-              {navigationItems
-                .filter((item: NavItem) => !item.featureFlag || clientFeatureFlags[item.featureFlag])
-                .map((item) => {
+              {navigationItems.map((item) => {
                 const isActive =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard"

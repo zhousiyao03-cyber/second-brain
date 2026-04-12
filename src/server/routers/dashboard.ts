@@ -3,7 +3,6 @@ import { router, protectedProcedure } from "../trpc";
 import { db } from "../db";
 import { notes, bookmarks, todos, osProjectNotes, osProjects, tokenUsageEntries } from "../db/schema";
 import { and, asc, count, desc, eq, gte, isNotNull, like, lt, or, sql } from "drizzle-orm";
-import { featureFlags } from "@/lib/feature-flags";
 import { normalizeJournalTitlesForUser } from "../notes/journal-titles";
 import { dashboardStatsCache } from "../cache/instances";
 
@@ -88,52 +87,43 @@ async function computeDashboardStats(userId: string) {
     .orderBy(desc(osProjectNotes.updatedAt))
     .limit(5);
 
-  // Token→Knowledge stats (only when token usage is enabled)
-  let tokenStats: {
-    monthlyTokens: number;
-    notesCreatedThisMonth: number;
-    conversionRate: number;
-  } | null = null;
+  // Token→Knowledge stats
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
 
-  if (featureFlags.tokenUsage) {
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+  const [tokenResult] = await db
+    .select({ total: sql<number>`coalesce(sum(${tokenUsageEntries.totalTokens}), 0)` })
+    .from(tokenUsageEntries)
+    .where(
+      and(
+        eq(tokenUsageEntries.userId, userId),
+        gte(tokenUsageEntries.usageAt, startOfMonth)
+      )
+    );
 
-    const [tokenResult] = await db
-      .select({ total: sql<number>`coalesce(sum(${tokenUsageEntries.totalTokens}), 0)` })
-      .from(tokenUsageEntries)
-      .where(
-        and(
-          eq(tokenUsageEntries.userId, userId),
-          gte(tokenUsageEntries.usageAt, startOfMonth)
-        )
-      );
+  const [monthNoteCount] = await db
+    .select({ count: count() })
+    .from(notes)
+    .where(
+      and(
+        eq(notes.userId, userId),
+        gte(notes.createdAt, startOfMonth)
+      )
+    );
 
-    const [monthNoteCount] = await db
-      .select({ count: count() })
-      .from(notes)
-      .where(
-        and(
-          eq(notes.userId, userId),
-          gte(notes.createdAt, startOfMonth)
-        )
-      );
+  const monthlyTokens = Number(tokenResult?.total ?? 0);
+  const notesCreatedThisMonth = monthNoteCount?.count ?? 0;
+  const conversionRate =
+    monthlyTokens > 0
+      ? (notesCreatedThisMonth / (monthlyTokens / 10000)) * 100
+      : 0;
 
-    const monthlyTokens = Number(tokenResult?.total ?? 0);
-    const notesCreatedThisMonth = monthNoteCount?.count ?? 0;
-    // Conversion rate: notes per 10k tokens (as percentage-like metric)
-    const conversionRate =
-      monthlyTokens > 0
-        ? (notesCreatedThisMonth / (monthlyTokens / 10000)) * 100
-        : 0;
-
-    tokenStats = {
-      monthlyTokens,
-      notesCreatedThisMonth,
-      conversionRate: Math.round(conversionRate * 10) / 10,
-    };
-  }
+  const tokenStats = {
+    monthlyTokens,
+    notesCreatedThisMonth,
+    conversionRate: Math.round(conversionRate * 10) / 10,
+  };
 
   return {
     counts: {

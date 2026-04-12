@@ -1,6 +1,5 @@
 import {
   Activity,
-  BookOpen,
   FileText,
   FolderGit2,
   LayoutDashboard,
@@ -13,8 +12,6 @@ export type NavItem = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
-  /** If set, this item is only shown when the corresponding feature flag is true */
-  featureFlag?: "tokenUsage" | "portfolio" | "ossProjects" | "focusTracker";
 };
 
 export type NavGroup = {
@@ -34,21 +31,20 @@ export const navigationGroups: NavGroup[] = [
   {
     label: "LEARN",
     items: [
-      { href: "/learn", label: "Learning", icon: BookOpen },
-      { href: "/projects", label: "Projects", icon: FolderGit2, featureFlag: "ossProjects" },
+      { href: "/projects", label: "Projects", icon: FolderGit2 },
     ],
   },
   {
     label: "TRACK",
     items: [
-      { href: "/portfolio", label: "Portfolio", icon: TrendingUp, featureFlag: "portfolio" },
-      { href: "/focus", label: "Focus", icon: Timer, featureFlag: "focusTracker" },
+      { href: "/portfolio", label: "Portfolio", icon: TrendingUp },
+      { href: "/focus", label: "Focus", icon: Timer },
     ],
   },
   {
     label: "INSIGHTS",
     items: [
-      { href: "/usage", label: "Usage", icon: Activity, featureFlag: "tokenUsage" },
+      { href: "/usage", label: "Usage", icon: Activity },
     ],
   },
 ];

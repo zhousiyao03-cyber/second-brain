@@ -15,7 +15,6 @@ import {
 import { logout } from "@/app/(app)/actions";
 import { AppBrand } from "./app-brand";
 import { navigationGroups } from "./navigation";
-import { clientFeatureFlags } from "@/lib/feature-flags";
 
 const COLLAPSED_COOKIE = "sb_collapsed";
 
@@ -91,13 +90,7 @@ export function Sidebar({
 
       {/* Nav */}
       <nav className="flex-1 space-y-3 overflow-y-auto px-2 pt-1">
-        {navigationGroups.map((group) => {
-          const visibleItems = group.items.filter(
-            (item) => !item.featureFlag || clientFeatureFlags[item.featureFlag]
-          );
-          if (visibleItems.length === 0) return null;
-
-          return (
+        {navigationGroups.map((group) => (
             <div key={group.label}>
               {collapsed ? (
                 <div className="mx-auto my-1 h-px w-6 bg-stone-200/60 dark:bg-stone-800/60" />
@@ -107,7 +100,7 @@ export function Sidebar({
                 </div>
               )}
               <div className="space-y-0.5">
-                {visibleItems.map((item) => {
+                {group.items.map((item) => {
                   const isActive =
                     item.href === "/dashboard"
                       ? pathname === "/dashboard"
@@ -144,8 +137,7 @@ export function Sidebar({
                 })}
               </div>
             </div>
-          );
-        })}
+          ))}
       </nav>
 
       {/* Bottom: icon-only utility row */}

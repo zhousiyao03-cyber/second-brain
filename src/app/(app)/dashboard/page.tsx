@@ -106,7 +106,7 @@ export default async function DashboardPage() {
     recentProjectNotes,
     pendingTodos,
     todayTodos,
-    tokenStats: null,
+    tokenStats: { monthlyTokens: 0, notesCreatedThisMonth: 0, conversionRate: 0 },
   };
 
   return (

@@ -74,6 +74,7 @@ export function LandingPage() {
             width={32}
             height={32}
             className="rounded-lg"
+            unoptimized
           />
           <span className="text-sm font-semibold tracking-tight">Knosi</span>
         </div>
