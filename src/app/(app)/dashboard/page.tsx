@@ -11,8 +11,9 @@ import {
 import { normalizeJournalTitlesForUser } from "@/server/notes/journal-titles";
 
 export default async function DashboardPage() {
-  const session = await getRequestSession();
-  const userId = session!.user!.id;
+  // Auth is guaranteed by (app) layout guard
+  const session = (await getRequestSession())!;
+  const userId = session.user!.id!;
 
   await normalizeJournalTitlesForUser(userId);
 

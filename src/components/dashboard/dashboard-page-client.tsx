@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Activity, ArrowRight, CircleDot, Circle } from "lucide-react";
+import { Activity, ArrowRight, CircleDot, Circle, Zap } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
@@ -99,6 +99,38 @@ export function DashboardPageClient({
           </Link>
         </div>
       </section>
+
+      {/* Token → Knowledge */}
+      {data?.tokenStats && (
+        <section className="rounded-md border border-stone-200 bg-white/70 p-4 dark:border-stone-800 dark:bg-stone-950/50">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
+            <Zap className="h-3 w-3" />
+            Token → Knowledge
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-4">
+            <div>
+              <div className="text-xl font-semibold tabular-nums text-stone-900 dark:text-stone-50">
+                {data.tokenStats.monthlyTokens > 0
+                  ? `${(data.tokenStats.monthlyTokens / 1000).toFixed(0)}k`
+                  : "0"}
+              </div>
+              <div className="mt-0.5 text-[11px] text-stone-400">tokens this month</div>
+            </div>
+            <div>
+              <div className="text-xl font-semibold tabular-nums text-stone-900 dark:text-stone-50">
+                {data.tokenStats.notesCreatedThisMonth}
+              </div>
+              <div className="mt-0.5 text-[11px] text-stone-400">notes created</div>
+            </div>
+            <div>
+              <div className="text-xl font-semibold tabular-nums text-cyan-600 dark:text-cyan-400">
+                {data.tokenStats.conversionRate.toFixed(1)}%
+              </div>
+              <div className="mt-0.5 text-[11px] text-stone-400">conversion rate</div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Focus Tracking */}
       <Link
