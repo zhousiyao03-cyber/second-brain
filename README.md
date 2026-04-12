@@ -38,6 +38,7 @@ Write notes with a Notion-level editor, index your knowledge with hybrid RAG, an
 - **Ask AI** — Chunk-level hybrid RAG: semantic retrieval + keyword recall + adjacent-paragraph expansion + clickable source citations. Falls back gracefully to keyword-only when no embedding provider is configured.
 - **Claude Code Daemon** — Route Ask AI through your local Claude Pro/Max subscription. No extra API spend. Works against both local dev and the hosted Vercel deployment.
 - **Structured AI Calls** — Learning outline generation, OSS analysis, and portfolio news summarization use the configured provider independently of the chat daemon.
+- **Claude Capture Integrations** — Claude Web can connect through a remote MCP endpoint, and Claude Code can save explicit conversation excerpts through the Knosi CLI + personal skill flow. Both write raw captures into `AI Inbox`.
 
 ### Developer Workflow
 
@@ -197,6 +198,39 @@ npm run daemon
 The daemon polls the server for queued AI tasks (both chat and structured data), executes them via your local Claude CLI, and streams results back. All AI-powered features work through this single daemon process.
 
 **Requirements:** [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) installed and logged in (`claude login`).
+
+### Claude Web Connector
+
+Knosi now exposes a remote MCP surface for Claude Web:
+
+```text
+/.well-known/oauth-authorization-server
+/api/mcp
+```
+
+In Claude Web, add a custom connector that points to your Knosi deployment. The OAuth flow uses your existing Knosi account and grants scoped access for:
+
+- `knowledge:read`
+- `knowledge:write_inbox`
+
+Saved conversations land in the root-level `AI Inbox` folder as raw captures.
+
+### Claude Code Save-To-Knosi Flow
+
+The local CLI now supports an explicit save path for Claude Code:
+
+```bash
+# 1. Log the CLI into your Knosi deployment
+npx @knosi/cli auth login https://www.knosi.xyz
+
+# 2. Install the personal Claude Code skill
+npx @knosi/cli install-skill
+
+# 3. Save a raw conversation payload
+cat payload.json | npx @knosi/cli save-ai-note --json
+```
+
+The installed skill template is written to `~/.claude/skills/save-to-knosi/SKILL.md` and is intended for explicit user-triggered saves only.
 
 ### Option B — OpenAI API
 

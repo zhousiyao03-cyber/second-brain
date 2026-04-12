@@ -14,14 +14,16 @@ const errorMessages: Record<string, string> = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{ error?: string | string[]; next?: string | string[] }>;
 }) {
+  const params = await searchParams;
+  const nextParam = Array.isArray(params.next) ? params.next[0] : params.next;
+  const redirectTo = nextParam || "/dashboard";
   const session = await getRequestSession();
   if (session) {
-    redirect("/dashboard");
+    redirect(redirectTo);
   }
 
-  const params = await searchParams;
   const errorCode = Array.isArray(params.error) ? params.error[0] : params.error;
   const errorMessage = errorCode ? errorMessages[errorCode] : null;
 
@@ -41,6 +43,7 @@ export default async function RegisterPage({
         </div>
 
         <form action={registerWithCredentials} className="space-y-4">
+          <input type="hidden" name="next" value={redirectTo} />
           <div className="space-y-2">
             <label
               htmlFor="name"
@@ -133,7 +136,7 @@ export default async function RegisterPage({
           <form
             action={async () => {
               "use server";
-              await signIn("github", { redirectTo: "/dashboard" });
+              await signIn("github", { redirectTo });
             }}
           >
             <button
@@ -147,7 +150,7 @@ export default async function RegisterPage({
           <form
             action={async () => {
               "use server";
-              await signIn("google", { redirectTo: "/dashboard" });
+              await signIn("google", { redirectTo });
             }}
           >
             <button
@@ -162,7 +165,7 @@ export default async function RegisterPage({
         <p className="text-center text-sm text-stone-500 dark:text-stone-400">
           Already have an account?
           <Link
-            href="/login"
+            href={nextParam ? `/login?next=${encodeURIComponent(nextParam)}` : "/login"}
             className="ml-1 font-medium text-stone-900 underline-offset-4 hover:underline dark:text-stone-100"
           >
             Sign in

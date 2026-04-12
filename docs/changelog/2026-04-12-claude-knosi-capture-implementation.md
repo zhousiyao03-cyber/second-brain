@@ -1,0 +1,112 @@
+# 2026-04-12 - Claude Knosi Capture Implementation
+
+Task / goal:
+- Implement the first end-to-end version of Claude conversation capture for Knosi:
+  - Claude Web via remote MCP + OAuth
+  - Claude Code via local CLI + personal skill
+  - both writing raw excerpts into `AI Inbox`
+
+Key changes:
+- Added the shared raw capture core:
+  - `src/server/integrations/ai-inbox.ts`
+  - `src/server/integrations/ai-capture.ts`
+  - raw markdown/plain-text builders
+  - `captureAiNote()` write path + AI Inbox auto-create
+- Added OAuth storage + services:
+  - new `oauth_authorization_codes`, `oauth_refresh_tokens`, `oauth_access_tokens` tables
+  - `src/server/integrations/oauth-clients.ts`
+  - `src/server/integrations/oauth.ts`
+  - local Drizzle migration `drizzle/0029_claude_knosi_capture.sql`
+  - production rollout artifacts:
+    - `scripts/db/2026-04-12-claude-knosi-capture.sql`
+    - `scripts/db/apply-2026-04-12-claude-knosi-capture-rollout.mjs`
+- Added OAuth web endpoints and login resume behavior:
+  - `/oauth/authorize`
+  - `/api/oauth/token`
+  - `/api/oauth/revoke`
+  - `/.well-known/oauth-authorization-server`
+  - login/register now preserve `next` so OAuth authorize can resume after sign-in
+  - proxy whitelist updated for OAuth, MCP, and CLI capture routes
+- Added Claude integration endpoints:
+  - `/api/integrations/ai-captures` for CLI write calls
+  - `/api/mcp` for JSON-RPC tool listing + tool calls
+  - `src/server/integrations/knowledge-read.ts`
+  - `src/server/integrations/mcp-tools.ts`
+- Added settings management for issued connector / CLI credentials:
+  - `Connected AI Clients` section on `/settings`
+  - revoke action for access / refresh tokens
+- Expanded `packages/cli` from daemon-only to multi-command:
+  - `daemon`
+  - `auth login`
+  - `save-ai-note --json`
+  - `install-skill`
+  - bundled skill template at `packages/cli/templates/save-to-knosi/SKILL.md`
+- Updated docs:
+  - `README.md`
+  - `packages/cli/README.md`
+
+Files touched:
+- `README.md`
+- `packages/cli/README.md`
+- `packages/cli/package.json`
+- `packages/cli/src/index.mjs`
+- `packages/cli/src/daemon.mjs`
+- `packages/cli/src/config.mjs`
+- `packages/cli/src/http.mjs`
+- `packages/cli/src/commands/auth-login.mjs`
+- `packages/cli/src/commands/save-ai-note.mjs`
+- `packages/cli/src/commands/install-skill.mjs`
+- `packages/cli/src/commands/auth-login.test.mjs`
+- `packages/cli/src/commands/save-ai-note.test.mjs`
+- `packages/cli/templates/save-to-knosi/SKILL.md`
+- `src/app/login/page.tsx`
+- `src/app/login/actions.ts`
+- `src/app/register/page.tsx`
+- `src/app/register/actions.ts`
+- `src/app/oauth/authorize/page.tsx`
+- `src/app/oauth/authorize/actions.ts`
+- `src/app/api/oauth/token/route.ts`
+- `src/app/api/oauth/revoke/route.ts`
+- `src/app/.well-known/oauth-authorization-server/route.ts`
+- `src/app/api/integrations/ai-captures/route.ts`
+- `src/app/api/mcp/route.ts`
+- `src/app/(app)/settings/page.tsx`
+- `src/app/(app)/settings/connected-ai-clients-section.tsx`
+- `src/app/(app)/settings/connected-ai-clients-actions.ts`
+- `src/proxy.ts`
+- `src/server/db/schema.ts`
+- `src/server/integrations/ai-inbox.ts`
+- `src/server/integrations/ai-capture.ts`
+- `src/server/integrations/ai-capture.test.mjs`
+- `src/server/integrations/oauth-clients.ts`
+- `src/server/integrations/oauth.ts`
+- `src/server/integrations/oauth.test.mjs`
+- `src/server/integrations/knowledge-read.ts`
+- `src/server/integrations/knowledge-read.test.mjs`
+- `src/server/integrations/mcp-tools.ts`
+- `src/server/integrations/mcp-tools.test.mjs`
+- `drizzle/0029_claude_knosi_capture.sql`
+- `drizzle/meta/0029_snapshot.json`
+- `drizzle/meta/_journal.json`
+- `scripts/db/2026-04-12-claude-knosi-capture.sql`
+- `scripts/db/apply-2026-04-12-claude-knosi-capture-rollout.mjs`
+- `docs/changelog/2026-04-12-claude-knosi-capture-implementation.md`
+
+Verification commands and results:
+- `SQLITE_DB_PATH=/Users/bytedance/second-brain/data/second-brain.db pnpm build`
+  - ✅ passes; Next.js build includes `/oauth/authorize`, `/.well-known/oauth-authorization-server`, `/api/oauth/token`, `/api/oauth/revoke`, `/api/integrations/ai-captures`, `/api/mcp`
+- `pnpm lint`
+  - ✅ no new errors; repository still has 5 pre-existing warnings in unrelated files
+- `node --import tsx --test src/server/integrations/ai-capture.test.mjs src/server/integrations/oauth.test.mjs`
+  - ✅ 10 passing tests
+- `SQLITE_DB_PATH=/Users/bytedance/second-brain/data/second-brain.db node --import tsx --test src/server/integrations/knowledge-read.test.mjs src/server/integrations/mcp-tools.test.mjs`
+  - ✅ 2 passing tests
+- `node --test packages/cli/src/commands/auth-login.test.mjs packages/cli/src/commands/save-ai-note.test.mjs`
+  - ✅ 2 passing tests
+- `git diff --check -- packages/cli src/app src/server drizzle scripts/db`
+  - ✅ passes
+
+Remaining risks / follow-up:
+- Production Turso rollout was intentionally **not performed yet** in this implementation session. The rollout SQL/script are prepared, but production schema apply + verification remains a follow-up blocked on running against `.env.turso-prod.local`.
+- The remote MCP handler currently implements the minimal JSON-RPC methods needed for `initialize`, `tools/list`, and `tools/call`; if Claude’s connector runtime requires additional MCP protocol surfaces, we may need to extend it after real connector testing.
+- The CLI OAuth flow currently assumes a local callback on `127.0.0.1:6274` and uses the OS `open` / `xdg-open` command. This is fine for local development, but may need more fallback UX on headless environments.

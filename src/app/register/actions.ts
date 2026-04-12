@@ -13,6 +13,7 @@ const registerSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(8).max(128),
   confirmPassword: z.string().min(8).max(128),
+  next: z.string().trim().optional().default(""),
 });
 
 export async function registerWithCredentials(formData: FormData) {
@@ -21,6 +22,7 @@ export async function registerWithCredentials(formData: FormData) {
     email: formData.get("email"),
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
+    next: formData.get("next"),
   });
 
   if (!parsed.success) {
@@ -32,6 +34,7 @@ export async function registerWithCredentials(formData: FormData) {
   }
 
   const email = normalizeEmail(parsed.data.email);
+  const redirectTo = parsed.data.next || "/dashboard";
   const [existingUser] = await db
     .select({ id: users.id })
     .from(users)
@@ -60,8 +63,8 @@ export async function registerWithCredentials(formData: FormData) {
   await signIn("credentials", {
     email,
     password: parsed.data.password,
-    redirectTo: "/dashboard",
+    redirectTo,
   });
 
-  redirect("/dashboard");
+  redirect(redirectTo);
 }

@@ -1,0 +1,108 @@
+import { execSync } from "node:child_process";
+import { configure, claimTask, sendHeartbeat } from "./api.mjs";
+import { setClaudeBin } from "./spawn-claude.mjs";
+import { handleChatTask } from "./handler-chat.mjs";
+import { handleStructuredTask } from "./handler-structured.mjs";
+
+function getArg(args, flag) {
+  const idx = args.indexOf(flag);
+  return idx !== -1 && idx + 1 < args.length ? args[idx + 1] : undefined;
+}
+
+function checkClaude(claudeBinArg) {
+  try {
+    const version = execSync(`${claudeBinArg} --version`, { encoding: "utf8" }).trim();
+    console.log(`✓ Claude CLI: ${version}`);
+    return true;
+  } catch {
+    console.error(`✗ Claude CLI not found at "${claudeBinArg}"`);
+    console.error("  Install: npm install -g @anthropic-ai/claude-code");
+    console.error("  Or specify: --claude-bin /path/to/claude");
+    return false;
+  }
+}
+
+function ts() {
+  return new Date().toLocaleTimeString("en-GB", { hour12: false });
+}
+
+export async function runDaemon(args) {
+  const serverUrl = getArg(args, "--url") || "https://second-brain-self-alpha.vercel.app";
+  const isOnce = args.includes("--once");
+  const claudeBinArg = getArg(args, "--claude-bin") || "claude";
+
+  const CHAT_POLL_MS = 2_000;
+  const STRUCTURED_POLL_MS = 1_000;
+  const HEARTBEAT_MS = 120_000;
+  const MAX_CONCURRENT_CHAT = 3;
+  const MAX_CONCURRENT_STRUCTURED = 5;
+
+  configure(serverUrl);
+  setClaudeBin(claudeBinArg);
+
+  if (!checkClaude(claudeBinArg)) process.exit(1);
+
+  let chatRunning = 0;
+  let structuredRunning = 0;
+
+  async function pollChat() {
+    if (chatRunning >= MAX_CONCURRENT_CHAT) return;
+    try {
+      const task = await claimTask("chat");
+      if (!task) return;
+      chatRunning++;
+      handleChatTask(task)
+        .catch(() => {})
+        .finally(() => {
+          chatRunning--;
+        });
+    } catch {}
+  }
+
+  async function pollStructured() {
+    if (structuredRunning >= MAX_CONCURRENT_STRUCTURED) return;
+    try {
+      const task = await claimTask("structured");
+      if (!task) return;
+      structuredRunning++;
+      handleStructuredTask(task)
+        .catch(() => {})
+        .finally(() => {
+          structuredRunning--;
+        });
+    } catch {}
+  }
+
+  if (isOnce) {
+    console.log("🔍 Single-run mode...");
+    await pollChat();
+    await pollStructured();
+    console.log("Done.");
+    return;
+  }
+
+  console.log("");
+  console.log("🚀 Knosi AI Daemon");
+  console.log(`   Server: ${serverUrl}`);
+  console.log(
+    `   Chat poll: ${CHAT_POLL_MS / 1000}s | Structured poll: ${STRUCTURED_POLL_MS / 1000}s`
+  );
+  console.log(
+    `   Max concurrent: chat=${MAX_CONCURRENT_CHAT} structured=${MAX_CONCURRENT_STRUCTURED}`
+  );
+  console.log("");
+  console.log("   Waiting for tasks... (Ctrl+C to stop)");
+  console.log("");
+
+  await sendHeartbeat("daemon");
+  setInterval(() => sendHeartbeat("daemon"), HEARTBEAT_MS);
+  setInterval(pollChat, CHAT_POLL_MS);
+  setInterval(pollStructured, STRUCTURED_POLL_MS);
+
+  for (const sig of ["SIGINT", "SIGTERM"]) {
+    process.on(sig, () => {
+      console.log(`\n[${ts()}] daemon stopped`);
+      process.exit(0);
+    });
+  }
+}

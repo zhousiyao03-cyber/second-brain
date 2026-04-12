@@ -1,8 +1,12 @@
 # @knosi/cli
 
-Local Claude Code daemon for [Second Brain](https://github.com/zhousiyao03-cyber/second-brain).
+Knosi CLI for [Second Brain](https://github.com/zhousiyao03-cyber/second-brain).
 
-Runs on your machine, picks up AI tasks from the hosted Second Brain instance, executes them via your local Claude CLI, and pushes results back.
+Runs on your machine and supports three workflows:
+
+1. the existing Claude Code daemon
+2. OAuth login against your Knosi deployment
+3. explicit raw AI capture saves for Claude Code skills
 
 ## Prerequisites
 
@@ -21,6 +25,49 @@ The daemon will:
 3. Stream results back to the server
 
 Press Ctrl+C to stop.
+
+### OAuth Login
+
+```bash
+npx @knosi/cli auth login https://www.knosi.xyz
+```
+
+This starts a local callback server on `127.0.0.1:6274`, opens the browser, completes OAuth against Knosi, and stores CLI credentials in `~/.knosi/cli.json`.
+
+### Save a Raw AI Capture
+
+```bash
+cat payload.json | npx @knosi/cli save-ai-note --json
+```
+
+Payload shape:
+
+```json
+{
+  "sourceApp": "claude-code",
+  "title": "Optional custom title",
+  "capturedAtLabel": "2026-04-12 15:20 SGT",
+  "messages": [
+    { "role": "user", "content": "Question" },
+    { "role": "assistant", "content": "Answer" }
+  ],
+  "sourceMeta": {
+    "projectPath": "/Users/bytedance/second-brain"
+  }
+}
+```
+
+### Install the Claude Code Skill
+
+```bash
+npx @knosi/cli install-skill
+```
+
+This copies the bundled template to:
+
+```text
+~/.claude/skills/save-to-knosi/SKILL.md
+```
 
 ## Options
 

@@ -14,12 +14,17 @@ export default auth((req) => {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/register" ||
+    pathname.startsWith("/oauth/authorize") ||
     pathname.startsWith("/share/") ||
     pathname === "/manifest.webmanifest" ||
     pathname.startsWith("/icon") ||
     pathname.startsWith("/apple-icon") ||
     pathname.startsWith("/149e9513-01fa-4fb0-aad4-566afd725d1b/") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/oauth/") ||
+    pathname === "/api/mcp" ||
+    pathname === "/api/integrations/ai-captures" ||
+    pathname === "/.well-known/oauth-authorization-server" ||
     pathname.startsWith("/api/focus/ingest") ||
     pathname.startsWith("/api/focus/status") ||
     pathname.startsWith("/api/focus/pair") ||
@@ -34,7 +39,12 @@ export default auth((req) => {
     pathname.startsWith("/favicon");
 
   if (!isLoggedIn && !isPublicPath) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+    const loginUrl = new URL("/login", req.nextUrl.origin);
+    const next = `${pathname}${req.nextUrl.search}`;
+    if (next && next !== "/login") {
+      loginUrl.searchParams.set("next", next);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
