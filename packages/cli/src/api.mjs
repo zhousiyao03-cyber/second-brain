@@ -67,3 +67,21 @@ export async function sendHeartbeat(kind) {
     body: JSON.stringify({ kind, version: "@knosi/cli" }),
   }).catch(() => {});
 }
+
+export async function createAuthSession(serverUrl) {
+  const res = await fetch(`${serverUrl}/api/cli/auth/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ serverUrl }),
+  });
+  if (!res.ok) throw new Error(`Failed to create auth session: ${res.status}`);
+  return res.json();
+}
+
+export async function pollAuthSession(serverUrl, sessionId) {
+  const res = await fetch(
+    `${serverUrl}/api/cli/auth/poll?session_id=${encodeURIComponent(sessionId)}`
+  );
+  if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
+  return res.json();
+}

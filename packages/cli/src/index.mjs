@@ -12,7 +12,7 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { configure, claimTask, sendHeartbeat, setAuthToken } from "./api.mjs";
+import { configure, claimTask, sendHeartbeat, setAuthToken, createAuthSession, pollAuthSession } from "./api.mjs";
 import { setClaudeBin } from "./spawn-claude.mjs";
 import { handleChatTask } from "./handler-chat.mjs";
 import { handleStructuredTask } from "./handler-structured.mjs";
@@ -72,48 +72,62 @@ async function loginFlow() {
   console.log("");
   console.log("🔐 Knosi CLI Login");
   console.log("");
-  console.log("To authenticate, generate a CLI token from your Knosi account:");
-  console.log("");
-  console.log(`  1. Open ${serverUrl}/settings in your browser`);
-  console.log("  2. Click \"Generate CLI Token\"");
-  console.log("  3. Copy the token and paste it below");
-  console.log("");
 
-  const readline = await import("node:readline");
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
-  const token = await new Promise((resolve) => {
-    rl.question("Token: ", (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-
-  if (!token) {
-    console.error("❌ No token provided.");
+  let session;
+  try {
+    session = await createAuthSession(serverUrl);
+  } catch (err) {
+    console.error(`❌ Could not reach ${serverUrl}. Is the server running?`);
+    console.error(`   ${err.message}`);
     process.exit(1);
   }
 
-  // Verify the token works
-  configure(serverUrl);
-  setAuthToken(token);
+  const authUrl = session.authUrl;
+  console.log("Opening browser for authorization...");
+  console.log("");
+  console.log("  If the browser doesn't open, visit:");
+  console.log(`  ${authUrl}`);
+  console.log("");
+
   try {
-    await claimTask("chat"); // will return null (no tasks) or throw AUTH_FAILED
-    saveToken(token);
-    console.log("");
-    console.log("✅ Authenticated successfully! Token saved to ~/.knosi/token");
-    console.log("   Run `knosi` to start the daemon.");
-  } catch (err) {
-    if (err.message === "AUTH_FAILED") {
-      console.error("❌ Invalid token. Please check and try again.");
-      process.exit(1);
-    }
-    // Network error — token might be valid but server is down
-    saveToken(token);
-    console.log("");
-    console.log("⚠️  Could not verify token (server may be down), but saved it.");
-    console.log("   Run `knosi` to start the daemon.");
+    const { default: open } = await import("open");
+    await open(authUrl);
+  } catch {
+    // open package not available — user can manually visit the URL
   }
+
+  console.log("Waiting for authorization...");
+  const POLL_INTERVAL_MS = 2000;
+  const MAX_POLL_DURATION_MS = 5 * 60 * 1000;
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < MAX_POLL_DURATION_MS) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+    try {
+      const result = await pollAuthSession(serverUrl, session.sessionId);
+
+      if (result.status === "approved" && result.token) {
+        saveToken(result.token);
+        console.log("");
+        console.log("✅ Authenticated successfully! Token saved to ~/.knosi/token");
+        console.log("   Run `knosi` to start the daemon.");
+        process.exit(0);
+      }
+
+      if (result.status === "expired") {
+        console.error("");
+        console.error("❌ Session expired. Please try again.");
+        process.exit(1);
+      }
+    } catch {
+      // Network hiccup — keep trying
+    }
+  }
+
+  console.error("");
+  console.error("❌ Timed out waiting for authorization. Please try again.");
+  process.exit(1);
 }
 
 // ── Commands ────────────────────────────────────────────────────────────
