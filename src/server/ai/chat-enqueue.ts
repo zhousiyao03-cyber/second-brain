@@ -73,6 +73,7 @@ export async function enqueueChatTask({
     id: taskId,
     userId,
     status: "queued",
+    taskType: "chat",
     sourceScope,
     messages: JSON.stringify(messages),
     systemPrompt,

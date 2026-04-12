@@ -1,0 +1,22 @@
+{
+  "name": "@knosi/cli",
+  "version": "0.1.0",
+  "description": "Local Claude Code daemon for Second Brain — run AI tasks on your machine",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "bin": {
+    "knosi": "./src/index.mjs"
+  },
+  "files": [
+    "src/"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "second-brain",
+    "claude",
+    "ai",
+    "daemon"
+  ]
+}

@@ -1,4 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
+import { and, eq } from "drizzle-orm";
 import { getOAuthApiKey } from "@mariozechner/pi-ai/oauth";
 import { generateText, Output, streamText, type ModelMessage } from "ai";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -7,6 +8,9 @@ import { Buffer } from "node:buffer";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod/v4";
+
+import { db } from "@/server/db";
+import { chatTasks } from "@/server/db/schema";
 
 type AIProviderMode = "local" | "openai" | "codex" | "claude-code-daemon";
 type GenerationKind = "chat" | "task";
@@ -765,19 +769,66 @@ export async function streamChatResponse({
   return createCodexTextStreamResponse(response);
 }
 
-/**
- * When the primary mode is "claude-code-daemon", generateStructuredData
- * cannot use the daemon queue (it's synchronous background work). Fall
- * back to the same auto-detect order used when AI_PROVIDER is unset.
- */
-function resolveStructuredDataMode(): Exclude<AIProviderMode, "claude-code-daemon"> {
-  if (hasCodexAuthProfile()) {
-    return "codex";
+async function generateStructuredDataWithDaemon<TSchema extends z.ZodType>({
+  description,
+  name,
+  prompt,
+  schema,
+  signal,
+}: GenerateStructuredDataOptions<TSchema>): Promise<z.infer<TSchema>> {
+  const fullPrompt = buildStructuredJsonPrompt({ description, name, prompt, schema });
+  const model = process.env.CLAUDE_CODE_CHAT_MODEL?.trim() || "sonnet";
+
+  const taskId = crypto.randomUUID();
+  await db.insert(chatTasks).values({
+    id: taskId,
+    userId: "system",
+    status: "queued",
+    taskType: "structured",
+    sourceScope: "direct",
+    messages: "[]",
+    systemPrompt: fullPrompt,
+    model,
+  });
+
+  const POLL_INTERVAL = 300;
+  const TIMEOUT = 120_000;
+  const deadline = Date.now() + TIMEOUT;
+
+  while (Date.now() < deadline) {
+    if (signal?.aborted) {
+      await db.update(chatTasks)
+        .set({ status: "cancelled" })
+        .where(and(eq(chatTasks.id, taskId), eq(chatTasks.status, "queued")));
+      throw new Error("Aborted");
+    }
+
+    const [row] = await db
+      .select({
+        status: chatTasks.status,
+        structuredResult: chatTasks.structuredResult,
+        error: chatTasks.error,
+      })
+      .from(chatTasks)
+      .where(eq(chatTasks.id, taskId));
+
+    if (!row) throw new Error(`Daemon task ${taskId} disappeared`);
+
+    if (row.status === "completed" && row.structuredResult) {
+      return schema.parse(JSON.parse(extractJsonObject(row.structuredResult)));
+    }
+
+    if (row.status === "failed") {
+      throw new Error(row.error || `Daemon structured task failed: ${taskId}`);
+    }
+
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL));
   }
-  if (resolveValue(process.env.OPENAI_API_KEY)) {
-    return "openai";
-  }
-  return "local";
+
+  await db.update(chatTasks)
+    .set({ status: "cancelled" })
+    .where(and(eq(chatTasks.id, taskId), eq(chatTasks.status, "queued")));
+  throw new Error(`Daemon structured task timed out: ${taskId}`);
 }
 
 export async function generateStructuredData<TSchema extends z.ZodType>({
@@ -787,30 +838,20 @@ export async function generateStructuredData<TSchema extends z.ZodType>({
   schema,
   signal,
 }: GenerateStructuredDataOptions<TSchema>): Promise<z.infer<TSchema>> {
-  const primaryMode = getProviderMode();
-  const mode: Exclude<AIProviderMode, "claude-code-daemon"> =
-    primaryMode === "claude-code-daemon"
-      ? resolveStructuredDataMode()
-      : primaryMode;
+  const mode = getProviderMode();
+
+  if (mode === "claude-code-daemon") {
+    return generateStructuredDataWithDaemon({ description, name, prompt, schema, signal });
+  }
 
   if (mode === "codex") {
-    return generateStructuredDataWithCodex({
-      description,
-      name,
-      prompt,
-      schema,
-      signal,
-    });
+    return generateStructuredDataWithCodex({ description, name, prompt, schema, signal });
   }
 
   const provider = createAiSdkProvider(mode);
   const { output } = await generateText({
     model: provider(resolveAiSdkModelId("task", mode)),
-    output: Output.object({
-      description,
-      name,
-      schema,
-    }),
+    output: Output.object({ description, name, schema }),
     prompt,
     abortSignal: signal,
   });

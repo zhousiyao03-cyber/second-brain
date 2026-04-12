@@ -175,22 +175,28 @@ Knosi supports four AI provider modes. Set `AI_PROVIDER` in `.env.local`.
 
 ### Option A — Claude Code Daemon (recommended for Claude subscribers)
 
-Route Ask AI through your existing Claude Pro/Max subscription. No API key required.
+Route **all AI features** (Ask AI chat, focus analysis, learning outlines, portfolio summaries, and more) through your existing Claude Pro/Max subscription. No API key required.
 
 ```bash
 AI_PROVIDER=claude-code-daemon
 CLAUDE_CODE_CHAT_MODEL=sonnet   # opus | sonnet | haiku | full model id
 ```
 
-Then run the daemon in a separate terminal:
+Then run the daemon on your local machine:
 
 ```bash
-npm run usage:daemon
+npx @knosi/cli --url https://your-second-brain.vercel.app
 ```
 
-The daemon polls for queued chat requests and spawns `claude -p` using your local session. Structured AI calls (outlines, analysis, news) fall back to a secondary provider, so they keep working even when the daemon is not running.
+Or during local development:
 
-**Requirements:** Claude CLI installed, `claude login` completed at least once.
+```bash
+npm run daemon
+```
+
+The daemon polls the server for queued AI tasks (both chat and structured data), executes them via your local Claude CLI, and streams results back. All AI-powered features work through this single daemon process.
+
+**Requirements:** [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) installed and logged in (`claude login`).
 
 ### Option B — OpenAI API
 
@@ -305,7 +311,8 @@ npm run test:e2e      # Playwright E2E tests
 npm run db:generate   # Generate Drizzle migrations
 npm run db:push       # Apply migrations to the database
 npm run db:studio     # Open Drizzle Studio
-npm run usage:daemon  # Start Claude Code daemon for Ask AI
+npm run daemon        # Start local Claude Code AI daemon
+npm run usage:daemon  # Start usage reporter + analysis daemon
 ```
 
 ---

@@ -771,11 +771,15 @@ export const chatTasks = sqliteTable(
     })
       .notNull()
       .default("queued"),
+    taskType: text("task_type", { enum: ["chat", "structured"] })
+      .notNull()
+      .default("chat"),
     sourceScope: text("source_scope").notNull().default("all"), // "all" | "notes" | "bookmarks" | "direct" — see src/lib/ask-ai.ts#ASK_AI_SOURCE_SCOPES
     messages: text("messages").notNull(), // JSON-encoded ModelMessage[]
     systemPrompt: text("system_prompt").notNull(),
     model: text("model").notNull().default("opus"), // Claude CLI model alias: "opus" | "sonnet" | "haiku" (or full ID)
     totalText: text("total_text"),
+    structuredResult: text("structured_result"),
     error: text("error"),
     createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
     startedAt: integer("started_at", { mode: "timestamp" }),

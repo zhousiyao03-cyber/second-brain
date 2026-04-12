@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
   const body = (await request.json()) as {
     taskId: string;
     totalText?: string;
+    structuredResult?: string;
     error?: string;
   };
 
@@ -19,11 +20,7 @@ export async function POST(request: NextRequest) {
   if (body.error) {
     await db
       .update(chatTasks)
-      .set({
-        status: "failed",
-        error: body.error,
-        completedAt: now,
-      })
+      .set({ status: "failed", error: body.error, completedAt: now })
       .where(eq(chatTasks.id, body.taskId));
   } else {
     await db
@@ -31,6 +28,7 @@ export async function POST(request: NextRequest) {
       .set({
         status: "completed",
         totalText: body.totalText ?? "",
+        structuredResult: body.structuredResult ?? null,
         completedAt: now,
       })
       .where(eq(chatTasks.id, body.taskId));
