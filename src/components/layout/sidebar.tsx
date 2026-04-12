@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { logout } from "@/app/(app)/actions";
 import { AppBrand } from "./app-brand";
-import { navigationItems } from "./navigation";
+import { navigationGroups } from "./navigation";
+import { clientFeatureFlags } from "@/lib/feature-flags";
 
 const COLLAPSED_COOKIE = "sb_collapsed";
 
@@ -89,40 +90,60 @@ export function Sidebar({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-0.5 px-2 pt-1">
-        {navigationItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          const Icon = item.icon;
+      <nav className="flex-1 space-y-3 overflow-y-auto px-2 pt-1">
+        {navigationGroups.map((group) => {
+          const visibleItems = group.items.filter(
+            (item) => !item.featureFlag || clientFeatureFlags[item.featureFlag]
+          );
+          if (visibleItems.length === 0) return null;
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-label={item.label}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                "relative flex items-center rounded-lg text-[13px] font-medium transition-colors",
-                collapsed ? "h-9 justify-center" : "gap-2.5 px-3 py-2",
-                isActive
-                  ? "bg-stone-200/70 text-stone-900 dark:bg-stone-800/80 dark:text-stone-100"
-                  : "text-stone-600 hover:bg-stone-200/50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800/60 dark:hover:text-stone-100"
+            <div key={group.label}>
+              {collapsed ? (
+                <div className="mx-auto my-1 h-px w-6 bg-stone-200/60 dark:bg-stone-800/60" />
+              ) : (
+                <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400 dark:text-stone-500">
+                  {group.label}
+                </div>
               )}
-            >
-              {isActive && !collapsed && (
-                <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-stone-900 dark:bg-stone-100" />
-              )}
-              <Icon
-                className={cn(
-                  "h-[16px] w-[16px] shrink-0",
-                  isActive ? "text-stone-900 dark:text-stone-100" : ""
-                )}
-                strokeWidth={isActive ? 2.2 : 1.8}
-              />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
+              <div className="space-y-0.5">
+                {visibleItems.map((item) => {
+                  const isActive =
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(item.href);
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-label={item.label}
+                      title={collapsed ? item.label : undefined}
+                      className={cn(
+                        "relative flex items-center rounded-lg text-[13px] font-medium transition-colors",
+                        collapsed ? "h-9 justify-center" : "gap-2.5 px-3 py-2",
+                        isActive
+                          ? "bg-stone-200/70 text-stone-900 dark:bg-stone-800/80 dark:text-stone-100"
+                          : "text-stone-600 hover:bg-stone-200/50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800/60 dark:hover:text-stone-100"
+                      )}
+                    >
+                      {isActive && !collapsed && (
+                        <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-stone-900 dark:bg-stone-100" />
+                      )}
+                      <Icon
+                        className={cn(
+                          "h-[16px] w-[16px] shrink-0",
+                          isActive ? "text-stone-900 dark:text-stone-100" : ""
+                        )}
+                        strokeWidth={isActive ? 2.2 : 1.8}
+                      />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>
