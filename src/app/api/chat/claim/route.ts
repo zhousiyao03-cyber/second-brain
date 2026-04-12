@@ -1,22 +1,36 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { eq, and, lt } from "drizzle-orm";
 import { db } from "@/server/db";
 import { chatTasks } from "@/server/db/schema";
 
-const ZOMBIE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const ZOMBIE_TIMEOUT_MS = 5 * 60 * 1000;
 
-export async function POST() {
-  // Reclaim zombie tasks — running for longer than ZOMBIE_TIMEOUT_MS
+export async function POST(request: NextRequest) {
+  let taskType: "chat" | "structured" = "chat";
+  try {
+    const body = await request.json();
+    if (body.taskType === "structured") taskType = "structured";
+  } catch {
+    // empty body = default to chat
+  }
+
+  // Reclaim zombies for this task type
   const zombieCutoff = new Date(Date.now() - ZOMBIE_TIMEOUT_MS);
   await db
     .update(chatTasks)
     .set({ status: "queued", startedAt: null })
-    .where(and(eq(chatTasks.status, "running"), lt(chatTasks.startedAt, zombieCutoff)));
+    .where(
+      and(
+        eq(chatTasks.status, "running"),
+        eq(chatTasks.taskType, taskType),
+        lt(chatTasks.startedAt, zombieCutoff)
+      )
+    );
 
   const [task] = await db
     .select()
     .from(chatTasks)
-    .where(eq(chatTasks.status, "queued"))
+    .where(and(eq(chatTasks.status, "queued"), eq(chatTasks.taskType, taskType)))
     .orderBy(chatTasks.createdAt)
     .limit(1);
 
@@ -25,8 +39,6 @@ export async function POST() {
   }
 
   const now = new Date();
-
-  // Atomic-ish claim: only transition if still queued
   const updated = await db
     .update(chatTasks)
     .set({ status: "running", startedAt: now })
@@ -34,7 +46,6 @@ export async function POST() {
     .returning({ id: chatTasks.id });
 
   if (updated.length === 0) {
-    // Another poll claimed it between the SELECT and UPDATE. Treat as empty.
     return NextResponse.json({ task: null });
   }
 
@@ -50,6 +61,7 @@ export async function POST() {
       id: task.id,
       userId: task.userId,
       model: task.model,
+      taskType: task.taskType,
       systemPrompt: task.systemPrompt,
       messages: parsedMessages,
     },
