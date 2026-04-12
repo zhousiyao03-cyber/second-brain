@@ -54,6 +54,33 @@ Write notes with a Notion-level editor, index your knowledge with hybrid RAG, an
 
 ## Quick Start
 
+### Option A: Docker (recommended for self-hosting)
+
+```bash
+git clone https://github.com/zhousiyao03-cyber/knosi.git
+cd knosi
+
+# Start with default settings (SQLite, email/password login)
+docker compose up -d
+
+# → http://localhost:3000
+```
+
+Data is persisted in a Docker volume. To customize, create a `.env` file:
+
+```bash
+# Generate a secure auth secret
+echo "AUTH_SECRET=$(openssl rand -base64 32)" > .env
+
+# Optional: add GitHub/Google OAuth
+echo "AUTH_GITHUB_ID=your-id" >> .env
+echo "AUTH_GITHUB_SECRET=your-secret" >> .env
+```
+
+Then restart: `docker compose up -d --build`
+
+### Option B: Local development
+
 ```bash
 # 1. Clone
 git clone https://github.com/zhousiyao03-cyber/knosi.git
