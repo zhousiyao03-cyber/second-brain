@@ -69,16 +69,26 @@ function getReadableErrorMessage(error: Error | undefined | null) {
   const rawMessage = error?.message?.trim();
   if (!rawMessage) return null;
 
+  let message = rawMessage;
   try {
     const parsed = JSON.parse(rawMessage) as { error?: string };
     if (typeof parsed.error === "string" && parsed.error.trim()) {
-      return parsed.error;
+      message = parsed.error;
     }
   } catch {
-    return rawMessage;
+    // not JSON — use rawMessage
   }
 
-  return rawMessage;
+  // Make daemon-related errors user-friendly
+  if (
+    message.includes("daemon") ||
+    message.includes("enqueue failed") ||
+    message.includes("AI_PROVIDER")
+  ) {
+    return "The AI daemon is not running. Please start it on your local machine: run `knosi login` to authenticate, then `knosi` to start the daemon.";
+  }
+
+  return message;
 }
 
 function buildNoteDocument(

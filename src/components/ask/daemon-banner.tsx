@@ -45,11 +45,43 @@ export function DaemonBanner() {
     return null;
   }
 
+  const isNeverConnected = statusData.secondsSince == null;
+
   return (
-    <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-      <strong>Local Claude daemon not running</strong> — Run{" "}
-      <code className="rounded bg-amber-100 px-1 py-0.5 dark:bg-amber-900/60">npx @knosi/cli</code> locally to start.
-      Last heartbeat: {formatAge(statusData.secondsSince)}
+    <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+      <p className="font-semibold">
+        {isNeverConnected
+          ? "AI daemon not set up yet"
+          : "Local Claude daemon offline"}
+      </p>
+      <p className="mt-1.5 text-amber-700 dark:text-amber-300">
+        Ask AI runs on your local machine via Claude Code. To get started:
+      </p>
+      <ol className="mt-2 ml-4 list-decimal space-y-1 text-amber-700 dark:text-amber-300">
+        <li>
+          Install the CLI:{" "}
+          <code className="rounded bg-amber-100 px-1 py-0.5 dark:bg-amber-900/60">
+            npm install -g @knosi/cli
+          </code>
+        </li>
+        <li>
+          Log in (opens browser):{" "}
+          <code className="rounded bg-amber-100 px-1 py-0.5 dark:bg-amber-900/60">
+            knosi login
+          </code>
+        </li>
+        <li>
+          Start the daemon:{" "}
+          <code className="rounded bg-amber-100 px-1 py-0.5 dark:bg-amber-900/60">
+            knosi
+          </code>
+        </li>
+      </ol>
+      {!isNeverConnected && (
+        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+          Last seen: {formatAge(statusData.secondsSince)}
+        </p>
+      )}
     </div>
   );
 }
