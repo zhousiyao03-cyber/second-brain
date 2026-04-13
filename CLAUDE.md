@@ -138,6 +138,7 @@ docs/changelog/       # Phase 完成留档
 
 ## 代码规范
 
+- **所有用户可见的文案（UI 文本、按钮、placeholder、错误提示、aria-label 等）必须使用英文。** 代码注释和内部日志语言不限，但对外展示一律英文。
 - 使用 `zod/v4` 进行输入校验（项目安装的是 zod v4）
 - tRPC router 使用 `publicProcedure`
 - ID 生成使用 `crypto.randomUUID()`
