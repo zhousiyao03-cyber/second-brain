@@ -42,13 +42,13 @@ export default async function OAuthAuthorizePage({
     redirect(`/login?next=${encodeURIComponent(`/oauth/authorize?${currentQuery.toString()}`)}`);
   }
 
-  const client = getOAuthClient(clientId);
+  const client = await getOAuthClient(clientId);
   const isValidRequest =
     responseType === "code" &&
     codeChallengeMethod === "S256" &&
     Boolean(client) &&
     Boolean(codeChallenge) &&
-    isAllowedOAuthRedirectUri(clientId, redirectUri);
+    (await isAllowedOAuthRedirectUri(clientId, redirectUri));
 
   const requestedScopes = isValidRequest
     ? normalizeOAuthScopes(scope)

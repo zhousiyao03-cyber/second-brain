@@ -43,6 +43,26 @@ export const userCredentials = sqliteTable("user_credentials", {
 });
 
 // ── OAuth integrations ─────────────────────────────
+export const oauthClients = sqliteTable(
+  "oauth_clients",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    clientId: text("client_id").notNull(),
+    clientName: text("client_name").notNull(),
+    redirectUris: text("redirect_uris").notNull(),
+    allowedScopes: text("allowed_scopes").notNull(),
+    tokenEndpointAuthMethod: text("token_endpoint_auth_method").notNull().default("none"),
+    grantTypes: text("grant_types").notNull().default("authorization_code refresh_token"),
+    clientUri: text("client_uri"),
+    logoUri: text("logo_uri"),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex("oauth_clients_client_id_idx").on(table.clientId)]
+);
+
 export const oauthAuthorizationCodes = sqliteTable(
   "oauth_authorization_codes",
   {

@@ -52,7 +52,12 @@ export async function approveOauthAuthorization(formData: FormData) {
     codeChallengeMethod: formData.get("codeChallengeMethod"),
   });
 
-  if (!parsed.success || !getOAuthClient(parsed.data.clientId)) {
+  if (!parsed.success) {
+    redirect("/login");
+  }
+
+  const client = await getOAuthClient(parsed.data.clientId);
+  if (!client) {
     redirect("/login");
   }
 

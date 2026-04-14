@@ -203,9 +203,9 @@ function fromScopeText(scopes: string) {
   return parseOAuthScopes(scopes);
 }
 
-function ensureClientAndRedirectUri(clientId: string, redirectUri: string, scopes: readonly string[] | string) {
-  assertOAuthClientScopeBoundary(clientId, scopes);
-  if (!isAllowedOAuthRedirectUri(clientId, redirectUri)) {
+async function ensureClientAndRedirectUri(clientId: string, redirectUri: string, scopes: readonly string[] | string) {
+  await assertOAuthClientScopeBoundary(clientId, scopes);
+  if (!(await isAllowedOAuthRedirectUri(clientId, redirectUri))) {
     throw new OAuthError(
       "invalid_redirect_uri",
       `Redirect URI is not allowed for client ${clientId}.`
@@ -401,7 +401,7 @@ export async function issueAuthorizationCode(
   const randomBytes = dependencies.randomBytes ?? crypto.randomBytes;
   const store = await getStore(dependencies);
 
-  ensureClientAndRedirectUri(input.clientId, input.redirectUri, input.scopes);
+  await ensureClientAndRedirectUri(input.clientId, input.redirectUri, input.scopes);
   if ((input.codeChallengeMethod ?? "S256") !== "S256") {
     throw new OAuthError(
       "unsupported_code_challenge_method",

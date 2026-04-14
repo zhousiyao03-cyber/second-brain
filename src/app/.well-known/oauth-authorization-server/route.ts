@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     authorization_endpoint: `${origin}/oauth/authorize`,
     token_endpoint: `${origin}/api/oauth/token`,
     revocation_endpoint: `${origin}/api/oauth/revoke`,
+    registration_endpoint: `${origin}/api/oauth/register`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
