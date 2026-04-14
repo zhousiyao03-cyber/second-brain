@@ -20,8 +20,8 @@ const ACCESS_TOKEN_PREFIX = "kat";
 const REFRESH_TOKEN_PREFIX = "krt";
 
 const DEFAULT_AUTHORIZATION_CODE_TTL_SECS = 10 * 60;
-const DEFAULT_ACCESS_TOKEN_TTL_SECS = 60 * 60;
-const DEFAULT_REFRESH_TOKEN_TTL_SECS = 30 * 24 * 60 * 60;
+const DEFAULT_ACCESS_TOKEN_TTL_SECS = 24 * 60 * 60;
+const DEFAULT_REFRESH_TOKEN_TTL_SECS = 365 * 24 * 60 * 60;
 
 export class OAuthError extends Error {
   code: string;
