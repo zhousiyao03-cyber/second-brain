@@ -24,6 +24,7 @@ export default auth((req) => {
     pathname === "/api/mcp" ||
     pathname === "/api/integrations/ai-captures" ||
     pathname === "/.well-known/oauth-authorization-server" ||
+    pathname === "/.well-known/oauth-protected-resource" ||
     pathname.startsWith("/api/focus/ingest") ||
     pathname.startsWith("/api/focus/status") ||
     pathname.startsWith("/api/focus/pair") ||
