@@ -1,6 +1,7 @@
 /**
  * HTTP API client — communicates with the hosted Second Brain server.
  */
+import { consumeDaemonNotificationStream } from "./daemon-notifications.mjs";
 
 let serverUrl = "";
 let authToken = "";
@@ -66,6 +67,24 @@ export async function sendHeartbeat(kind) {
     headers: authHeaders(),
     body: JSON.stringify({ kind, version: "@knosi/cli" }),
   }).catch(() => {});
+}
+
+export async function connectDaemonTaskNotifications({ signal } = {}, onEvent) {
+  const headers = { Accept: "text/event-stream" };
+  if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+
+  const res = await fetch(`${serverUrl}/api/daemon/tasks`, {
+    method: "GET",
+    headers,
+    signal,
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("AUTH_FAILED");
+    throw new Error(`Daemon notifications ${res.status}`);
+  }
+
+  await consumeDaemonNotificationStream(res, onEvent);
 }
 
 export async function createAuthSession(serverUrl) {

@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { chatTasks } from "@/server/db/schema";
 import { retrieveAgenticContext } from "@/server/ai/agentic-rag";
 import { retrieveContext } from "@/server/ai/rag";
+import { publishDaemonTaskNotification } from "@/server/ai/daemon-task-notifications";
 import {
   buildSystemPrompt,
   getUserMessageText,
@@ -98,6 +99,11 @@ export async function enqueueChatTask({
     messages: JSON.stringify(messages),
     systemPrompt,
     model,
+  });
+  await publishDaemonTaskNotification({
+    kind: "wake",
+    userId,
+    taskType: "chat",
   });
 
   return { taskId };

@@ -36,7 +36,7 @@ Write notes with a Notion-level editor, index your knowledge with hybrid RAG, an
 ### AI
 
 - **Ask AI** — Chunk-level hybrid RAG: semantic retrieval + keyword recall + adjacent-paragraph expansion + clickable source citations. Falls back gracefully to keyword-only when no embedding provider is configured.
-- **Claude Code Daemon** — Route Ask AI through your local Claude Pro/Max subscription. No extra API spend. Works against both local dev and the self-hosted web deployment, with Redis-backed live token fan-out for low-latency daemon responses.
+- **Claude Code Daemon** — Route Ask AI through your local Claude Pro/Max subscription. No extra API spend. Works against both local dev and the self-hosted web deployment, with Redis-backed live token fan-out plus Redis/SSE wakeups so the daemon no longer has to idle-poll claims aggressively.
 - **Structured AI Calls** — Learning outline generation, OSS analysis, and portfolio news summarization use the configured provider independently of the chat daemon.
 - **Claude Capture Integrations** — Claude Web can connect through a remote MCP endpoint, and Claude Code can save explicit conversation excerpts through the Knosi CLI + personal skill flow. Both write raw captures into `AI Inbox`.
 
@@ -278,7 +278,7 @@ Or during local development:
 npm run daemon
 ```
 
-The daemon polls the server for queued AI tasks (both chat and structured data), executes them via your local Claude CLI, and streams results back. All AI-powered features work through this single daemon process.
+The daemon opens a lightweight notification stream for queued AI tasks, falls back to coarse claim checks if notifications are unavailable, executes tasks via your local Claude CLI, and streams results back. All AI-powered features work through this single daemon process.
 
 **Requirements:** [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) installed and logged in (`claude login`).
 

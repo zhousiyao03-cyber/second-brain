@@ -1,0 +1,45 @@
+# 2026-04-15 Daemon Claim Notifications
+
+- date: 2026-04-15
+- task / goal: Reduce idle database pressure from the local Claude daemon by replacing fixed-interval `/api/chat/claim` polling with Redis-backed wake notifications and an authenticated SSE stream.
+- key changes:
+  - Added a dedicated daemon task notification module with per-user Redis channels plus typed wake events.
+  - Added `/api/daemon/tasks` as an authenticated SSE endpoint that emits a queued-task snapshot on connect and live wake notifications afterward.
+  - Updated chat enqueue paths to publish wake events after durable `chat_tasks` inserts.
+  - Added a tiny CLI SSE parser and notification consumer for daemon wake events.
+  - Reworked the CLI daemon to drain claims on wake, reconnect snapshot, worker completion, or coarse fallback intervals instead of fixed `1s/2s` polling loops.
+  - Kept the durable queue and atomic `/api/chat/claim` contract intact so Redis remains an optimization rather than the source of truth.
+- files touched:
+  - `README.md`
+  - `docs/changelog/2026-04-15-daemon-claim-notifications.md`
+  - `docs/superpowers/plans/2026-04-15-daemon-claim-notifications.md`
+  - `docs/superpowers/specs/2026-04-15-daemon-claim-notifications-design.md`
+  - `packages/cli/src/api.mjs`
+  - `packages/cli/src/daemon.mjs`
+  - `packages/cli/src/daemon-notifications.mjs`
+  - `packages/cli/src/daemon-notifications.test.mjs`
+  - `src/app/api/daemon/tasks/route.ts`
+  - `src/server/ai/chat-enqueue.ts`
+  - `src/server/ai/daemon-task-notifications.test.mjs`
+  - `src/server/ai/daemon-task-notifications.ts`
+  - `src/server/ai/provider.ts`
+- verification commands and results:
+  - `pnpm tsx --test src/server/ai/daemon-task-notifications.test.mjs`
+    - Exit `0`; 5 tests passed covering channel naming, event round-tripping, malformed payload rejection, publish semantics, and subscription cleanup.
+  - `node --test packages/cli/src/daemon-notifications.test.mjs`
+    - Exit `0`; 3 tests passed covering SSE frame parsing, buffering of partial frames, and end-to-end stream consumption order.
+  - `pnpm lint`
+    - Exit `0`; same 8 pre-existing warnings remain, with no new warnings introduced by this task.
+  - `AUTH_SECRET=test-secret TURSO_DATABASE_URL=file:data/second-brain.db NEXT_DEPLOYMENT_ID=daemon-claim-wake pnpm build`
+    - Exit `0`; production build completed successfully with the new daemon wake route and CLI changes.
+  - `rsync -az --delete --exclude-from=ops/hetzner/rsync-excludes.txt ./ knosi:/srv/knosi/`
+    - Exit `0`; synced the new server code to Hetzner.
+  - `NEXT_DEPLOYMENT_ID=$(date -u +%Y%m%d%H%M%S) && ssh knosi "APP_DIR=/srv/knosi NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID /srv/knosi/ops/hetzner/deploy.sh"`
+    - Exit `0`; deployed to Hetzner with deployment id `20260415134538`.
+  - `ssh knosi 'curl -I -sS http://127.0.0.1:3000/login && echo --- && curl -I -sS https://www.knosi.xyz/login'`
+    - Returned `200 OK` for both origin and public login routes after deploy.
+  - `ssh knosi 'cd /srv/knosi && docker compose -f docker-compose.prod.yml logs --since=60s knosi | grep -E "chat_tasks|daemon_chat_messages|daemon_heartbeats|oauth_access_tokens" | tail -n 40'`
+    - Confirmed production still showed the old idle claim cadence, which identified the remaining rollout gap: the local daemon process must be restarted on the client machine to pick up the new CLI logic.
+- remaining risks or follow-up items:
+  - The server-side change is live, but any already-running local daemon process will keep polling with the old cadence until it is restarted from updated code.
+  - Structured daemon tasks still use the existing server-side queue semantics; this change optimizes claim wakeups without changing how tasks are atomically claimed or completed.

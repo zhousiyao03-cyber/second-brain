@@ -11,6 +11,7 @@ import { z } from "zod/v4";
 
 import { db } from "@/server/db";
 import { chatTasks } from "@/server/db/schema";
+import { publishDaemonTaskNotification } from "@/server/ai/daemon-task-notifications";
 
 type AIProviderMode = "local" | "openai" | "codex" | "claude-code-daemon";
 type GenerationKind = "chat" | "task";
@@ -794,6 +795,11 @@ async function generateStructuredDataWithDaemon<TSchema extends z.ZodType>({
     messages: "[]",
     systemPrompt: fullPrompt,
     model,
+  });
+  await publishDaemonTaskNotification({
+    kind: "wake",
+    userId: "system",
+    taskType: "structured",
   });
 
   const POLL_INTERVAL = 300;
