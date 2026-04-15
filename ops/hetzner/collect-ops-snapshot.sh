@@ -18,17 +18,23 @@ UPTIME_SECONDS="$(cut -d' ' -f1 /proc/uptime | cut -d'.' -f1)"
 
 DISK_JSON="$(df -B1 --output=used,size,target /srv/knosi | tail -n1 | awk '{printf "{\"usedBytes\":%s,\"totalBytes\":%s,\"mount\":\"%s\"}", $1, $2, $3}')"
 
-SERVICES_JSON="$(docker compose -f "$APP_DIR/docker-compose.prod.yml" ps --format json | node -e '
-const fs = require("node:fs");
-const input = fs.readFileSync(0, "utf8").trim();
-const rows = input ? input.split(/\n+/).map((line) => JSON.parse(line)) : [];
-const mapped = rows.map((row) => ({
-  name: row.Service,
-  status: row.State === "running" ? "healthy" : "degraded",
-  detail: row.Status ?? null,
-}));
-process.stdout.write(JSON.stringify(mapped));
-')"
+SERVICES_JSON="$(
+  docker compose -f "$APP_DIR/docker-compose.prod.yml" ps --format json | python3 -c '
+import json, sys
+
+text = sys.stdin.read().strip()
+rows = [json.loads(line) for line in text.splitlines() if line.strip()]
+mapped = [
+    {
+        "name": row.get("Service"),
+        "status": "healthy" if row.get("State") == "running" else "degraded",
+        "detail": row.get("Status"),
+    }
+    for row in rows
+]
+json.dump(mapped, sys.stdout)
+'
+)"
 
 cat >"$TMP_FILE" <<EOF
 {
