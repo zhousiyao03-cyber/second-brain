@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Second Brain",
-    short_name: "Second Brain",
+    name: "Knosi",
+    short_name: "Knosi",
     description: "A personal knowledge management workspace",
     start_url: "/",
     scope: "/",
@@ -12,17 +12,17 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#f5f5f4",
     icons: [
       {
-        src: "/icon?size=192",
+        src: "/pwa-192.png",
         sizes: "192x192",
         type: "image/png",
       },
       {
-        src: "/icon?size=512",
+        src: "/pwa-512.png",
         sizes: "512x512",
         type: "image/png",
       },
       {
-        src: "/apple-icon",
+        src: "/apple-icon.png",
         sizes: "180x180",
         type: "image/png",
       },

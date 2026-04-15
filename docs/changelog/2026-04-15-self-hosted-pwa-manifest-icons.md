@@ -1,0 +1,39 @@
+# 2026-04-15 Self-Hosted PWA Manifest Icons
+
+- date: 2026-04-15
+- task / goal: Restore PWA installability on the self-hosted deployment by making `manifest.webmanifest` resolve to real icon assets instead of broken metadata icon URLs.
+- key changes:
+  - Removed the legacy `public/manifest.webmanifest` file that was overriding the App Router manifest route with an empty `icons` array.
+  - Updated `src/app/manifest.ts` to use stable static icon asset URLs (`/pwa-192.png`, `/pwa-512.png`, `/apple-icon.png`) that are served correctly behind the Hetzner + Caddy deployment.
+  - Generated dedicated 192x192 and 512x512 PWA icons from `public/knosi-logo.png` for install prompts and splash screens.
+  - Added regression tests to verify the generated manifest exposes installable icons, the legacy public manifest stays absent, and the referenced public assets exist.
+  - Rolled the fix to production and re-checked the live manifest plus icon URLs.
+- files touched:
+  - `public/manifest.webmanifest`
+  - `public/pwa-192.png`
+  - `public/pwa-512.png`
+  - `src/app/manifest.ts`
+  - `src/app/manifest.test.mjs`
+  - `docs/changelog/2026-04-15-self-hosted-pwa-manifest-icons.md`
+- verification commands and results:
+  - `pnpm tsx --test src/app/manifest.test.mjs`
+    - Exit `0`; manifest icon coverage, legacy manifest absence, and public asset existence assertions all passed.
+  - `pnpm lint`
+    - Exit `0`; same 8 pre-existing warnings remain, with no new errors.
+  - `AUTH_SECRET=test-secret TURSO_DATABASE_URL=file:data/second-brain.db NEXT_DEPLOYMENT_ID=pwa-fix pnpm build`
+    - Exit `0`; production build completed successfully with the static PWA assets.
+  - `rsync -az --delete --exclude-from=ops/hetzner/rsync-excludes.txt ./ knosi:/srv/knosi/`
+    - Exit `0`; synchronized the manifest and static icon changes to the Hetzner host.
+  - `NEXT_DEPLOYMENT_ID=$(date -u +%Y%m%d%H%M%S) && ssh knosi "APP_DIR=/srv/knosi NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID /srv/knosi/ops/hetzner/deploy.sh"`
+    - Exit `0`; rebuilt and restarted production successfully with deployment ID `20260415091756`.
+  - `curl -sS https://www.knosi.xyz/manifest.webmanifest`
+    - Returned the generated manifest with icon URLs `/pwa-192.png`, `/pwa-512.png`, and `/apple-icon.png`.
+  - `curl -I -sS https://www.knosi.xyz/pwa-192.png`
+    - Returned `HTTP/2 200`.
+  - `curl -I -sS https://www.knosi.xyz/pwa-512.png`
+    - Returned `HTTP/2 200`.
+  - `curl -I -sS https://www.knosi.xyz/apple-icon.png`
+    - Returned `HTTP/2 200`.
+- remaining risks or follow-up items:
+  - Browsers may need one hard refresh or site-data clear before they re-read the updated manifest and icon set.
+  - The production issue is fixed for new installs, but existing installed shortcuts might keep old metadata until the browser refreshes its cached manifest.

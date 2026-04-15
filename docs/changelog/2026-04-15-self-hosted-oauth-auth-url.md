@@ -1,0 +1,22 @@
+# 2026-04-15 Self-Hosted OAuth AUTH_URL Fix
+
+- date: 2026-04-15
+- task / goal: Fix self-hosted GitHub login on Hetzner after the app redirected OAuth callbacks through the container host (`0.0.0.0`) instead of the public domain.
+- key changes:
+  - Updated the live Hetzner production environment to include `AUTH_URL=https://www.knosi.xyz` so Auth.js generates GitHub callback URLs from the public HTTPS origin.
+  - Restarted the production `knosi` container after the env change.
+  - Updated `.env.production.example` and `README.md` to document `AUTH_URL` as required for OAuth providers behind the self-hosted reverse proxy.
+- files touched:
+  - `.env.production.example`
+  - `README.md`
+  - `docs/changelog/2026-04-15-self-hosted-oauth-auth-url.md`
+- verification commands and results:
+  - `ssh knosi 'cd /srv/knosi && docker compose -f docker-compose.prod.yml exec -T knosi sh -lc "env | sort | grep -E \"^(AUTH_URL|AUTH_TRUST_HOST|HOSTNAME)=\""`
+    - Confirmed `AUTH_URL=https://www.knosi.xyz`, `AUTH_TRUST_HOST=true`, and `HOSTNAME=0.0.0.0` inside the running production container.
+  - `python3 ...` (stdlib `urllib`) to fetch `/login`, extract the GitHub sign-in form, and POST it back to `https://www.knosi.xyz/login`
+    - Redirected to `https://github.com/login/oauth/authorize?...&redirect_uri=https%3A%2F%2Fwww.knosi.xyz%2Fapi%2Fauth%2Fcallback%2Fgithub...`, proving the app now generates the public callback URL instead of `0.0.0.0`.
+  - `ssh knosi 'cd /srv/knosi && docker compose -f docker-compose.prod.yml logs --tail=40 knosi | tail -n 40'`
+    - The earlier `redirect_uri_mismatch` error was captured before the env fix; after setting `AUTH_URL`, no new `redirect_uri_mismatch` entry was emitted by the reproduction command.
+- remaining risks or follow-up items:
+  - The GitHub OAuth App itself still needs `https://www.knosi.xyz/api/auth/callback/github` registered as its callback URL. The application side now points at that URL correctly.
+  - The production env inspection exposed existing OAuth and S3 secrets during debugging. Rotating those credentials would be a prudent follow-up.

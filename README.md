@@ -44,6 +44,7 @@ Write notes with a Notion-level editor, index your knowledge with hybrid RAG, an
 
 - **Token Usage Dashboard** — Auto-reads local Claude Code session files (`~/.claude/projects/`) and Codex state databases (`~/.codex/state*.sqlite`). Aggregates across all workspaces and subagents. Manual entry supported for OpenAI API and other sources.
 - **Focus Tracker** — Server-side ingestion and `/focus` web UI for app-level time tracking. Pairs with the [desktop Tauri collector](https://github.com/zhousiyao03-cyber/focus-tracker) via one-time pairing codes.
+- **Installable PWA** — Ships a standalone web app manifest with dedicated 192x192, 512x512, and Apple touch icons that work on the self-hosted Hetzner deployment.
 
 ### Optional Modules
 
@@ -208,10 +209,13 @@ TURSO_AUTH_TOKEN=your-turso-auth-token
 ```bash
 APP_DOMAIN=knosi.example.com
 ACME_EMAIL=ops@example.com
+AUTH_URL=https://knosi.example.com
 AUTH_TRUST_HOST=true
 CRON_SECRET=your-random-secret
 JOBS_TICK_TOKEN=your-random-secret
 ```
+
+If you enable GitHub or Google login on a self-hosted deployment, set `AUTH_URL` to the public HTTPS origin served by your reverse proxy. OAuth providers validate the callback URL against that origin, so relying on the container's internal `HOSTNAME=0.0.0.0` will produce `redirect_uri_mismatch` errors.
 
 Image uploads on self-hosted deployments use S3-compatible object storage:
 
