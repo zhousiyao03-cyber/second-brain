@@ -48,7 +48,19 @@
     - Exit `0`; same 8 pre-existing warnings remain, with no new errors or warnings introduced by this task.
   - `AUTH_SECRET=test-secret TURSO_DATABASE_URL=file:data/second-brain.db pnpm build`
     - Exit `0`; Next.js production build completed successfully after pointing the build at the temporary local SQLite database.
+  - `curl -I -sS https://assets.knosi.xyz`
+    - Returned `HTTP/2 404`; the Cloudflare R2 custom domain was active and serving the bucket hostname before any objects were added.
+  - `S3_* ... pnpm tsx --eval "... uploadPublicObject(...)"` followed by `curl -sS https://assets.knosi.xyz/healthchecks/codex-1776231424121.txt`
+    - Returned the public object URL, and `curl` returned `r2-ok`; the Cloudflare R2 credentials, endpoint, and custom domain worked end-to-end from the local branch.
+  - `ssh knosi 'APP_DIR=/srv/knosi /srv/knosi/ops/hetzner/deploy.sh'`
+    - Exit `0`; rebuilt the production image, ran `pnpm db:push`, completed `next build`, recreated `knosi` + `caddy`, and recovered after the first local health check retry.
+  - `curl -I -sS https://www.knosi.xyz/login`
+    - Returned `HTTP/2 200` after the Hetzner rollout.
+  - `curl -i -sS -X POST https://www.knosi.xyz/api/upload/image`
+    - Returned `HTTP/2 307` redirecting to `/login?next=%2Fapi%2Fupload%2Fimage`, confirming the deployed upload route is mounted behind auth.
+  - `ssh knosi 'cd /srv/knosi && docker compose -f docker-compose.prod.yml exec -T knosi node - < /tmp/r2-test.js'` followed by `curl -sS https://assets.knosi.xyz/healthchecks/server-1776231892371.txt`
+    - Printed a public R2 URL from inside the running production container, and `curl` returned `server-r2-ok`; the deployed container can write to Cloudflare R2 with the production `S3_*` environment.
 - remaining risks or follow-up items:
-  - Production rollout is intentionally not performed yet. The live Hetzner environment still needs real `S3_*` credentials and a chosen S3-compatible bucket before this branch can be pushed to `main` without breaking image uploads.
   - Historical assets already stored on Vercel Blob are not migrated by this change; existing URLs will continue to work, but future uploads require the new S3-compatible backend.
   - The migration script name still contains `-blob` for continuity, even though it now writes to generic object storage. Renaming it can be a follow-up cleanup if desired.
+  - The Cloudflare R2 access key was displayed during setup. Rotating that key after the rollout and updating `/srv/knosi/.env.production` would be a prudent follow-up.
