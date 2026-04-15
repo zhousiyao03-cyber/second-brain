@@ -4,6 +4,7 @@
 - task / goal: Add push-to-main automatic deployment for the Hetzner single-server production setup.
 - key changes:
   - Added `.github/workflows/deploy-hetzner.yml` to lint on GitHub Actions, sync the repository to the Hetzner host with `rsync`, and run the server-side deployment script after every push to `main`.
+  - Adjusted the workflow so `actions/setup-node` only installs Node.js 22; `pnpm` is now enabled afterward via `corepack`, which avoids the initial `pnpm`-cache bootstrap failure on GitHub-hosted runners.
   - Added `ops/hetzner/deploy.sh` to validate the compose stack, rebuild the `knosi` image, restart the production services, and wait for the local health check to return `200`.
   - Added `ops/hetzner/rsync-excludes.txt` so automated syncs do not overwrite `.env.production` or push build/test artifacts to the server.
   - Updated `ops/hetzner/bootstrap.sh` to install `rsync` on future Hetzner hosts.
