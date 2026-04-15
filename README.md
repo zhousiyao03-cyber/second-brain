@@ -120,6 +120,7 @@ The repository now includes a production-oriented Docker Compose stack for a sin
 - [`ops/hetzner/Caddyfile`](ops/hetzner/Caddyfile) — HTTPS reverse proxy
 - [`ops/hetzner/bootstrap.sh`](ops/hetzner/bootstrap.sh) — swap, Docker, firewall, `/srv/knosi`
 - [`ops/hetzner/deploy.sh`](ops/hetzner/deploy.sh) — server-side deployment entrypoint
+- [`ops/hetzner/collect-ops-snapshot.sh`](ops/hetzner/collect-ops-snapshot.sh) — writes a narrow host health snapshot for the in-app Ops page
 - [`ops/hetzner/rsync-excludes.txt`](ops/hetzner/rsync-excludes.txt) — sync exclusions for GitHub Actions
 - [`ops/hetzner/knosi.cron.example`](ops/hetzner/knosi.cron.example) — cron jobs for queue processing
 - [`.env.production.example`](.env.production.example) — production env template
@@ -155,6 +156,8 @@ Then install the cron entries:
 crontab -e
 # paste ops/hetzner/knosi.cron.example and fill in the secrets
 ```
+
+The cron example now includes the host snapshot collector. That script writes `/srv/knosi/runtime/ops-snapshot.json`, which the app mounts read-only at `/app/runtime/ops-snapshot.json` for the owner-only `/settings/ops` dashboard.
 
 Automatic deployments:
 
@@ -213,9 +216,12 @@ AUTH_URL=https://knosi.example.com
 AUTH_TRUST_HOST=true
 CRON_SECRET=your-random-secret
 JOBS_TICK_TOKEN=your-random-secret
+OPS_OWNER_EMAIL=you@example.com
 ```
 
 If you enable GitHub or Google login on a self-hosted deployment, set `AUTH_URL` to the public HTTPS origin served by your reverse proxy. OAuth providers validate the callback URL against that origin, so relying on the container's internal `HOSTNAME=0.0.0.0` will produce `redirect_uri_mismatch` errors.
+
+Set `OPS_OWNER_EMAIL` to the single account that should be allowed to open `/settings/ops`. The page is read-only and only renders for that owner; other authenticated users receive a `404`.
 
 Image uploads on self-hosted deployments use S3-compatible object storage:
 

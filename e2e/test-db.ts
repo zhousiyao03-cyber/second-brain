@@ -4,7 +4,6 @@ import path from "path";
 export const PLAYWRIGHT_DB_PATH = path.join(
   process.cwd(),
   "data",
-  "test",
   "second-brain.e2e.db"
 );
 

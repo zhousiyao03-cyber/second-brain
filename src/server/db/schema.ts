@@ -919,6 +919,17 @@ export const daemonHeartbeats = sqliteTable("daemon_heartbeats", {
   version: text("version"),
 });
 
+export const opsJobHeartbeats = sqliteTable("ops_job_heartbeats", {
+  jobName: text("job_name").primaryKey(),
+  lastStatus: text("last_status", { enum: ["healthy", "degraded"] }).notNull(),
+  lastSuccessAt: integer("last_success_at", { mode: "timestamp" }),
+  lastFailureAt: integer("last_failure_at", { mode: "timestamp" }),
+  lastMessage: text("last_message"),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 // ── CLI Auth Tokens ──────────────────────────────
 // Each user's local CLI daemon authenticates with a personal token.
 // Tokens are generated via the web UI and stored locally by the CLI.

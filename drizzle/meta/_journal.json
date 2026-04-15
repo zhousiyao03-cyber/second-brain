@@ -225,6 +225,13 @@
       "when": 1776183839104,
       "tag": "0031_motionless_punisher",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1776266044225,
+      "tag": "0032_closed_bedlam",
+      "breakpoints": true
     }
   ]
 }

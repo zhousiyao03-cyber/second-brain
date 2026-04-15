@@ -21,6 +21,7 @@ services:
       - redis
     volumes:
       - knosi-data:/app/data
+      - ./runtime:/app/runtime:ro
 
   redis:
     image: redis:7-alpine

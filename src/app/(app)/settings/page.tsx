@@ -1,8 +1,10 @@
 import { eq, sql } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRequestSession } from "@/server/auth/request-session";
 import { db } from "@/server/db";
 import { hasTable } from "@/server/db/metadata";
+import { getOpsOwnerAccess } from "@/server/ops/authorization";
 import {
   oauthAccessTokens,
   oauthRefreshTokens,
@@ -76,6 +78,8 @@ export default async function SettingsPage({
     redirect("/login");
   }
 
+  const opsOwnerAccess = getOpsOwnerAccess(session);
+
   const params = await searchParams;
   const getParam = (key: string) => {
     const value = params[key];
@@ -135,6 +139,16 @@ export default async function SettingsPage({
         <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
           Update your name, sign-in email, and local password here.
         </p>
+        {opsOwnerAccess.allowed || opsOwnerAccess.reason === "missing-owner-config" ? (
+          <div className="mt-4">
+            <Link
+              href="/settings/ops"
+              className="inline-flex items-center justify-center rounded-xl border border-stone-200 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-900"
+            >
+              Open Ops dashboard
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       <section className="rounded-[28px] border border-stone-200 bg-white/92 p-6 shadow-[0_22px_80px_-58px_rgba(15,23,42,0.55)] dark:border-stone-800 dark:bg-stone-950/88">

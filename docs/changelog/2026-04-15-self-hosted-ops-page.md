@@ -1,0 +1,68 @@
+# 2026-04-15 Self-Hosted Ops Page
+
+- date: 2026-04-15
+- task / goal: Add a single-user, read-only Ops dashboard inside Knosi so the self-hosted Hetzner deployment can be monitored without SSH for routine checks.
+- key changes:
+  - Added an owner-only `/settings/ops` route gated by `OPS_OWNER_EMAIL`, with a config-missing fallback for logged-in owners during initial setup.
+  - Built a server-rendered dashboard with Deployment, Services, Queue, System, and Health cards backed by app-native status data plus a narrow host snapshot file.
+  - Added `ops_job_heartbeats` schema + helpers so cron endpoints can record success/failure and surface their latest status in the dashboard.
+  - Extended in-process metrics to count recent slow queries and DB-originated application errors for the health card.
+  - Added `ops/hetzner/collect-ops-snapshot.sh`, mounted `/srv/knosi/runtime` into the app container, and updated the example cron so host memory, disk, load, uptime, and container state are collected without exposing arbitrary shell execution in the web UI.
+  - Passed deployment metadata (`NEXT_DEPLOYMENT_ID`, `GIT_SHA`, `DEPLOYED_AT`) through the Hetzner deploy script and GitHub Actions workflow so the dashboard can show the live version source.
+- files touched:
+  - `.env.production.example`
+  - `README.md`
+  - `docs/changelog/2026-04-15-self-hosted-ops-page.md`
+  - `docs/superpowers/plans/2026-04-15-self-hosted-ops-page.md`
+  - `drizzle/0032_closed_bedlam.sql`
+  - `drizzle/meta/0032_snapshot.json`
+  - `drizzle/meta/_journal.json`
+  - `e2e/settings-ops.spec.ts`
+  - `ops/hetzner/bootstrap.sh`
+  - `ops/hetzner/collect-ops-snapshot.sh`
+  - `ops/hetzner/deploy.sh`
+  - `ops/hetzner/knosi.cron.example`
+  - `ops/hetzner/rsync-excludes.txt`
+  - `playwright.config.ts`
+  - `src/app/(app)/settings/ops/ops-card.tsx`
+  - `src/app/(app)/settings/ops/ops-dashboard.tsx`
+  - `src/app/(app)/settings/ops/page.tsx`
+  - `src/app/(app)/settings/page.tsx`
+  - `src/app/api/cron/cleanup-stale-chat-tasks/route.ts`
+  - `src/app/api/cron/portfolio-news/route.ts`
+  - `src/app/api/jobs/tick/route.ts`
+  - `src/server/db/index.ts`
+  - `src/server/db/schema.ts`
+  - `src/server/metrics.ts`
+  - `src/server/ops/authorization.test.ts`
+  - `src/server/ops/authorization.ts`
+  - `src/server/ops/deployment.ts`
+  - `src/server/ops/host-snapshot.test.ts`
+  - `src/server/ops/host-snapshot.ts`
+  - `src/server/ops/job-heartbeats.ts`
+  - `src/server/ops/page-data.test.ts`
+  - `src/server/ops/page-data.ts`
+  - `src/server/ops/types.ts`
+- verification commands and results:
+  - `pnpm tsx --test src/server/ops/authorization.test.ts src/server/ops/page-data.test.ts src/server/ops/host-snapshot.test.ts`
+    - Exit `0`; owner gating, page aggregation, and host snapshot parsing all passed.
+  - `bash -n ops/hetzner/collect-ops-snapshot.sh`
+    - Exit `0`; the host snapshot collector script is syntactically valid.
+  - `pnpm db:generate`
+    - Exit `0`; generated migration `drizzle/0032_closed_bedlam.sql` for `ops_job_heartbeats`.
+  - `AUTH_SECRET=test-secret TURSO_DATABASE_URL=file:data/second-brain.db pnpm db:push`
+    - Exit `0`; applied the new schema locally.
+  - `pnpm lint`
+    - Exit `0`; the repo still has the same 8 pre-existing warnings and no new lint errors.
+  - `AUTH_SECRET=test-secret TURSO_DATABASE_URL=file:data/second-brain.db NEXT_DEPLOYMENT_ID=ops-ui OPS_OWNER_EMAIL=e2e@test.local pnpm build`
+    - Exit `0`; production build passed with the new dashboard route.
+  - `pnpm test:e2e --grep 'owner can open the ops dashboard'`
+    - Exit `0`; Playwright verified the owner-bypassed test user can open `/settings/ops` and see all five cards.
+  - `ssh knosi "cd /srv/knosi && docker compose -f docker-compose.prod.yml exec -T knosi node -e \"(async()=>{ const { createClient } = await import('@@libsql/client'.replace('@@','@')); const client = createClient({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN }); const result = await client.execute('select id, email from users order by email asc'); console.log(JSON.stringify(result.rows, null, 2)); await client.close(); })().catch((err)=>{ console.error(err); process.exit(1); });\""`
+    - Exit `0`; inspected production users before setting `OPS_OWNER_EMAIL` and confirmed the owner email exists in Turso.
+  - Production rollout and deployment verification
+    - Pending until the feature branch is synced to Hetzner, `OPS_OWNER_EMAIL` is written to `.env.production`, cron is updated with the host snapshot collector, and the `ops_job_heartbeats` table is verified in production.
+- remaining risks or follow-up items:
+  - The dashboard stays intentionally read-only; service restarts, shell access, and environment editing still require SSH.
+  - Host metrics only refresh as often as the cron snapshot collector runs; stale snapshots are surfaced, but they are not push-based.
+  - The owner gate is single-email by design. If multi-admin support is needed later, the authorization helper and env model will need to expand.

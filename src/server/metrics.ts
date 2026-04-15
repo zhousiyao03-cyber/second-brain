@@ -87,6 +87,7 @@ export function snapshotMetrics() {
     generatedAt: new Date().toISOString(),
     procedures: entries,
     caches: snapshotCacheMetrics(),
+    operational: snapshotOperationalMetrics(),
   };
 }
 
@@ -103,6 +104,15 @@ type CacheStats = {
 };
 
 const cacheStore = new Map<string, CacheStats>();
+type OperationalEventKind = "db_slow_query" | "app_error";
+
+type OperationalEvent = {
+  kind: OperationalEventKind;
+  at: number;
+};
+
+const operationalEvents: OperationalEvent[] = [];
+const MAX_OPERATIONAL_EVENTS = 500;
 
 function getOrCreateCache(name: string): CacheStats {
   let entry = cacheStore.get(name);
@@ -142,8 +152,26 @@ export function snapshotCacheMetrics() {
   return entries;
 }
 
+export function recordOperationalEvent(kind: OperationalEventKind) {
+  operationalEvents.push({ kind, at: Date.now() });
+  if (operationalEvents.length > MAX_OPERATIONAL_EVENTS) {
+    operationalEvents.splice(0, operationalEvents.length - MAX_OPERATIONAL_EVENTS);
+  }
+}
+
+export function snapshotOperationalMetrics(windowMs = 15 * 60 * 1000) {
+  const cutoff = Date.now() - windowMs;
+  const recent = operationalEvents.filter((event) => event.at >= cutoff);
+  return {
+    windowMs,
+    slowQueryCount: recent.filter((event) => event.kind === "db_slow_query").length,
+    appErrorCount: recent.filter((event) => event.kind === "app_error").length,
+  };
+}
+
 /** 仅测试用 */
 export function _resetMetrics() {
   store.clear();
   cacheStore.clear();
+  operationalEvents.length = 0;
 }

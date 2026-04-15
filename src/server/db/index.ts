@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/libsql";
 import { getDatabaseUrl } from "./path";
 import * as schema from "./schema";
 import { logger } from "../logger";
+import { recordOperationalEvent } from "../metrics";
 
 const databaseUrl = getDatabaseUrl();
 
@@ -69,6 +70,7 @@ rawClient.execute = new Proxy(rawClient.execute, {
       .then((result) => {
         const durationMs = performance.now() - start;
         if (durationMs >= SLOW_QUERY_THRESHOLD_MS) {
+          recordOperationalEvent("db_slow_query");
           logger.warn(
             {
               event: "db.slow_query",
@@ -83,6 +85,7 @@ rawClient.execute = new Proxy(rawClient.execute, {
       })
       .catch((err) => {
         const durationMs = Math.round(performance.now() - start);
+        recordOperationalEvent("app_error");
         logger.error(
           {
             event: "db.error",

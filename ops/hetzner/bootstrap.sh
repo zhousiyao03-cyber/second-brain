@@ -46,5 +46,6 @@ ufw allow 443/tcp
 ufw --force enable
 
 install -d -m 755 /srv/knosi
+install -d -m 755 /srv/knosi/runtime
 
 echo "bootstrap complete"

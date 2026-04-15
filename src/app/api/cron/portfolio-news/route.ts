@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { portfolioHoldings } from "@/server/db/schema";
+import { markOpsJobFailure, markOpsJobSuccess } from "@/server/ops/job-heartbeats";
 import { generatePortfolioNews } from "@/server/routers/portfolio";
 
 export const maxDuration = 300;
@@ -13,20 +14,34 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const holdings = await db.select().from(portfolioHoldings);
+  try {
+    const holdings = await db.select().from(portfolioHoldings);
+    const results: Array<{ symbol: string; status: string }> = [];
 
-  const results: Array<{ symbol: string; status: string }> = [];
-
-  for (const holding of holdings) {
-    try {
-      await generatePortfolioNews(holding.userId, holding.symbol);
-      results.push({ symbol: holding.symbol, status: "ok" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`[cron/portfolio-news] Failed for ${holding.symbol}: ${message}`);
-      results.push({ symbol: holding.symbol, status: "error" });
+    for (const holding of holdings) {
+      try {
+        await generatePortfolioNews(holding.userId, holding.symbol);
+        results.push({ symbol: holding.symbol, status: "ok" });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[cron/portfolio-news] Failed for ${holding.symbol}: ${message}`);
+        results.push({ symbol: holding.symbol, status: "error" });
+      }
     }
-  }
 
-  return NextResponse.json({ processed: results.length, results });
+    const errorCount = results.filter((item) => item.status === "error").length;
+    if (errorCount > 0) {
+      await markOpsJobFailure("portfolio-news", `${errorCount} symbols failed`);
+    } else {
+      await markOpsJobSuccess("portfolio-news", `processed=${results.length}`);
+    }
+
+    return NextResponse.json({ processed: results.length, results });
+  } catch (error) {
+    await markOpsJobFailure(
+      "portfolio-news",
+      error instanceof Error ? error.message : "unknown error"
+    );
+    throw error;
+  }
 }

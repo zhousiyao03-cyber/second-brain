@@ -18,6 +18,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { processJobs } from "@/server/jobs/worker";
+import { markOpsJobFailure, markOpsJobSuccess } from "@/server/ops/job-heartbeats";
 
 async function handle(request: Request) {
   if (!(await isAuthorized(request))) {
@@ -28,8 +29,17 @@ async function handle(request: Request) {
   const maxParam = url.searchParams.get("max");
   const max = maxParam ? Math.max(1, Math.min(100, Number(maxParam))) : 10;
 
-  const result = await processJobs(max);
-  return NextResponse.json(result);
+  try {
+    const result = await processJobs(max);
+    await markOpsJobSuccess("jobs-tick", `processed=${result.processed}, errors=${result.errors}`);
+    return NextResponse.json(result);
+  } catch (error) {
+    await markOpsJobFailure(
+      "jobs-tick",
+      error instanceof Error ? error.message : "unknown error"
+    );
+    throw error;
+  }
 }
 
 export const GET = handle;

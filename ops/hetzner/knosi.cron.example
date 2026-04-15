@@ -4,6 +4,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 CRON_SECRET=replace-with-random-hex
 JOBS_TICK_TOKEN=replace-with-random-hex
 
+* * * * * APP_DIR=/srv/knosi /srv/knosi/ops/hetzner/collect-ops-snapshot.sh >/dev/null 2>&1
 * * * * * curl -fsS -H "Authorization: Bearer ${JOBS_TICK_TOKEN}" "http://127.0.0.1:3000/api/jobs/tick?max=10" >/dev/null
 */5 * * * * curl -fsS -H "Authorization: Bearer ${CRON_SECRET}" "http://127.0.0.1:3000/api/cron/cleanup-stale-chat-tasks" >/dev/null
 # Optional if the portfolio module is enabled:
