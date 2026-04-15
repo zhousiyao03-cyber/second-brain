@@ -1,0 +1,35 @@
+# 2026-04-15 Ask AI Daemon Redis Stream
+
+- date: 2026-04-15
+- task / goal: Replace daemon-mode Ask AI database polling with Redis Pub/Sub while preserving the browser SSE API and durable task history.
+- key changes:
+  - Added a dedicated daemon chat event module that defines task-scoped Redis channels plus typed delta/done/error event payloads.
+  - Updated `/api/chat/progress` to publish delta events after durable `daemon_chat_messages` writes.
+  - Updated `/api/chat/complete` to publish terminal `done` or `error` events after durable `chat_tasks` updates.
+  - Reworked `/api/chat/tokens` so it does an initial DB catch-up and then switches to Redis subscription for live events instead of polling SQLite every 200ms.
+  - Kept the legacy DB polling loop as an automatic fallback when Redis is unavailable, preserving reliability in degraded environments.
+  - Added focused tests for event serialization/publishing/subscription and for SSE catch-up framing.
+- files touched:
+  - `README.md`
+  - `docs/changelog/2026-04-15-ask-ai-daemon-redis-stream.md`
+  - `docs/superpowers/plans/2026-04-15-ask-ai-daemon-redis-stream.md`
+  - `docs/superpowers/specs/2026-04-15-ask-ai-daemon-redis-stream-design.md`
+  - `src/app/api/chat/complete/route.ts`
+  - `src/app/api/chat/progress/route.ts`
+  - `src/app/api/chat/tokens/route.ts`
+  - `src/app/api/chat/tokens.test.mjs`
+  - `src/server/ai/daemon-chat-events.ts`
+  - `src/server/ai/daemon-chat-events.test.mjs`
+  - `src/server/redis.ts`
+- verification commands and results:
+  - `pnpm tsx --test src/server/ai/daemon-chat-events.test.mjs`
+    - Exit `0`; 5 tests passed covering channel naming, event round-trip parsing, malformed payload rejection, publish semantics, and subscription delivery.
+  - `pnpm tsx --test src/app/api/chat/tokens.test.mjs`
+    - Exit `0`; 2 tests passed covering SSE framing and DB catch-up emission ordering.
+  - `pnpm lint`
+    - Exit `0`; same 8 pre-existing warnings remain, with no new warnings introduced by this change.
+  - `AUTH_SECRET=test-secret TURSO_DATABASE_URL=file:data/second-brain.db NEXT_DEPLOYMENT_ID=ask-ai-redis-stream pnpm build`
+    - Exit `0`; production build completed successfully with the new SSE + Redis integration.
+- remaining risks or follow-up items:
+  - I have not yet rolled this change to Hetzner, so production is still using the previous daemon polling loop until deployment.
+  - The Redis Pub/Sub path still does a final DB catch-up and task-state check on timeout for safety; if desired, that safety path can be further refined once live traffic confirms behavior.

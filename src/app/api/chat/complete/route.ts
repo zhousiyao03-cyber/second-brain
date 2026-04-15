@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { chatTasks } from "@/server/db/schema";
 import { validateBearerAccessToken } from "@/server/integrations/oauth";
+import { publishChatEvent } from "@/server/ai/daemon-chat-events";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,6 +31,12 @@ export async function POST(request: NextRequest) {
       .update(chatTasks)
       .set({ status: "failed", error: body.error, completedAt: now })
       .where(eq(chatTasks.id, body.taskId));
+
+    await publishChatEvent({
+      kind: "error",
+      taskId: body.taskId,
+      error: body.error,
+    });
   } else {
     await db
       .update(chatTasks)
@@ -40,6 +47,12 @@ export async function POST(request: NextRequest) {
         completedAt: now,
       })
       .where(eq(chatTasks.id, body.taskId));
+
+    await publishChatEvent({
+      kind: "done",
+      taskId: body.taskId,
+      totalText: body.totalText ?? "",
+    });
   }
 
   return NextResponse.json({ status: "ok" });

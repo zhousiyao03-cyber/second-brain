@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { daemonChatMessages } from "@/server/db/schema";
 import { validateBearerAccessToken } from "@/server/integrations/oauth";
+import { publishChatEvent } from "@/server/ai/daemon-chat-events";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +35,18 @@ export async function POST(request: NextRequest) {
       type: msg.type,
       delta: msg.delta ?? null,
     }))
+  );
+
+  await Promise.all(
+    body.messages.map((msg) =>
+      publishChatEvent({
+        kind: "delta",
+        taskId: body.taskId,
+        seq: msg.seq,
+        type: msg.type,
+        delta: msg.delta ?? null,
+      })
+    )
   );
 
   return NextResponse.json({ status: "ok", count: body.messages.length });

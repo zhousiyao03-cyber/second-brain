@@ -36,7 +36,7 @@ Write notes with a Notion-level editor, index your knowledge with hybrid RAG, an
 ### AI
 
 - **Ask AI** — Chunk-level hybrid RAG: semantic retrieval + keyword recall + adjacent-paragraph expansion + clickable source citations. Falls back gracefully to keyword-only when no embedding provider is configured.
-- **Claude Code Daemon** — Route Ask AI through your local Claude Pro/Max subscription. No extra API spend. Works against both local dev and the self-hosted web deployment.
+- **Claude Code Daemon** — Route Ask AI through your local Claude Pro/Max subscription. No extra API spend. Works against both local dev and the self-hosted web deployment, with Redis-backed live token fan-out for low-latency daemon responses.
 - **Structured AI Calls** — Learning outline generation, OSS analysis, and portfolio news summarization use the configured provider independently of the chat daemon.
 - **Claude Capture Integrations** — Claude Web can connect through a remote MCP endpoint, and Claude Code can save explicit conversation excerpts through the Knosi CLI + personal skill flow. Both write raw captures into `AI Inbox`.
 

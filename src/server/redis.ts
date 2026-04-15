@@ -82,6 +82,25 @@ export function getRedis(): RedisPromise {
   return globalThis.__redisClientPromise;
 }
 
+export async function getRedisSubscriber(): Promise<RedisClientType | null> {
+  const client = await getRedis();
+  if (!client) {
+    return null;
+  }
+
+  try {
+    const subscriber = client.duplicate() as RedisClientType;
+    subscriber.on("error", (err) => {
+      logger.error({ event: "redis.subscriber_error", err }, "redis subscriber error");
+    });
+    await subscriber.connect();
+    return subscriber;
+  } catch (err) {
+    logger.error({ event: "redis.subscriber_connect_failed", err }, "redis subscriber connect failed");
+    return null;
+  }
+}
+
 /** 判断 Redis 是否可用（非阻塞快速检查） */
 export function isRedisConfigured(): boolean {
   return resolveRedisUrl() !== null;
