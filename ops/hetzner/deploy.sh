@@ -7,6 +7,7 @@ HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:3000/login}"
 EXPECTED_STATUS="${EXPECTED_STATUS:-200}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-30}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-2}"
+NEXT_DEPLOYMENT_ID="${NEXT_DEPLOYMENT_ID:-$(date -u +%Y%m%d%H%M%S)}"
 
 cd "$APP_DIR"
 
@@ -15,8 +16,11 @@ if [ ! -f ".env.production" ]; then
   exit 1
 fi
 
+export NEXT_DEPLOYMENT_ID
+echo "deploying with NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID"
+
 docker compose -f "$COMPOSE_FILE" config >/dev/null
-docker compose -f "$COMPOSE_FILE" build --pull knosi
+docker compose -f "$COMPOSE_FILE" build --pull --build-arg NEXT_DEPLOYMENT_ID="$NEXT_DEPLOYMENT_ID" knosi
 docker compose -f "$COMPOSE_FILE" up -d --remove-orphans redis knosi caddy
 
 attempt=1

@@ -2,6 +2,8 @@ services:
   knosi:
     build:
       context: .
+      args:
+        NEXT_DEPLOYMENT_ID: ${NEXT_DEPLOYMENT_ID:-local}
     restart: unless-stopped
     env_file:
       - .env.production
@@ -9,6 +11,7 @@ services:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
       PORT: 3000
+      NEXT_DEPLOYMENT_ID: ${NEXT_DEPLOYMENT_ID:-local}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
     ports:
       - "127.0.0.1:3000:3000"

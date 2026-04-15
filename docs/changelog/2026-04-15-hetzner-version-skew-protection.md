@@ -1,0 +1,47 @@
+# 2026-04-15 Hetzner Version Skew Protection
+
+- date: 2026-04-15
+- task / goal: Fix the production `notes` white screen caused by chunk loading failures during self-hosted deploys by enabling Next.js deployment IDs and wiring them through the Hetzner build pipeline.
+- key changes:
+  - Enabled `deploymentId` in `next.config.ts` so Next.js emits deployment-aware asset URLs and client navigation protection for self-hosted rollouts.
+  - Added a regression test covering the whole Hetzner deployment contract: Next config, Docker Compose build/runtime env, deploy script export, and GitHub Actions forwarding.
+  - Updated `docker-compose.prod.yml` and `Dockerfile` so `NEXT_DEPLOYMENT_ID` is available during both image build and runtime.
+  - Hardened `ops/hetzner/deploy.sh` to generate a fallback deployment ID for manual rollouts and to pass it explicitly with `--build-arg NEXT_DEPLOYMENT_ID=...` during `docker compose build`.
+  - Updated the GitHub Actions deploy workflow to pass `${{ github.sha }}` as `NEXT_DEPLOYMENT_ID` for push-to-main releases.
+  - Rolled the fix to Hetzner and verified that production HTML now contains `data-dpl-id` plus `?dpl=<deployment-id>` on chunk URLs.
+- files touched:
+  - `.github/workflows/deploy-hetzner.yml`
+  - `Dockerfile`
+  - `README.md`
+  - `docker-compose.prod.yml`
+  - `next.config.ts`
+  - `ops/hetzner/deploy.sh`
+  - `ops/hetzner/deployment-version-skew.test.mjs`
+  - `docs/changelog/2026-04-15-hetzner-version-skew-protection.md`
+- verification commands and results:
+  - `pnpm tsx --test ops/hetzner/deployment-version-skew.test.mjs`
+    - Exit `1` before the explicit build-arg change, failing on the missing `--build-arg NEXT_DEPLOYMENT_ID="$NEXT_DEPLOYMENT_ID"` assertion as expected.
+    - Exit `0` after the fix; all 4 deployment-version-skew assertions passed.
+  - `pnpm lint`
+    - Exit `0`; same 8 pre-existing warnings remain, with no new errors.
+  - `AUTH_SECRET=test-secret TURSO_DATABASE_URL=file:data/second-brain.db NEXT_DEPLOYMENT_ID=test-dpl pnpm build`
+    - Exit `0`; production build completed locally with deployment ID support enabled.
+  - `NEXT_DEPLOYMENT_ID=test-dpl docker compose -f docker-compose.prod.yml config`
+    - Confirmed `NEXT_DEPLOYMENT_ID` appears in both `build.args` and runtime `environment`.
+  - `bash -n ops/hetzner/deploy.sh`
+    - Exit `0`; deploy script stayed shell-valid after the rollout changes.
+  - `rsync -az --delete --exclude-from=ops/hetzner/rsync-excludes.txt ./ knosi:/srv/knosi/`
+    - Exit `0`; synchronized the updated deployment files to the Hetzner host.
+  - `NEXT_DEPLOYMENT_ID=$(date -u +%Y%m%d%H%M%S) && ssh knosi "APP_DIR=/srv/knosi NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID /srv/knosi/ops/hetzner/deploy.sh"`
+    - Exit `0`; rebuilt and restarted production successfully with deployment ID `20260415061621`.
+  - `ssh knosi "cd /srv/knosi && docker compose -f docker-compose.prod.yml exec -T knosi sh -lc 'node -e \"const f=require(\\\"./.next/required-server-files.json\\\"); console.log(process.env.NEXT_DEPLOYMENT_ID); console.log(f.config.deploymentId ?? \\\"<missing>\\\")\"'"`
+    - Printed the same deployment ID twice (`20260415061621`), confirming the running container and built Next config agree.
+  - `curl -sS https://www.knosi.xyz/login | grep -o 'data-dpl-id=\"[^\"]*\"' | head -n 1`
+    - Returned `data-dpl-id="20260415061621"`.
+  - `curl -sS https://www.knosi.xyz/login | grep -n 'dpl=' | sed -n '1,4p'`
+    - Returned production HTML with `?dpl=20260415061621` on CSS and JS asset URLs, including the previously failing `0mkmh5z64sx9b.js` chunk.
+  - `curl -I -sS https://www.knosi.xyz/_next/static/chunks/0mkmh5z64sx9b.js`
+    - Returned `HTTP/2 200` after the rollout, confirming the formerly failing chunk path is now served successfully.
+- remaining risks or follow-up items:
+  - Browsers that already loaded the pre-fix HTML may still need one hard refresh to clear the old chunk graph from memory. Future deploys are now protected by deployment IDs.
+  - This fix addresses version skew during deploys; if a white screen still appears after a full refresh, the next step should be capturing the browser console error for that specific session.

@@ -9,12 +9,14 @@ RUN pnpm install --frozen-lockfile
 FROM node:22-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 WORKDIR /app
+ARG NEXT_DEPLOYMENT_ID=local
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Default env for build (can be overridden at runtime)
 ENV TURSO_DATABASE_URL=file:data/second-brain.db
 ENV AUTH_SECRET=change-me-in-production
+ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
 
 RUN mkdir -p data && pnpm db:push && pnpm build
 

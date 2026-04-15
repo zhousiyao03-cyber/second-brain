@@ -70,4 +70,4 @@ jobs:
       - name: Deploy on Hetzner
         run: |
           ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "APP_DIR='$DEPLOY_PATH' '$DEPLOY_PATH/ops/hetzner/deploy.sh'"
+            "APP_DIR='$DEPLOY_PATH' NEXT_DEPLOYMENT_ID='${{ github.sha }}' '$DEPLOY_PATH/ops/hetzner/deploy.sh'"

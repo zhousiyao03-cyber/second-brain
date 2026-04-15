@@ -166,7 +166,7 @@ Automatic deployments:
 2. Push to `main`.
 3. GitHub Actions will lint, `rsync` the repository to `/srv/knosi`, then run `ops/hetzner/deploy.sh` on the server.
 
-The deployment script validates `docker-compose.prod.yml`, rebuilds the `knosi` image, restarts `redis + knosi + caddy`, and waits for `http://127.0.0.1:3000/login` to return `200`.
+The deployment script validates `docker-compose.prod.yml`, generates a unique `NEXT_DEPLOYMENT_ID` for every rollout, rebuilds the `knosi` image, restarts `redis + knosi + caddy`, and waits for `http://127.0.0.1:3000/login` to return `200`.
 
 ---
 
