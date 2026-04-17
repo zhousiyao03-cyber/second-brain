@@ -47,7 +47,7 @@
 - **搜索** — Cmd+K 全局搜索笔记，关键词高亮
 - **Ask AI** — 基于知识库的 chunk 级 hybrid RAG 问答，支持语义检索、关键词召回、邻近段落扩展和可点击引用来源
 - **Token Usage** — 自动读取本机里的 Codex / Claude Code 本地 session（含 Claude subagents，跨工作区聚合），用于展示真实 token 用量；也支持手动补录 OpenAI API / 其他来源，统一在 Dashboard 和独立页面聚合（线上环境默认禁用，本地开发可开启）
-- **Focus Tracker** — 服务端 ingestion、dashboard focus card 和 `/focus` 页面；Web 端按当天原始 session 累计每个 app 的使用时长，默认折叠 <10m 的短 session；支持手动刷新分类和 daily summary。桌面端 Tauri collector 已迁移到[独立仓库](https://github.com/zhousiyao03-cyber/focus-tracker) —— 从 [Releases 页面](https://github.com/zhousiyao03-cyber/focus-tracker/releases/latest)下载 macOS 最新版，登录 Knosi 账号即可开始采集
+- **Focus Tracker** — 服务端 ingestion、dashboard focus card 和 `/focus` 页面；Web 端按当天原始 session 累计每个 app 的使用时长，默认折叠 <10m 的短 session；支持手动刷新分类和 daily summary。桌面端 Tauri collector 已迁移到[独立仓库](https://github.com/zhousiyao03-cyber/focus-tracker) —— **[⬇️ 下载 macOS 安装包](https://github.com/zhousiyao03-cyber/focus-tracker/releases/latest/download/focus-tracker_0.2.0_aarch64.dmg)**（Apple Silicon），登录 Knosi 账号即可开始采集
 - **Dashboard** — 统计概览 + 最近条目 + token usage 聚合概览
 - **暗色模式** — 全局可切换
 
@@ -200,7 +200,7 @@ NEXT_PUBLIC_TOKEN_USAGE_REFRESH_INTERVAL_MS=15000
 
 如果这两个目录不存在，页面会显示"未发现"，但手动录入仍然可用。
 
-Focus Tracker 的服务端 ingestion 和 `/focus` Web 页面保留在本仓库。桌面端 Tauri collector 已迁移到[独立仓库](https://github.com/zhousiyao03-cyber/focus-tracker) —— 从 [Releases](https://github.com/zhousiyao03-cyber/focus-tracker/releases/latest) 下载 macOS 安装包，拖到 `/Applications`，打开后登录 Knosi 账号即可。
+Focus Tracker 的服务端 ingestion 和 `/focus` Web 页面保留在本仓库。桌面端 Tauri collector 已迁移到[独立仓库](https://github.com/zhousiyao03-cyber/focus-tracker) —— **[⬇️ 直接下载 macOS 安装包](https://github.com/zhousiyao03-cyber/focus-tracker/releases/latest/download/focus-tracker_0.2.0_aarch64.dmg)**（Apple Silicon），拖到 `/Applications`，打开后登录 Knosi 账号即可。
 
 个人部署时可以给服务端配置：
 

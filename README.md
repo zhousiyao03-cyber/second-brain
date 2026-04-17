@@ -43,7 +43,7 @@ Write notes with a Notion-level editor, index your knowledge with hybrid RAG, an
 ### Developer Workflow
 
 - **Token Usage Dashboard** — Auto-reads local Claude Code session files (`~/.claude/projects/`) and Codex state databases (`~/.codex/state*.sqlite`). Aggregates across all workspaces and subagents. Manual entry supported for OpenAI API and other sources.
-- **Focus Tracker** — Server-side ingestion and `/focus` web UI for app-level time tracking. Pairs with the [desktop Tauri collector](https://github.com/zhousiyao03-cyber/focus-tracker) — download the latest macOS build from the [Releases page](https://github.com/zhousiyao03-cyber/focus-tracker/releases/latest), then sign in with your Knosi account.
+- **Focus Tracker** — Server-side ingestion and `/focus` web UI for app-level time tracking. Pairs with the [desktop Tauri collector](https://github.com/zhousiyao03-cyber/focus-tracker) — **[⬇️ download the macOS app](https://github.com/zhousiyao03-cyber/focus-tracker/releases/latest/download/focus-tracker_0.2.0_aarch64.dmg)** (Apple Silicon), then sign in with your Knosi account.
 - **Installable PWA** — Ships a standalone web app manifest with dedicated 192x192, 512x512, and Apple touch icons that work on the self-hosted Hetzner deployment.
 
 ### Optional Modules
