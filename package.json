@@ -11,8 +11,6 @@
     "lint": "mkdir -p test-results && eslint",
     "test:e2e": "playwright test",
     "focus:collector": "node tools/focus-collector/collector.mjs",
-    "usage:report": "node tools/usage-reporter/report.mjs --once",
-    "usage:daemon": "node tools/usage-reporter/report.mjs",
     "daemon": "node packages/cli/src/index.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",

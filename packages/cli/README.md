@@ -2,11 +2,12 @@
 
 Knosi CLI for [Second Brain](https://github.com/zhousiyao03-cyber/second-brain).
 
-Runs on your machine and supports three workflows:
+Runs on your machine and supports four workflows:
 
-1. the existing Claude Code daemon
+1. the Claude Code task daemon (chat + structured)
 2. OAuth login against your Knosi deployment
 3. explicit raw AI capture saves for Claude Code skills
+4. local Claude Code / Codex token usage reporting
 
 ## Prerequisites
 
@@ -23,8 +24,18 @@ The daemon will:
 1. Poll the server for queued AI tasks (chat + structured data)
 2. Execute them using your local Claude CLI
 3. Stream results back to the server
+4. Scan local Claude Code / Codex logs every 5 min and upload token usage to `/api/usage`
+5. Fire a daily Claude "hello" ping at 05:59 local time to keep the CLI warm
 
 Press Ctrl+C to stop.
+
+### One-shot Usage Sync
+
+```bash
+npx @knosi/cli usage report
+```
+
+Scans `~/.claude/projects/**/*.jsonl` (and `~/.codex/state*.sqlite` when `better-sqlite3` is available), aggregates token counts per `(date, provider, model)`, and POSTs to the configured server. Requires `knosi auth login` first.
 
 ### OAuth Login
 

@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execSync, spawn as cpSpawn } from "node:child_process";
 import {
   claimTask,
   configure,
@@ -10,6 +10,11 @@ import { getDefaultBaseUrl, loadConfig } from "./config.mjs";
 import { setClaudeBin } from "./spawn-claude.mjs";
 import { handleChatTask } from "./handler-chat.mjs";
 import { handleStructuredTask } from "./handler-structured.mjs";
+import { runUsageSync } from "./usage-reporter.mjs";
+import {
+  getDelayUntilNextDailyPing,
+  getNextDailyPingAt,
+} from "./daily-ping-scheduler.mjs";
 
 function getArg(args, flag) {
   const idx = args.indexOf(flag);
@@ -47,6 +52,7 @@ export async function runDaemon(args) {
   const STRUCTURED_FALLBACK_MS = 15_000;
   const HEARTBEAT_MS = 60_000;
   const NOTIFICATION_RETRY_MS = 3_000;
+  const USAGE_SYNC_MS = 5 * 60_000;
   const MAX_CONCURRENT_CHAT = 3;
   const MAX_CONCURRENT_STRUCTURED = 5;
 
@@ -157,10 +163,82 @@ export async function runDaemon(args) {
     }
   }
 
+  async function syncUsageOnce() {
+    try {
+      const { count } = await runUsageSync(serverUrl, config.accessToken);
+      if (count > 0) {
+        console.log(`[${ts()}] ✓ synced ${count} usage records`);
+      }
+    } catch (err) {
+      if (err?.message === "AUTH_FAILED") {
+        onPollError(err);
+      } else {
+        console.error(`[${ts()}] ✗ usage sync failed: ${err?.message ?? err}`);
+      }
+    }
+  }
+
+  async function runDailyPing() {
+    console.log(`[${ts()}] 🌅 daily claude ping firing`);
+    try {
+      const child = cpSpawn(
+        claudeBinArg,
+        ["-p", "hello", "--output-format", "stream-json", "--verbose"],
+        { stdio: ["ignore", "pipe", "pipe"] }
+      );
+      let outputText = "";
+      child.stdout.on("data", (chunk) => {
+        outputText += chunk.toString("utf8");
+      });
+      await new Promise((resolve, reject) => {
+        child.on("error", reject);
+        child.on("close", (code) => {
+          if (code !== 0) reject(new Error(`claude exited with code ${code}`));
+          else resolve(undefined);
+        });
+      });
+      let firstText = "";
+      for (const line of outputText.split("\n")) {
+        if (!line.trim()) continue;
+        try {
+          const event = JSON.parse(line);
+          if (event.type === "assistant" && event.message?.content) {
+            for (const block of event.message.content) {
+              if (block.type === "text" && typeof block.text === "string") {
+                firstText = block.text;
+                break;
+              }
+            }
+          }
+          if (firstText) break;
+        } catch {}
+      }
+      console.log(`[${ts()}] ✓ daily claude ping ok: ${firstText.slice(0, 80) || "(no text)"}`);
+    } catch (err) {
+      console.error(`[${ts()}] ✗ daily claude ping failed: ${err?.message ?? err}`);
+    }
+  }
+
+  function scheduleDailyPing() {
+    if (stopped) return;
+    const now = new Date();
+    const nextAt = getNextDailyPingAt(now);
+    const delayMs = getDelayUntilNextDailyPing(now);
+    console.log(
+      `[${ts()}] 🌅 next daily claude ping scheduled for ${nextAt.toLocaleString("en-GB", { hour12: false })}`
+    );
+    setTimeout(() => {
+      runDailyPing()
+        .catch(() => {})
+        .finally(() => scheduleDailyPing());
+    }, delayMs);
+  }
+
   if (isOnce) {
     console.log("🔍 Single-run mode...");
     await drainTaskType("chat");
     await drainTaskType("structured");
+    await syncUsageOnce();
     console.log("Done.");
     return;
   }
@@ -171,6 +249,7 @@ export async function runDaemon(args) {
   console.log(
     `   Claim fallback: chat=${CHAT_FALLBACK_MS / 1000}s structured=${STRUCTURED_FALLBACK_MS / 1000}s`
   );
+  console.log(`   Usage sync interval: ${USAGE_SYNC_MS / 1000}s`);
   console.log(
     `   Max concurrent: chat=${MAX_CONCURRENT_CHAT} structured=${MAX_CONCURRENT_STRUCTURED}`
   );
@@ -223,8 +302,11 @@ export async function runDaemon(args) {
   setInterval(() => sendHeartbeat("daemon"), HEARTBEAT_MS);
   setInterval(() => requestDrain("chat"), CHAT_FALLBACK_MS);
   setInterval(() => requestDrain("structured"), STRUCTURED_FALLBACK_MS);
+  setInterval(() => void syncUsageOnce(), USAGE_SYNC_MS);
   requestDrain("chat");
   requestDrain("structured");
+  void syncUsageOnce();
+  scheduleDailyPing();
 
   for (const sig of ["SIGINT", "SIGTERM"]) {
     process.on(sig, () => {

@@ -2,6 +2,7 @@
 import { runAuthLogin } from "./commands/auth-login.mjs";
 import { runInstallSkill } from "./commands/install-skill.mjs";
 import { runSaveAiNote } from "./commands/save-ai-note.mjs";
+import { runUsageReport } from "./commands/usage-report.mjs";
 import { runDaemon } from "./daemon.mjs";
 import { clearConfig } from "./config.mjs";
 
@@ -42,6 +43,11 @@ async function main() {
 
   if (command === "install-skill") {
     await runInstallSkill();
+    return;
+  }
+
+  if (command === "usage" && subcommand === "report") {
+    await runUsageReport(rest);
     return;
   }
 

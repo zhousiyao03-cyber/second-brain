@@ -2,8 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/server/db";
 import { usageRecords } from "@/server/db/schema";
+import { validateBearerAccessToken } from "@/server/integrations/oauth";
 
 export async function POST(request: NextRequest) {
+  let userId: string;
+  try {
+    const auth = await validateBearerAccessToken({
+      authorization: request.headers.get("authorization"),
+    });
+    userId = auth.userId;
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid or missing access token. Run `knosi login` to authenticate." },
+      { status: 401 },
+    );
+  }
+
   const body = (await request.json()) as {
     entries?: Array<{
       date: string;
@@ -20,13 +34,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No entries provided" }, { status: 400 });
   }
 
-  // Upsert each entry
   for (const entry of body.entries) {
     const existing = await db
       .select()
       .from(usageRecords)
       .where(
         and(
+          eq(usageRecords.userId, userId),
           eq(usageRecords.date, entry.date),
           eq(usageRecords.provider, entry.provider),
           eq(usageRecords.model, entry.model),
@@ -47,6 +61,7 @@ export async function POST(request: NextRequest) {
         .where(eq(usageRecords.id, existing[0]!.id));
     } else {
       await db.insert(usageRecords).values({
+        userId,
         date: entry.date,
         provider: entry.provider,
         model: entry.model,

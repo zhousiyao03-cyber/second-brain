@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "../db";
 import { usageRecords } from "../db/schema";
 import { protectedProcedure, router } from "../trpc";
@@ -8,7 +8,7 @@ import type { UsageRecord } from "@/lib/usage-utils";
 export const usageRouter = router({
   list: protectedProcedure
     .input(z.object({ days: z.number().int().min(1).max(365).optional() }).optional())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const days = input?.days ?? 90;
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - days);
@@ -17,6 +17,7 @@ export const usageRouter = router({
       const rows = await db
         .select()
         .from(usageRecords)
+        .where(eq(usageRecords.userId, ctx.userId))
         .orderBy(desc(usageRecords.date));
 
       return rows

@@ -465,6 +465,9 @@ export const usageRecords = sqliteTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: text("date").notNull(), // "YYYY-MM-DD"
     provider: text("provider").notNull(), // "claude-code" | "codex"
     model: text("model").notNull().default(""),
@@ -476,7 +479,8 @@ export const usageRecords = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   },
   (table) => [
-    uniqueIndex("usage_records_date_provider_model_idx").on(
+    uniqueIndex("usage_records_user_date_provider_model_idx").on(
+      table.userId,
       table.date,
       table.provider,
       table.model,
