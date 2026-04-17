@@ -12,5 +12,15 @@
 		X-Frame-Options "SAMEORIGIN"
 	}
 
-	reverse_proxy knosi:3000
+	reverse_proxy 172.17.0.1:30080 {
+		header_up Host {host}
+	}
+}
+
+k3s.knosi.xyz {
+	encode gzip zstd
+
+	reverse_proxy 172.17.0.1:30080 {
+		header_up Host {host}
+	}
 }

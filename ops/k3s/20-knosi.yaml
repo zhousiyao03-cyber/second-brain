@@ -1,0 +1,108 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: knosi-data
+  namespace: knosi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: knosi
+  namespace: knosi
+  labels:
+    app: knosi
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: knosi
+  template:
+    metadata:
+      labels:
+        app: knosi
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "waiting for redis..."
+              until nc -z redis.knosi.svc.cluster.local 6379; do
+                sleep 2
+              done
+              echo "redis ready"
+      containers:
+        - name: knosi
+          image: docker.io/library/knosi-knosi:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: knosi-env
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
+            - name: REDIS_URL
+              value: "redis://redis.knosi.svc.cluster.local:6379"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          startupProbe:
+            httpGet:
+              path: /login
+              port: 3000
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 3000
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: 3000
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: knosi-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: knosi
+  namespace: knosi
+spec:
+  selector:
+    app: knosi
+  ports:
+    - port: 3000
+      targetPort: 3000

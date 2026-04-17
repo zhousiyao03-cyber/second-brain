@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: knosi
+  namespace: knosi
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: k3s.knosi.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: knosi
+                port:
+                  number: 3000
+    - host: www.knosi.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: knosi
+                port:
+                  number: 3000
+    - host: knosi.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: knosi
+                port:
+                  number: 3000
