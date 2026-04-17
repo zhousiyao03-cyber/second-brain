@@ -1,10 +1,11 @@
 import { z } from "zod/v4";
 import { router, protectedProcedure } from "../trpc";
 import { db } from "../db";
-import { notes, bookmarks, todos, osProjectNotes, osProjects, tokenUsageEntries } from "../db/schema";
+import { notes, bookmarks, todos, osProjectNotes, osProjects, folders } from "../db/schema";
 import { and, count, desc, eq, gte, isNotNull, like, or, sql } from "drizzle-orm";
 import { normalizeJournalTitlesForUser } from "../notes/journal-titles";
 import { dashboardStatsCache } from "../cache/instances";
+import { AI_INBOX_FOLDER_NAME } from "../integrations/ai-inbox";
 
 async function computeDashboardStats(userId: string) {
   await normalizeJournalTitlesForUser(userId);
@@ -46,42 +47,54 @@ async function computeDashboardStats(userId: string) {
     .orderBy(desc(osProjectNotes.updatedAt))
     .limit(5);
 
-  // Token→Knowledge stats
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  // AI → Knowledge stats: measure knowledge volume captured via AI (MCP save_to_knosi)
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [tokenResult] = await db
-    .select({ total: sql<number>`coalesce(sum(${tokenUsageEntries.totalTokens}), 0)` })
-    .from(tokenUsageEntries)
+  const [inboxFolder] = await db
+    .select({ id: folders.id })
+    .from(folders)
     .where(
       and(
-        eq(tokenUsageEntries.userId, userId),
-        gte(tokenUsageEntries.usageAt, startOfMonth)
+        eq(folders.userId, userId),
+        eq(folders.name, AI_INBOX_FOLDER_NAME),
+        sql`${folders.parentId} is null`
       )
-    );
+    )
+    .limit(1);
 
-  const [monthNoteCount] = await db
-    .select({ count: count() })
-    .from(notes)
-    .where(
-      and(
-        eq(notes.userId, userId),
-        gte(notes.createdAt, startOfMonth)
-      )
-    );
+  let capturedNotes = 0;
+  let capturedChars = 0;
+  if (inboxFolder) {
+    const [row] = await db
+      .select({
+        count: count(),
+        chars: sql<number>`coalesce(sum(length(${notes.plainText})), 0)`,
+      })
+      .from(notes)
+      .where(
+        and(
+          eq(notes.userId, userId),
+          eq(notes.folderId, inboxFolder.id),
+          gte(notes.createdAt, startOfMonth)
+        )
+      );
+    capturedNotes = row?.count ?? 0;
+    capturedChars = Number(row?.chars ?? 0);
+  }
 
-  const monthlyTokens = Number(tokenResult?.total ?? 0);
-  const notesCreatedThisMonth = monthNoteCount?.count ?? 0;
-  const conversionRate =
-    monthlyTokens > 0
-      ? (notesCreatedThisMonth / (monthlyTokens / 10000)) * 100
-      : 0;
+  // Rough token estimate: ~4 chars per token (OpenAI/Anthropic English heuristic)
+  const capturedTokens = Math.round(capturedChars / 4);
+  const daysElapsed = Math.max(
+    1,
+    Math.ceil((now.getTime() - startOfMonth.getTime()) / 86_400_000)
+  );
+  const avgPerDay = Math.round((capturedNotes / daysElapsed) * 10) / 10;
 
   const tokenStats = {
-    monthlyTokens,
-    notesCreatedThisMonth,
-    conversionRate: Math.round(conversionRate * 10) / 10,
+    capturedNotes,
+    capturedTokens,
+    avgPerDay,
   };
 
   return {

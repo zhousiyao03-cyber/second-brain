@@ -61,7 +61,7 @@ export default async function DashboardPage() {
     recentNotes,
     recentLearnNotes,
     recentProjectNotes,
-    tokenStats: { monthlyTokens: 0, notesCreatedThisMonth: 0, conversionRate: 0 },
+    tokenStats: { capturedNotes: 0, capturedTokens: 0, avgPerDay: 0 },
   };
 
   return (
