@@ -28,6 +28,7 @@ export default auth((req) => {
     pathname.startsWith("/api/focus/ingest") ||
     pathname.startsWith("/api/focus/status") ||
     pathname.startsWith("/api/focus/pair") ||
+    pathname.startsWith("/api/cli/auth/") ||
     pathname.startsWith("/api/usage") ||
     pathname.startsWith("/api/analysis") ||
     pathname.startsWith("/api/daemon/") ||
