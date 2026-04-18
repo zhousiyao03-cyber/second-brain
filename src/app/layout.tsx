@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://knosi.xyz";
+const SITE_URL = "https://www.knosi.xyz";
 const SITE_TITLE = "Knosi — a self-hostable second brain for your AI conversations";
 const SITE_DESCRIPTION =
   "Capture high-signal Claude and ChatGPT answers, turn them into structured notes, and ask AI on top of your own knowledge. Open source and self-hostable.";

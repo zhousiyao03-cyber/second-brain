@@ -3,7 +3,7 @@ import { isNotNull } from "drizzle-orm";
 import { db } from "@/server/db";
 import { notes, osProjectNotes } from "@/server/db/schema";
 
-const SITE_URL = "https://knosi.xyz";
+const SITE_URL = "https://www.knosi.xyz";
 
 export const revalidate = 3600;
 

@@ -11,7 +11,7 @@ test.describe("SEO primitives", () => {
     expect(body).toMatch(/Allow:\s*\/share\/?/);
     expect(body).toMatch(/Disallow:\s*\/api\/?/);
     expect(body).toMatch(/Disallow:\s*\/settings/);
-    expect(body).toMatch(/Sitemap:\s*https:\/\/knosi\.xyz\/sitemap\.xml/);
+    expect(body).toMatch(/Sitemap:\s*https:\/\/www\.knosi\.xyz\/sitemap\.xml/);
   });
 
   test("/sitemap.xml lists the landing page", async ({ request }) => {
@@ -19,7 +19,7 @@ test.describe("SEO primitives", () => {
     expect(res.status()).toBe(200);
     const body = await res.text();
     expect(body).toContain("<urlset");
-    expect(body).toContain("https://knosi.xyz/");
+    expect(body).toContain("https://www.knosi.xyz/");
   });
 
   test("root layout exposes lang=en and rich OG metadata", async ({ page }) => {
@@ -45,6 +45,6 @@ test.describe("SEO primitives", () => {
     const canonical = await page
       .locator('link[rel="canonical"]')
       .getAttribute("href");
-    expect(canonical).toBe("https://knosi.xyz/");
+    expect(canonical).toBe("https://www.knosi.xyz/");
   });
 });
