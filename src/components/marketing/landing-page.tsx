@@ -246,6 +246,61 @@ export function LandingPage() {
         </p>
       </section>
 
+      {/* ── Product shots ───────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-6 pb-24">
+        <div className="overflow-hidden rounded-2xl border border-stone-800 bg-stone-900/40 shadow-2xl shadow-black/50">
+          <Image
+            src="/screenshots/home.png"
+            alt="Knosi Home dashboard — today's focus, 30-day heatmap, and recent notes"
+            width={2560}
+            height={1440}
+            className="w-full"
+            priority
+          />
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+          <figure className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/40">
+            <Image
+              src="/screenshots/notes.png"
+              alt="Knosi Notes — folder tree with Engineering, Product, Reading, and Prompts collections"
+              width={2560}
+              height={1440}
+              className="w-full"
+            />
+            <figcaption className="px-4 py-3 text-sm text-stone-400">
+              <span className="font-medium text-stone-200">Notes.</span>{" "}
+              Rich editor with Mermaid, code, callouts, tables, and wiki-links.
+            </figcaption>
+          </figure>
+          <figure className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/40">
+            <Image
+              src="/screenshots/focus.png"
+              alt="Knosi Focus — 30-day focus heatmap, streak, daily totals, and activity breakdown"
+              width={2560}
+              height={1440}
+              className="w-full"
+            />
+            <figcaption className="px-4 py-3 text-sm text-stone-400">
+              <span className="font-medium text-stone-200">Focus.</span>{" "}
+              Auto-captured deep-work sessions from your desktop.
+            </figcaption>
+          </figure>
+          <figure className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/40">
+            <Image
+              src="/screenshots/usage.png"
+              alt="Knosi Usage — token usage by provider, daily trend, and estimated monthly cost"
+              width={2560}
+              height={1440}
+              className="w-full"
+            />
+            <figcaption className="px-4 py-3 text-sm text-stone-400">
+              <span className="font-medium text-stone-200">Usage.</span>{" "}
+              Track input, output, cache, and cost across every model you use.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
       {/* ── Social proof / positioning ──────────────────── */}
       <section className="mx-auto max-w-3xl px-6 pb-20 text-center">
         <div className="rounded-xl border border-stone-800 bg-stone-900/30 px-6 py-4">
