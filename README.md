@@ -25,9 +25,15 @@ Write notes with a Notion-level editor, index your knowledge with hybrid RAG, an
 </p>
 
 <p align="center">
-  <img src="public/screenshots/notes.png" alt="Knosi Notes — folders and list" width="32%" />
-  <img src="public/screenshots/focus.png" alt="Knosi Focus — 30-day focus heatmap, streak, daily totals" width="32%" />
-  <img src="public/screenshots/usage.png" alt="Knosi Usage — token usage by provider, daily trend, estimated cost" width="32%" />
+  <img src="public/screenshots/notes.png" alt="Knosi Notes — folder tree with Engineering, Product, Reading, and Prompts collections" width="32%" />
+  <img src="public/screenshots/editor.png" alt="Knosi editor — Tiptap-based note with Mermaid diagram, code block, and callout" width="32%" />
+  <img src="public/screenshots/ask-ai.png" alt="Knosi Ask AI — daily AI assistant over your own corpus" width="32%" />
+</p>
+
+<p align="center">
+  <img src="public/screenshots/projects.png" alt="Knosi Projects — Open Source discover tab with trending GitHub repos" width="32%" />
+  <img src="public/screenshots/focus.png" alt="Knosi Focus — 30-day focus heatmap, streak, daily totals, and activity breakdown" width="32%" />
+  <img src="public/screenshots/portfolio.png" alt="Knosi Portfolio — holdings with AI position analysis and concentration diagnostics" width="32%" />
 </p>
 
 ---

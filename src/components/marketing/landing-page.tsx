@@ -269,7 +269,46 @@ export function LandingPage() {
             />
             <figcaption className="px-4 py-3 text-sm text-stone-400">
               <span className="font-medium text-stone-200">Notes.</span>{" "}
-              Rich editor with Mermaid, code, callouts, tables, and wiki-links.
+              Folder-organised knowledge base with full-text search and wiki-links.
+            </figcaption>
+          </figure>
+          <figure className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/40">
+            <Image
+              src="/screenshots/editor.png"
+              alt="Knosi editor — Tiptap note with Mermaid pipeline diagram, code block, and callout"
+              width={2560}
+              height={1440}
+              className="w-full"
+            />
+            <figcaption className="px-4 py-3 text-sm text-stone-400">
+              <span className="font-medium text-stone-200">Editor.</span>{" "}
+              Rich blocks: Mermaid, code, callouts, tables, and Excalidraw.
+            </figcaption>
+          </figure>
+          <figure className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/40">
+            <Image
+              src="/screenshots/ask-ai.png"
+              alt="Knosi Ask AI — daily AI assistant scoped to your own corpus"
+              width={2560}
+              height={1440}
+              className="w-full"
+            />
+            <figcaption className="px-4 py-3 text-sm text-stone-400">
+              <span className="font-medium text-stone-200">Ask AI.</span>{" "}
+              Hybrid RAG over your notes, routed through your Claude subscription.
+            </figcaption>
+          </figure>
+          <figure className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/40">
+            <Image
+              src="/screenshots/projects.png"
+              alt="Knosi Projects — Open Source discover tab with trending GitHub repos"
+              width={2560}
+              height={1440}
+              className="w-full"
+            />
+            <figcaption className="px-4 py-3 text-sm text-stone-400">
+              <span className="font-medium text-stone-200">Projects.</span>{" "}
+              Analyse any GitHub repo and track OSS reading alongside your notes.
             </figcaption>
           </figure>
           <figure className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/40">
@@ -287,15 +326,15 @@ export function LandingPage() {
           </figure>
           <figure className="overflow-hidden rounded-xl border border-stone-800 bg-stone-900/40">
             <Image
-              src="/screenshots/usage.png"
-              alt="Knosi Usage — token usage by provider, daily trend, and estimated monthly cost"
+              src="/screenshots/portfolio.png"
+              alt="Knosi Portfolio — holdings with AI position analysis and concentration diagnostics"
               width={2560}
               height={1440}
               className="w-full"
             />
             <figcaption className="px-4 py-3 text-sm text-stone-400">
-              <span className="font-medium text-stone-200">Usage.</span>{" "}
-              Track input, output, cache, and cost across every model you use.
+              <span className="font-medium text-stone-200">Portfolio.</span>{" "}
+              Live prices with AI-driven concentration and P&amp;L diagnostics.
             </figcaption>
           </figure>
         </div>
