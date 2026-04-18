@@ -1,6 +1,6 @@
 {
   "name": "@knosi/cli",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Knosi CLI — Claude Code daemon, OAuth login, raw AI capture saves, usage reporting, and skill install",
   "license": "AGPL-3.0-or-later",
   "type": "module",

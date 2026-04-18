@@ -29,12 +29,18 @@ export function buildAuthorizationUrl({
 export function getOpenCommand(platform, url) {
   if (platform === "win32") {
     // cmd's `start` builtin: first quoted arg is the window title, so pass "" then the URL.
-    return { command: "cmd", args: ["/c", "start", "", url] };
+    // Caret-escape cmd metachars in the URL — libuv's Windows arg-quoter does not quote args
+    // for `&|<>^`, so an OAuth URL with `?a=1&b=2` would otherwise get split at the `&`.
+    return { command: "cmd", args: ["/c", "start", "", escapeForCmd(url)] };
   }
   if (platform === "darwin") {
     return { command: "open", args: [url] };
   }
   return { command: "xdg-open", args: [url] };
+}
+
+function escapeForCmd(value) {
+  return value.replace(/[&|<>^]/g, "^$&");
 }
 
 function openUrl(url) {

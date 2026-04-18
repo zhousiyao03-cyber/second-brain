@@ -1,4 +1,4 @@
-# 2026-04-18 · Fix `knosi login` crash on Windows
+# 2026-04-18 · Fix `knosi login` crash + URL truncation on Windows
 
 ## Task / Goal
 
@@ -9,15 +9,17 @@
 
 ## Key Changes
 
-### CLI (`@knosi/cli` 0.2.0 → 0.2.1)
+### CLI (`@knosi/cli` 0.2.0 → 0.2.2)
+
+The first pass (`0.2.1`) stopped the `xdg-open` crash but uncovered a second Windows-only bug: the browser now opened, but the authorize URL was truncated to just `?response_type=code`. Because `cmd /c start "" <url>` receives the URL as a plain command-line token (libuv's `QuoteCmdArg` does not wrap args for `&|<>^`), cmd interprets the first `&` between query parameters as a command separator and drops the rest. `0.2.2` caret-escapes those metacharacters before handing the URL to cmd.
 
 - `packages/cli/src/commands/auth-login.mjs` — added a platform-aware `getOpenCommand(platform, url)` helper:
-  - `win32` → `cmd /c start "" <url>` (empty title so `start` does not eat the URL as a window title)
+  - `win32` → `cmd /c start "" <url>` with cmd metachars (`&|<>^`) in the URL caret-escaped by the internal `escapeForCmd` helper.
   - `darwin` → `open <url>`
   - everything else → `xdg-open <url>`
   Attached a `.once("error", …)` listener so when the opener binary is missing the CLI now prints the URL as a manual fallback instead of crashing.
-- `packages/cli/src/commands/auth-login.test.mjs` — new test covering the three platform branches of `getOpenCommand`.
-- `packages/cli/package.json` — bumped to `0.2.1` and removed the `open` dependency that was declared but never imported anywhere.
+- `packages/cli/src/commands/auth-login.test.mjs` — new tests covering the three platform branches of `getOpenCommand` and the `&` caret-escape for a realistic OAuth URL.
+- `packages/cli/package.json` — bumped to `0.2.2` and removed the `open` dependency that was declared but never imported anywhere.
 
 ## Files Touched
 
