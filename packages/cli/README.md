@@ -88,3 +88,13 @@ This copies the bundled template to:
 | `--model <model>` | Override Claude model | (from task) |
 | `--once` | Process one round then exit | `false` |
 | `--claude-bin <path>` | Path to Claude CLI binary | `claude` |
+
+## Releasing
+
+`@knosi/cli` is published automatically by the `Publish @knosi/cli` GitHub Actions workflow (`.github/workflows/publish-cli.yml`):
+
+1. Bump `packages/cli/package.json` → `version`.
+2. Commit + push to `main`.
+3. The workflow runs the CLI unit tests, compares the local version with the one on the npm registry, and publishes only if the local version is strictly greater.
+
+The workflow needs a repo secret named `NPM_TOKEN` holding an **npm automation token** (not a classic one — automation tokens bypass 2FA, which is what lets CI publish non-interactively). Create one under npmjs.com → Access Tokens → "Generate New Token" → **Automation**, scope it to `@knosi/cli` publish access, then add it to GitHub repo **Settings → Secrets and variables → Actions** as `NPM_TOKEN`.
