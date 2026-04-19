@@ -10,7 +10,7 @@
  * path 保持一致，便于在日志里关联。
  */
 
-import { RedisCache } from "../redis-cache";
+import { RedisCache } from "./redis-cache";
 
 /**
  * dashboard.stats 的缓存。

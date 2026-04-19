@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import redisCacheModule from "../redis-cache.ts";
+import * as redisCacheModule from "./redis-cache.ts";
 
 const { RedisCache } = redisCacheModule;
 

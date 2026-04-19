@@ -28,9 +28,9 @@
  *    写时由调用方显式 invalidate。
  */
 
-import { getRedis } from "./redis";
-import { logger } from "./logger";
-import { recordCacheEvent } from "./metrics";
+import { getRedis } from "../redis";
+import { logger } from "../logger";
+import { recordCacheEvent } from "../metrics";
 
 export type RedisCacheOptions = {
   /** 命名空间，用于 key 前缀 + metrics 聚合 */
