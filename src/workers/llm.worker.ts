@@ -485,6 +485,18 @@ async function runGeneration(
       throw error;
     }
 
+    if (isDeviceLostError(error)) {
+      resetGpuResources();
+      setStatus({
+        phase: "error",
+        detail:
+          "WebGPU device lost — freed model handles. Try again; weights will reload from cache.",
+        error: error instanceof Error ? error.message : String(error),
+        progress: undefined,
+      });
+      throw error;
+    }
+
     setStatus({
       phase: "error",
       detail: "Model generation failed.",
@@ -493,6 +505,25 @@ async function runGeneration(
     });
     throw error;
   }
+}
+
+function isDeviceLostError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = `${error.message} ${error.stack ?? ""}`;
+  return (
+    msg.includes("A valid external Instance reference no longer exists") ||
+    msg.includes("Device was lost") ||
+    msg.includes("device is lost") ||
+    msg.includes("GPUDevice was destroyed") ||
+    msg.includes("OrtRun") ||
+    msg.includes("mapAsync")
+  );
+}
+
+function resetGpuResources(): void {
+  processorPromise = null;
+  modelPromise = null;
+  activeCacheSource = null;
 }
 
 function stripTrailingSpecials(text: string): string {
@@ -523,12 +554,23 @@ const llmApi: LocalLlmWorkerAPI = {
       return status;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setStatus({
-        phase: "error",
-        detail: "Model failed to load.",
-        error: message,
-        progress: undefined,
-      });
+      if (isDeviceLostError(error)) {
+        resetGpuResources();
+        setStatus({
+          phase: "error",
+          detail:
+            "WebGPU device lost during load — freed model handles. Try again.",
+          error: message,
+          progress: undefined,
+        });
+      } else {
+        setStatus({
+          phase: "error",
+          detail: "Model failed to load.",
+          error: message,
+          progress: undefined,
+        });
+      }
       throw error;
     }
   },
