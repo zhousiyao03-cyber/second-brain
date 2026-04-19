@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import oauthModule from "./oauth.ts";
+import * as oauthModule from "./oauth/index.ts";
 
 const {
   approveAuthorizationCode,
