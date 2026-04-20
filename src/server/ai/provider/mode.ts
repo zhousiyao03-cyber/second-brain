@@ -37,17 +37,37 @@ export function resolveCodexProfileId() {
   return orderedProfiles?.[0] ?? DEFAULT_CODEX_PROFILE_ID;
 }
 
-export function resolveCodexAuthStorePath() {
+export function resolveCodexAuthStorePath(override?: string) {
   return (
     resolveValue(
+      override,
       process.env.CODEX_AUTH_STORE_PATH,
       process.env.OPENCLAW_CODEX_AUTH_STORE_PATH
     ) ?? DEFAULT_CODEX_AUTH_STORE_PATH
   );
 }
 
-export function readCodexAuthStore() {
-  const storePath = resolveCodexAuthStorePath();
+/**
+ * Expand a leading `~/` / bare `~` to the user's home directory, and, if the
+ * override points at a directory (no `.json` suffix), append the canonical
+ * codex store filename. Used by hosted-pool callers that hand us a per-account
+ * base dir like `~/.openclaw/<account>`.
+ */
+export function normalizeCodexAuthStorePath(raw: string): string {
+  let expanded = raw;
+  if (expanded === "~") {
+    expanded = homedir();
+  } else if (expanded.startsWith("~/") || expanded.startsWith("~\\")) {
+    expanded = join(homedir(), expanded.slice(2));
+  }
+  if (!expanded.toLowerCase().endsWith(".json")) {
+    expanded = join(expanded, "agents", "main", "agent", "auth-profiles.json");
+  }
+  return expanded;
+}
+
+export function readCodexAuthStore(override?: string) {
+  const storePath = resolveCodexAuthStorePath(override);
   const authStore = readJsonFile<CodexAuthStore>(storePath);
 
   if (!authStore) {

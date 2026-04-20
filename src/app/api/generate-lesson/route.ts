@@ -51,12 +51,13 @@ export async function POST(req: Request) {
   const existingTitles = existingLessons.map((l) => l.title).join("、");
 
   try {
-    const output = await generateStructuredData({
-      schema: lessonOutputSchema,
-      name: "learning_lesson",
-      description:
-        "A Chinese programming lesson with markdown content and quiz answers.",
-      prompt: `你是一位编程导师。请为学习路径"${path.title}"生成下一节课程。
+    const output = await generateStructuredData(
+      {
+        schema: lessonOutputSchema,
+        name: "learning_lesson",
+        description:
+          "A Chinese programming lesson with markdown content and quiz answers.",
+        prompt: `你是一位编程导师。请为学习路径"${path.title}"生成下一节课程。
 
 学习路径描述：${path.description}
 已有课程：${existingTitles || "无（这是第一节课）"}
@@ -66,7 +67,9 @@ export async function POST(req: Request) {
 2. 包含实际代码示例
 3. 练习题要有实际编程思考价值
 4. content 使用 Markdown，控制在 800-1200 字`,
-    });
+      },
+      { userId: session.user.id },
+    );
     const lessonId = crypto.randomUUID();
 
     await db.insert(learningLessons).values({

@@ -77,12 +77,15 @@ export async function POST(req: Request) {
 
     const { system, messages } = await buildChatContext(parsed.data, userId);
 
-    const response = await streamChatResponse({
-      messages,
-      sessionId: parsed.data.id,
-      signal: req.signal,
-      system,
-    });
+    const response = await streamChatResponse(
+      {
+        messages,
+        sessionId: parsed.data.id,
+        signal: req.signal,
+        system,
+      },
+      { userId },
+    );
 
     // Record usage (fire-and-forget, don't block the response)
     if (process.env.AUTH_BYPASS !== "true" && userId) {

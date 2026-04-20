@@ -54,12 +54,13 @@ export async function POST() {
   };
 
   try {
-    const output = await generateStructuredData({
-      schema: exploreOutputSchema,
-      name: "interest_recommendations",
-      description:
-        "Interest analysis with five personalized learning recommendations in Chinese.",
-      prompt: `你是一个知识推荐助手。基于用户的笔记、收藏和待办，分析他们的兴趣方向并推荐5条相关的学习资源或话题。
+    const output = await generateStructuredData(
+      {
+        schema: exploreOutputSchema,
+        name: "interest_recommendations",
+        description:
+          "Interest analysis with five personalized learning recommendations in Chinese.",
+        prompt: `你是一个知识推荐助手。基于用户的笔记、收藏和待办，分析他们的兴趣方向并推荐5条相关的学习资源或话题。
 
 用户最近的笔记：
 ${context.notes || "暂无"}
@@ -75,7 +76,9 @@ ${context.todos || "暂无"}
 2. 推荐内容要有学习价值
 3. 如果用户数据不足，基于技术学习推荐通用资源
 4. 返回中文结果，recommendations 固定 5 条`,
-    });
+      },
+      { userId },
+    );
 
     return Response.json(output);
   } catch (error) {

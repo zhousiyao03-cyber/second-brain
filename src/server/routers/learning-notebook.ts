@@ -373,20 +373,21 @@ export const learningNotebookRouter = router({
       const { combinedText } = await collectTopicMeta(topic.id);
       const sourceText = combinedText || "No notes yet.";
 
-      const output = await generateStructuredData({
-        schema: z.object({
-          title: z.string().min(1),
-          summary: z.string().min(1),
-          items: z.array(
-            z.object({
-              heading: z.string().min(1),
-              detail: z.string().min(1),
-            })
-          ),
-        }),
-        name: `learning_${input.type}_review`,
-        description: "A structured study review in English.",
-        prompt: `You are helping a developer review their study notes for "${topic.title}".
+      const output = await generateStructuredData(
+        {
+          schema: z.object({
+            title: z.string().min(1),
+            summary: z.string().min(1),
+            items: z.array(
+              z.object({
+                heading: z.string().min(1),
+                detail: z.string().min(1),
+              })
+            ),
+          }),
+          name: `learning_${input.type}_review`,
+          description: "A structured study review in English.",
+          prompt: `You are helping a developer review their study notes for "${topic.title}".
 
 Review type: ${input.type}
 Topic description: ${topic.description ?? "None"}
@@ -397,7 +398,9 @@ Return concise but useful sections.
 - outline: extract the current knowledge map
 - gap: identify missing but important areas
 - quiz: produce question-style prompts in the items list`,
-      });
+        },
+        { userId: ctx.userId },
+      );
 
       const id = crypto.randomUUID();
       await db.insert(learningReviews).values({
@@ -434,11 +437,12 @@ Return concise but useful sections.
       }
 
       const { combinedText } = await collectTopicMeta(topic.id);
-      const answer = await generateStructuredData({
-        schema: z.object({ answer: z.string().min(1) }),
-        name: "learning_topic_answer",
-        description: "An answer grounded in the user's study notes.",
-        prompt: `Answer the question using the study notes when possible.
+      const answer = await generateStructuredData(
+        {
+          schema: z.object({ answer: z.string().min(1) }),
+          name: "learning_topic_answer",
+          description: "An answer grounded in the user's study notes.",
+          prompt: `Answer the question using the study notes when possible.
 
 Topic: ${topic.title}
 Question: ${input.question}
@@ -446,7 +450,9 @@ Notes:
 ${combinedText || "No notes yet."}
 
 If the notes are incomplete, say so clearly and provide the best answer you can.`,
-      });
+        },
+        { userId: ctx.userId },
+      );
 
       return answer;
     }),

@@ -85,7 +85,10 @@ type SessionForSummary = {
   aiSummary: string | null;
 };
 
-export async function classifyActivitySessions(sessions: SessionForClassification[]) {
+export async function classifyActivitySessions(
+  sessions: SessionForClassification[],
+  opts?: { userId?: string | null },
+) {
   if (sessions.length === 0) {
     return [];
   }
@@ -98,16 +101,19 @@ export async function classifyActivitySessions(sessions: SessionForClassificatio
     .join("\n");
 
   try {
-    const result = await generateStructuredData({
-      name: "focus_session_classification",
-      description: "Summarize focus tracking sessions in one short factual line each.",
-      prompt: `Generate one short factual summary per session.
+    const result = await generateStructuredData(
+      {
+        name: "focus_session_classification",
+        description: "Summarize focus tracking sessions in one short factual line each.",
+        prompt: `Generate one short factual summary per session.
 
 Sessions:
 ${sessionList}`,
-      schema: sessionSummarySchema,
-      signal: createFocusAiTimeoutSignal(),
-    });
+        schema: sessionSummarySchema,
+        signal: createFocusAiTimeoutSignal(),
+      },
+      { userId: opts?.userId ?? null },
+    );
 
     return result.sessions.map((session) => ({
       id: session.id,
@@ -125,14 +131,17 @@ ${sessionList}`,
   }
 }
 
-export async function generateDailySummary(input: {
-  sessions: SessionForSummary[];
-  totalSecs: number;
-  tagBreakdown: Record<string, number>;
-  longestStreakSecs: number;
-  appSwitches: number;
-  date: string;
-}) {
+export async function generateDailySummary(
+  input: {
+    sessions: SessionForSummary[];
+    totalSecs: number;
+    tagBreakdown: Record<string, number>;
+    longestStreakSecs: number;
+    appSwitches: number;
+    date: string;
+  },
+  opts?: { userId?: string | null },
+) {
   if (input.sessions.length === 0) {
     return null;
   }
@@ -159,10 +168,11 @@ export async function generateDailySummary(input: {
     .join(", ");
 
   try {
-    const result = await generateStructuredData({
-      name: "focus_daily_summary",
-      description: "Generate a concise daily focus summary for a knowledge worker.",
-      prompt: `Generate a short factual summary for ${input.date}.
+    const result = await generateStructuredData(
+      {
+        name: "focus_daily_summary",
+        description: "Generate a concise daily focus summary for a knowledge worker.",
+        prompt: `Generate a short factual summary for ${input.date}.
 
 Total focus time: ${(input.totalSecs / 3600).toFixed(1)}h
 Longest streak: ${Math.round(input.longestStreakSecs / 60)}min
@@ -171,9 +181,11 @@ Tag breakdown: ${breakdown}
 
 Timeline:
 ${timeline}`,
-      schema: z.object({ summary: z.string() }),
-      signal: createFocusAiTimeoutSignal(),
-    });
+        schema: z.object({ summary: z.string() }),
+        signal: createFocusAiTimeoutSignal(),
+      },
+      { userId: opts?.userId ?? null },
+    );
 
     return (
       normalizeGeneratedText(result.summary) ??
@@ -220,7 +232,10 @@ const dailyInsightSchema = z.object({
   insights: z.array(z.string()).min(1).max(4),
 });
 
-export async function generateDailyInsight(input: DailyInsightInput) {
+export async function generateDailyInsight(
+  input: DailyInsightInput,
+  opts?: { userId?: string | null },
+) {
   if (input.sessions.length === 0) {
     return { insights: [], aiGenerated: false };
   }
@@ -245,10 +260,11 @@ export async function generateDailyInsight(input: DailyInsightInput) {
   const lastTime = input.lastSessionAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   try {
-    const result = await generateStructuredData({
-      name: "focus_daily_insight",
-      description: "Analyze a single day's focus data and generate specific insights in Chinese.",
-      prompt: `Analyze today's (${input.date}) focus data.
+    const result = await generateStructuredData(
+      {
+        name: "focus_daily_insight",
+        description: "Analyze a single day's focus data and generate specific insights in Chinese.",
+        prompt: `Analyze today's (${input.date}) focus data.
 
 Total tracked: ${formatDurationShort(input.totalSecs)}
 Active window: ${firstTime} — ${lastTime}
@@ -264,9 +280,11 @@ Generate 2-3 concise, specific insights in Chinese. Focus on:
 - Any notable observations (long stretches, frequent switching, etc.)
 
 Be specific with app names and times. Each insight should be 1-2 sentences. Don't repeat what the stats already show.`,
-      schema: dailyInsightSchema,
-      signal: createFocusAiTimeoutSignal(),
-    });
+        schema: dailyInsightSchema,
+        signal: createFocusAiTimeoutSignal(),
+      },
+      { userId: opts?.userId ?? null },
+    );
     return { insights: result.insights, aiGenerated: true };
   } catch {
     const topAppNames = input.topApps.slice(0, 3).map(([app]) => app).join("、");

@@ -106,27 +106,30 @@ export async function generatePortfolioNews(userId: string, symbol: string) {
       summary: fallbackSummary,
       sentiment: "neutral" as const,
     }
-    : await generateStructuredData({
-      name: "portfolio_news_summary",
-      description: `Summarize recent grounded news for ${subjectName} (${normalizedSymbol}) using only the provided article list.`,
-      prompt: [
-        `Today is ${today}.`,
-        `Target asset: ${subjectName} (${normalizedSymbol}).`,
-        `Asset type: ${subjectType ?? "unknown"}.`,
-        "Use only the article list below as evidence. Do not claim you searched the web.",
-        "If the evidence is thin or ambiguous, say that explicitly.",
-        'Return JSON with "summary" (3-5 Chinese bullet points) and "sentiment" ("bullish", "bearish", or "neutral").',
-        "",
-        "Articles:",
-        articles
-          .slice(0, 6)
-          .map((article, index) => (
-            `${index + 1}. ${article.title}\nSource: ${article.source}\nPublished: ${article.publishedAt}\nSnippet: ${article.snippet || "N/A"}\nLink: ${article.link}`
-          ))
-          .join("\n\n"),
-      ].join("\n"),
-      schema: newsSummarySchema,
-    }).catch(() => ({
+    : await generateStructuredData(
+      {
+        name: "portfolio_news_summary",
+        description: `Summarize recent grounded news for ${subjectName} (${normalizedSymbol}) using only the provided article list.`,
+        prompt: [
+          `Today is ${today}.`,
+          `Target asset: ${subjectName} (${normalizedSymbol}).`,
+          `Asset type: ${subjectType ?? "unknown"}.`,
+          "Use only the article list below as evidence. Do not claim you searched the web.",
+          "If the evidence is thin or ambiguous, say that explicitly.",
+          'Return JSON with "summary" (3-5 Chinese bullet points) and "sentiment" ("bullish", "bearish", or "neutral").',
+          "",
+          "Articles:",
+          articles
+            .slice(0, 6)
+            .map((article, index) => (
+              `${index + 1}. ${article.title}\nSource: ${article.source}\nPublished: ${article.publishedAt}\nSnippet: ${article.snippet || "N/A"}\nLink: ${article.link}`
+            ))
+            .join("\n\n"),
+        ].join("\n"),
+        schema: newsSummarySchema,
+      },
+      { userId },
+    ).catch(() => ({
       summary: fallbackSummary,
       sentiment: "neutral" as const,
     }));
@@ -249,7 +252,7 @@ export const portfolioRouter = router({
 
   analyze: proProcedure
     .input(portfolioAnalysisInputSchema)
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const fallback = buildPortfolioAnalysisFallback(input);
 
       if (input.holdings.length === 0) {
@@ -283,7 +286,7 @@ export const portfolioRouter = router({
             "Write the response in Chinese. Keep each item short and useful.",
           ].join("\n"),
           schema: portfolioAnalysisSchema,
-        });
+        }, { userId: ctx.userId });
 
         return { ...result, aiGenerated: true };
       } catch {

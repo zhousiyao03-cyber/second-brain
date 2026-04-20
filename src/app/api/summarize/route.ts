@@ -47,18 +47,21 @@ export async function POST(req: Request) {
   }
 
   try {
-    const output = await generateStructuredData({
-      schema: summaryOutputSchema,
-      name: "bookmark_summary",
-      description: "A concise Chinese bookmark summary with 2-3 short tags.",
-      prompt: `请对以下内容生成简短的中文摘要（不超过100字），并推荐2-3个标签（JSON数组格式）。
+    const output = await generateStructuredData(
+      {
+        schema: summaryOutputSchema,
+        name: "bookmark_summary",
+        description: "A concise Chinese bookmark summary with 2-3 short tags.",
+        prompt: `请对以下内容生成简短的中文摘要（不超过100字），并推荐2-3个标签（JSON数组格式）。
 
 内容：${contentToSummarize}
 
 请输出中文结果：
 1. summary 控制在 100 字以内。
 2. tags 提供 2-3 个简短标签，不要重复。`,
-    });
+      },
+      { userId: session.user.id },
+    );
 
     const tags = normalizeTags(output.tags);
     const summary = output.summary.trim();

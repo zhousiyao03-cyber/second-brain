@@ -12,6 +12,7 @@ import {
 } from "./shared";
 import {
   DEFAULT_CODEX_PROVIDER,
+  normalizeCodexAuthStorePath,
   readCodexAuthStore,
   readOpenclawConfig,
   resolveCodexAuthStorePath,
@@ -77,11 +78,11 @@ function extractAccountId(token: string) {
   }
 }
 
-async function resolveCodexApiKey() {
-  const store = readCodexAuthStore();
+async function resolveCodexApiKey(authStorePathOverride?: string) {
+  const store = readCodexAuthStore(authStorePathOverride);
   if (!store) {
     throw new Error(
-      `Missing Codex auth store at ${resolveCodexAuthStorePath()}. Please sign in with OpenClaw first.`
+      `Missing Codex auth store at ${resolveCodexAuthStorePath(authStorePathOverride)}. Please sign in with OpenClaw first.`
     );
   }
 
@@ -266,15 +267,17 @@ async function extractCodexError(response: Response) {
 }
 
 async function fetchCodexResponse({
+  authStorePathOverride,
   body,
   sessionId,
   signal,
 }: {
+  authStorePathOverride?: string;
   body: Record<string, unknown>;
   sessionId?: string;
   signal?: AbortSignal;
 }) {
-  const { accountId, apiKey } = await resolveCodexApiKey();
+  const { accountId, apiKey } = await resolveCodexApiKey(authStorePathOverride);
   const response = await fetch(resolveCodexUrl(), {
     method: "POST",
     headers: buildCodexHeaders({ accountId, apiKey, sessionId }),
@@ -283,7 +286,10 @@ async function fetchCodexResponse({
   });
 
   if (!response.ok) {
-    throw new Error(await extractCodexError(response));
+    const message = await extractCodexError(response);
+    const err = new Error(message) as Error & { status?: number };
+    err.status = response.status;
+    throw err;
   }
 
   if (!response.body) {
@@ -442,13 +448,14 @@ function createCodexTextStreamResponse(response: Response) {
   });
 }
 
-export async function streamChatCodex({
-  messages,
-  sessionId,
-  signal,
-  system,
-}: StreamChatOptions) {
+export async function streamChatCodex(
+  { messages, sessionId, signal, system }: StreamChatOptions,
+  opts?: { authStorePath?: string },
+) {
   const response = await fetchCodexResponse({
+    authStorePathOverride: opts?.authStorePath
+      ? normalizeCodexAuthStorePath(opts.authStorePath)
+      : undefined,
     body: buildCodexRequestBody({
       input: buildCodexConversationInput(messages),
       modelId: resolveCodexModelId("chat"),
@@ -463,14 +470,14 @@ export async function streamChatCodex({
   return createCodexTextStreamResponse(response);
 }
 
-export async function generateStructuredDataCodex<TSchema extends z.ZodType>({
-  description,
-  name,
-  prompt,
-  schema,
-  signal,
-}: GenerateStructuredDataOptions<TSchema>): Promise<z.infer<TSchema>> {
+export async function generateStructuredDataCodex<TSchema extends z.ZodType>(
+  { description, name, prompt, schema, signal }: GenerateStructuredDataOptions<TSchema>,
+  opts?: { authStorePath?: string },
+): Promise<z.infer<TSchema>> {
   const response = await fetchCodexResponse({
+    authStorePathOverride: opts?.authStorePath
+      ? normalizeCodexAuthStorePath(opts.authStorePath)
+      : undefined,
     body: buildCodexRequestBody({
       input: [
         {

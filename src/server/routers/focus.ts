@@ -419,7 +419,8 @@ export const focusRouter = router({
           displayLabel: null,
           tags: session.tags,
           durationSecs: session.durationSecs,
-        }))
+        })),
+        { userId: ctx.userId },
       );
 
       // 批量 UPDATE：用事务包裹，减少单独的写操作开销
@@ -464,14 +465,17 @@ export const focusRouter = router({
         return { summary: null };
       }
 
-      const summary = await generateDailySummary({
-        sessions: daily.displaySessions,
-        totalSecs: daily.totalSecs,
-        tagBreakdown: daily.tagBreakdown,
-        longestStreakSecs: daily.longestStreakSecs,
-        appSwitches: daily.appSwitches,
-        date: input.date,
-      });
+      const summary = await generateDailySummary(
+        {
+          sessions: daily.displaySessions,
+          totalSecs: daily.totalSecs,
+          tagBreakdown: daily.tagBreakdown,
+          longestStreakSecs: daily.longestStreakSecs,
+          appSwitches: daily.appSwitches,
+          date: input.date,
+        },
+        { userId: ctx.userId },
+      );
 
       const [existing] = await db
         .select({ id: focusDailySummaries.id })
@@ -625,13 +629,16 @@ export const focusRouter = router({
       const firstSession = sessions[0];
       const lastSession = sessions[sessions.length - 1];
 
-      return generateDailyInsight({
-        date: input.date,
-        totalSecs,
-        sessions,
-        topApps,
-        firstSessionAt: firstSession.startedAt,
-        lastSessionAt: lastSession.endedAt,
-      });
+      return generateDailyInsight(
+        {
+          date: input.date,
+          totalSecs,
+          sessions,
+          topApps,
+          firstSessionAt: firstSession.startedAt,
+          lastSessionAt: lastSession.endedAt,
+        },
+        { userId: ctx.userId },
+      );
     }),
 });
