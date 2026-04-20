@@ -23,11 +23,10 @@ export async function POST(req: Request) {
   }
 
   const body = JSON.parse(raw) as LsWebhookBody;
-  const state = await persistWebhookEvent(body, raw, sig);
+  const { state, eventId } = await persistWebhookEvent(body, raw, sig);
   // Ack duplicates so LS stops retrying — we've already processed this one.
   if (state === "duplicate") return new NextResponse("ok", { status: 200 });
 
-  const eventId = body.meta.event_id!;
   try {
     await dispatchLsEvent(body);
     await db

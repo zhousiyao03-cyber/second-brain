@@ -35,7 +35,7 @@ export async function persistWebhookEvent(
   body: LsWebhookBody,
   raw: string,
   signature: string | null,
-): Promise<"new" | "duplicate"> {
+): Promise<{ state: "new" | "duplicate"; eventId: string }> {
   const eventId =
     body.meta.event_id ??
     `generated-${crypto.createHash("sha256").update(raw).digest("hex")}`;
@@ -46,9 +46,9 @@ export async function persistWebhookEvent(
       payload: raw,
       signature,
     });
-    return "new";
+    return { state: "new", eventId };
   } catch {
     logger.info({ eventId, event: "ls.webhook.duplicate" }, "LS webhook already recorded");
-    return "duplicate";
+    return { state: "duplicate", eventId };
   }
 }
