@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { auth } from "@/lib/auth";
+import { getEntitlements } from "./billing/entitlements";
 import { logger, newRequestId } from "./logger";
 import { recordProcedureCall } from "./metrics";
 
@@ -97,6 +98,40 @@ const authMiddleware = t.middleware(async ({ next }) => {
   return next({ ctx: { userId: session.user.id } });
 });
 
+/**
+ * entitlementsMiddleware 挂在 authMiddleware 之后，把订阅派生的
+ * entitlements 注入到 ctx。自托管模式下恒定返回 PRO_UNLIMITED；
+ * hosted 模式下走 Redis 缓存的 getEntitlements()。
+ *
+ * 若上游没有 userId（例如有人错误地把它挂在 publicProcedure 上），
+ * 这里直接透传，不会抛错，保持中间件可复用。
+ */
+const entitlementsMiddleware = t.middleware(async ({ ctx, next }) => {
+  const userId = (ctx as { userId?: string }).userId;
+  if (!userId) return next();
+  const entitlements = await getEntitlements(userId);
+  return next({ ctx: { ...ctx, entitlements } });
+});
+
+/**
+ * requireProMiddleware 要求当前用户 plan === "pro"，否则抛 FORBIDDEN。
+ * message 用 JSON 编码，便于客户端稳定解析 reason 做 upsell。
+ */
+const requireProMiddleware = t.middleware(async ({ ctx, next }) => {
+  const ent = (ctx as { entitlements?: { plan: string } }).entitlements;
+  if (!ent || ent.plan !== "pro") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: JSON.stringify({ reason: "PRO_REQUIRED" }),
+    });
+  }
+  return next();
+});
+
 export const router = t.router;
 export const publicProcedure = t.procedure.use(loggingMiddleware);
-export const protectedProcedure = t.procedure.use(loggingMiddleware).use(authMiddleware);
+export const protectedProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(authMiddleware)
+  .use(entitlementsMiddleware);
+export const proProcedure = protectedProcedure.use(requireProMiddleware);
