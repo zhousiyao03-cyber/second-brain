@@ -1,7 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { auth } from "@/lib/auth";
-import { getEntitlements } from "./billing/entitlements";
+import { getEntitlements, PRO_UNLIMITED } from "./billing/entitlements";
 import { logger, newRequestId } from "./logger";
 import { recordProcedureCall } from "./metrics";
 
@@ -108,8 +108,10 @@ const authMiddleware = t.middleware(async ({ next }) => {
  */
 const entitlementsMiddleware = t.middleware(async ({ ctx, next }) => {
   const userId = (ctx as { userId?: string }).userId;
-  if (!userId) return next();
-  const entitlements = await getEntitlements(userId);
+  // Without a userId there's no user to derive entitlements for — fall back
+  // to PRO_UNLIMITED so the ctx type is stable and downstream code can
+  // always read ctx.entitlements without a runtime guard.
+  const entitlements = userId ? await getEntitlements(userId) : PRO_UNLIMITED;
   return next({ ctx: { ...ctx, entitlements } });
 });
 

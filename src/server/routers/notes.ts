@@ -1,7 +1,7 @@
 import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "../db";
 import { notes, noteLinks } from "../db/schema";
-import { and, desc, eq, ne, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, ne, or, sql } from "drizzle-orm";
 import { extractWikiLinks } from "../notes/link-extractor";
 import { z } from "zod/v4";
 import crypto from "crypto";
@@ -10,6 +10,7 @@ import {
   runIndexJobFor,
 } from "../ai/indexer";
 import { after } from "next/server";
+import { assertQuota } from "../billing/quota";
 import {
   createJournalTemplate,
   formatJournalTitle,
@@ -187,6 +188,12 @@ export const notesRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      const [{ cnt }] = await db
+        .select({ cnt: count() })
+        .from(notes)
+        .where(eq(notes.userId, ctx.userId));
+      assertQuota(ctx.entitlements, "notes", cnt ?? 0, 1);
+
       const id = crypto.randomUUID();
       await db.insert(notes).values({ id, userId: ctx.userId, ...input });
       after(runIndexJobFor("note", id, "note-create"));
