@@ -1,3 +1,10 @@
+import { eq } from "drizzle-orm";
+import { db } from "@/server/db";
+import { users } from "@/server/db/schema/auth";
+import { getRedis } from "@/server/redis";
+import { isHostedMode } from "./mode";
+import { getSubscriptionByUserId } from "./subscriptions";
+
 export type Plan = "free" | "pro";
 export type Limit = number | "unlimited";
 
@@ -161,4 +168,50 @@ function freeHosted(): Entitlements {
     limits: FREE_HOSTED_LIMITS,
     features: FREE_FEATURES,
   };
+}
+
+// ── Redis-cached lookup ────────────────────────────────────────────────
+
+const CACHE_TTL_SECONDS = 60;
+const cacheKey = (userId: string) => `billing:ent:${userId}`;
+
+export async function getEntitlements(userId: string): Promise<Entitlements> {
+  if (!isHostedMode()) return PRO_UNLIMITED;
+
+  const redis = await getRedis();
+  if (redis) {
+    const cached = await redis.get(cacheKey(userId));
+    if (cached) {
+      try {
+        return JSON.parse(cached) as Entitlements;
+      } catch {
+        // Fall through and rebuild on parse error.
+      }
+    }
+  }
+
+  const [user] = await db
+    .select({ createdAt: users.createdAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const sub = await getSubscriptionByUserId(userId);
+  const ent = deriveEntitlements(
+    sub,
+    { createdAt: user?.createdAt ?? null },
+    Date.now(),
+  );
+
+  if (redis) {
+    await redis.set(cacheKey(userId), JSON.stringify(ent), {
+      expiration: { type: "EX", value: CACHE_TTL_SECONDS },
+    });
+  }
+  return ent;
+}
+
+export async function invalidateEntitlements(userId: string) {
+  const redis = await getRedis();
+  if (redis) await redis.del(cacheKey(userId));
 }

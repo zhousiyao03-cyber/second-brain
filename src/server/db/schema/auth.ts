@@ -10,6 +10,7 @@ export const users = sqliteTable("users", {
   email: text("email").unique(),
   emailVerified: integer("email_verified", { mode: "timestamp" }),
   image: text("image"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const accounts = sqliteTable("accounts", {
