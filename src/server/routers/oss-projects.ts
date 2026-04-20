@@ -9,7 +9,7 @@ import {
   osProjects,
   analysisTasks,
 } from "../db/schema";
-import { protectedProcedure, router } from "../trpc";
+import { proProcedure, protectedProcedure, router } from "../trpc";
 import { fetchTrending } from "../analysis/trending";
 import { fetchRepoInfo, searchRepos } from "../analysis/github";
 import {
@@ -205,7 +205,7 @@ export const ossProjectsRouter = router({
       };
     }),
 
-  createProject: protectedProcedure
+  createProject: proProcedure
     .input(projectSchema)
     .mutation(async ({ input, ctx }) => {
       const id = crypto.randomUUID();
@@ -221,7 +221,7 @@ export const ossProjectsRouter = router({
       return { id };
     }),
 
-  updateProject: protectedProcedure
+  updateProject: proProcedure
     .input(projectSchema.extend({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
@@ -236,7 +236,7 @@ export const ossProjectsRouter = router({
       return { id };
     }),
 
-  deleteProject: protectedProcedure
+  deleteProject: proProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       await db
@@ -245,7 +245,7 @@ export const ossProjectsRouter = router({
       return { success: true };
     }),
 
-  enableNoteShare: protectedProcedure
+  enableNoteShare: proProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const [note] = await db
@@ -270,7 +270,7 @@ export const ossProjectsRouter = router({
       return { shareToken };
     }),
 
-  disableNoteShare: protectedProcedure
+  disableNoteShare: proProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       await db
@@ -335,7 +335,7 @@ export const ossProjectsRouter = router({
       return note ?? null;
     }),
 
-  createNote: protectedProcedure
+  createNote: proProcedure
     .input(noteSchema)
     .mutation(async ({ input, ctx }) => {
       const id = crypto.randomUUID();
@@ -364,7 +364,7 @@ export const ossProjectsRouter = router({
       return { id };
     }),
 
-  updateNote: protectedProcedure
+  updateNote: proProcedure
     .input(noteSchema.extend({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const { id, projectId, ...data } = input;
@@ -385,7 +385,7 @@ export const ossProjectsRouter = router({
       return { id };
     }),
 
-  deleteNote: protectedProcedure
+  deleteNote: proProcedure
     .input(z.object({ id: z.string(), projectId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       await db.transaction(async (tx) => {
@@ -432,7 +432,7 @@ export const ossProjectsRouter = router({
       return searchRepos(input.query, input.limit ?? 5);
     }),
 
-  startAnalysis: protectedProcedure
+  startAnalysis: proProcedure
     .input(
       z.object({
         projectId: z.string().optional(),
@@ -528,7 +528,7 @@ export const ossProjectsRouter = router({
       return { ...project, activeTaskId, activeProvider };
     }),
 
-  askFollowup: protectedProcedure
+  askFollowup: proProcedure
     .input(
       z.object({
         projectId: z.string(),
@@ -601,7 +601,7 @@ export const ossProjectsRouter = router({
     };
   }),
 
-  upsertAnalysisPrompt: protectedProcedure
+  upsertAnalysisPrompt: proProcedure
     .input(
       z.object({
         kind: z.enum(["analysis", "followup"]),
@@ -635,7 +635,7 @@ export const ossProjectsRouter = router({
       return { success: true };
     }),
 
-  resetAnalysisPrompt: protectedProcedure
+  resetAnalysisPrompt: proProcedure
     .input(z.object({ kind: z.enum(["analysis", "followup"]) }))
     .mutation(async ({ input, ctx }) => {
       await db
