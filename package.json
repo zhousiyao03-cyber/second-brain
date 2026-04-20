@@ -11,6 +11,8 @@
     "browser:install": "agent-browser install",
     "lint": "mkdir -p test-results && eslint",
     "test:e2e": "playwright test",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "focus:collector": "node tools/focus-collector/collector.mjs",
     "daemon": "node packages/cli/src/index.mjs",
     "db:generate": "drizzle-kit generate",
@@ -99,12 +101,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/ui": "^4.1.4",
     "agent-browser": "0.21.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.4"
   }
 }
