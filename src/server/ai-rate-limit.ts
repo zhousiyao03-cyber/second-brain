@@ -1,12 +1,14 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { aiUsage } from "./db/schema";
-
-const AI_DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT) || 50;
+import type { Limit } from "./billing/entitlements";
 
 export async function checkAiRateLimit(
-  userId: string
-): Promise<{ allowed: boolean; remaining: number }> {
+  userId: string,
+  limit: Limit,
+): Promise<{ allowed: boolean; remaining: number | "unlimited" }> {
+  if (limit === "unlimited") return { allowed: true, remaining: "unlimited" };
+
   const today = new Date().toISOString().slice(0, 10);
   const [usage] = await db
     .select()
@@ -15,8 +17,8 @@ export async function checkAiRateLimit(
 
   const currentCount = usage?.count ?? 0;
   return {
-    allowed: currentCount < AI_DAILY_LIMIT,
-    remaining: Math.max(0, AI_DAILY_LIMIT - currentCount),
+    allowed: currentCount < limit,
+    remaining: Math.max(0, limit - currentCount),
   };
 }
 

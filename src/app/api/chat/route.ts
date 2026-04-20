@@ -9,6 +9,7 @@ import {
 import { buildChatContext, chatInputSchema } from "@/server/ai/chat-prepare";
 import { auth } from "@/lib/auth";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
+import { getEntitlements } from "@/server/billing/entitlements";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
 import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
 
@@ -23,7 +24,11 @@ export async function POST(req: Request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
     userId = session.user.id;
-    const { allowed } = await checkAiRateLimit(userId);
+    const entitlements = await getEntitlements(userId);
+    const { allowed } = await checkAiRateLimit(
+      userId,
+      entitlements.limits.askAiPerDay,
+    );
     if (!allowed) {
       return Response.json(
         { error: "Daily AI usage limit reached. Please try again tomorrow." },
