@@ -32,6 +32,7 @@
     "@huggingface/transformers": "4.0.1",
     "@langfuse/otel": "^5.1.0",
     "@langfuse/tracing": "^5.1.0",
+    "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
     "@libsql/client": "^0.17.2",
     "@mariozechner/pi-ai": "0.61.1",
     "@mozilla/readability": "^0.6.0",
