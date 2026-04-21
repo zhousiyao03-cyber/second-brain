@@ -14,6 +14,7 @@ export default auth((req) => {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/register" ||
+    pathname === "/pricing" ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
     pathname === "/manifest.webmanifest" ||
@@ -40,6 +41,7 @@ export default auth((req) => {
     pathname === "/api/chat/complete" ||
     pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/api/jobs/") ||
+    pathname.startsWith("/api/webhooks/") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 
