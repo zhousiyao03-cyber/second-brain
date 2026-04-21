@@ -89,13 +89,35 @@ type SubRow = {
 type UserRow = { createdAt: Date | null };
 
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
+const THIRTY_DAYS_MS = 30 * 24 * 3600 * 1000;
 
 export function deriveEntitlements(
   sub: SubRow | null,
   user: UserRow,
   now: number,
+  opts?: { grandfatherLaunchDate?: number | null },
 ): Entitlements {
   const createdAt = user.createdAt?.getTime() ?? 0;
+  const launchDate = opts?.grandfatherLaunchDate ?? null;
+  const grandfatherEndsAt = launchDate ? launchDate + THIRTY_DAYS_MS : null;
+
+  // Grandfather: pre-launch user, still within 30-day window, no active subscription.
+  if (
+    !sub &&
+    launchDate &&
+    grandfatherEndsAt &&
+    createdAt > 0 &&
+    createdAt < launchDate &&
+    now < grandfatherEndsAt
+  ) {
+    return {
+      plan: "pro",
+      source: "hosted-grace",
+      limits: PRO_HOSTED_LIMITS,
+      features: PRO_FEATURES,
+      currentPeriodEnd: grandfatherEndsAt,
+    };
+  }
 
   // No subscription — check signup trial window.
   if (!sub) {
@@ -207,10 +229,13 @@ export async function getEntitlements(userId: string): Promise<Entitlements> {
     .limit(1);
 
   const sub = await getSubscriptionByUserId(userId);
+  const launchStr = process.env.KNOSI_BILLING_LAUNCH_DATE;
+  const grandfatherLaunchDate = launchStr ? new Date(launchStr).getTime() : null;
   const ent = deriveEntitlements(
     sub,
     { createdAt: user?.createdAt ?? null },
     Date.now(),
+    { grandfatherLaunchDate },
   );
 
   if (redis) {

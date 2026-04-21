@@ -100,3 +100,48 @@ describe("deriveEntitlements", () => {
     expect(ent.features.portfolio).toBe(false);
   });
 });
+
+const LAUNCH = new Date("2026-05-01T00:00:00Z").getTime();
+
+describe("deriveEntitlements grandfather window", () => {
+  it("pre-launch user within 30 days → hosted-grace Pro", () => {
+    const ent = deriveEntitlements(
+      null,
+      { createdAt: new Date(LAUNCH - 60 * DAY) },
+      LAUNCH + 5 * DAY,
+      { grandfatherLaunchDate: LAUNCH },
+    );
+    expect(ent.plan).toBe("pro");
+    expect(ent.source).toBe("hosted-grace");
+  });
+
+  it("pre-launch user past 30 days → hosted-free", () => {
+    const ent = deriveEntitlements(
+      null,
+      { createdAt: new Date(LAUNCH - 60 * DAY) },
+      LAUNCH + 31 * DAY,
+      { grandfatherLaunchDate: LAUNCH },
+    );
+    expect(ent.plan).toBe("free");
+  });
+
+  it("post-launch user uses signup trial, not grandfather", () => {
+    const ent = deriveEntitlements(
+      null,
+      { createdAt: new Date(LAUNCH + 1 * DAY) },
+      LAUNCH + 3 * DAY,
+      { grandfatherLaunchDate: LAUNCH },
+    );
+    expect(ent.source).toBe("hosted-trial");
+  });
+
+  it("no launch date configured → no grandfather", () => {
+    const ent = deriveEntitlements(
+      null,
+      { createdAt: new Date(LAUNCH - 60 * DAY) },
+      LAUNCH + 5 * DAY,
+      { grandfatherLaunchDate: null },
+    );
+    expect(ent.plan).toBe("free");
+  });
+});
