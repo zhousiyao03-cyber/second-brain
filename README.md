@@ -68,6 +68,12 @@ Write notes with a Notion-level editor, index your knowledge with hybrid RAG, an
 
 ---
 
+## Hosted vs Self-Hosted
+
+Knosi is AGPL-3.0 and fully self-hostable for free. The hosted service at [knosi.xyz](https://www.knosi.xyz) offers a paid Pro tier ($9/mo or $90/yr) with included Knosi AI (no API key needed), 80 Ask AI calls per day, unlimited notes, 10 GB image storage, and access to the Portfolio, Focus, OSS Projects, and Claude Capture modules. See [/pricing](https://www.knosi.xyz/pricing) for the full plan comparison. **Self-hosted deployments are unaffected — every feature stays free.**
+
+---
+
 ## Quick Start
 
 ### Option A: Docker (recommended for self-hosting)
