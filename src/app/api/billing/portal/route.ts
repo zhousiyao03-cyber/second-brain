@@ -9,7 +9,7 @@
 // pricing table again instead of 500-ing.
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { getRequestSession } from "@/server/auth/request-session";
 import { db } from "@/server/db";
 import { subscriptions } from "@/server/db/schema/billing";
 import { isHostedMode } from "@/server/billing/mode";
@@ -19,7 +19,7 @@ export async function GET() {
     return new NextResponse(null, { status: 404 });
   }
 
-  const session = await auth();
+  const session = await getRequestSession();
   if (!session?.user?.id) {
     return new NextResponse(null, { status: 401 });
   }

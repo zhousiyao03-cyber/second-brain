@@ -12,7 +12,7 @@
 // reach the billing UI, so this endpoint 404s there for consistency with the
 // other /api/billing/* routes.
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getRequestSession } from "@/server/auth/request-session";
 import { isHostedMode } from "@/server/billing/mode";
 import { invalidateEntitlements } from "@/server/billing/entitlements";
 
@@ -21,7 +21,7 @@ export async function POST() {
     return new NextResponse(null, { status: 404 });
   }
 
-  const session = await auth();
+  const session = await getRequestSession();
   if (!session?.user?.id) {
     return new NextResponse(null, { status: 401 });
   }
