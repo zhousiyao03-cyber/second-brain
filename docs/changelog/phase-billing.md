@@ -122,3 +122,9 @@ Paid Pro tier on hosted knosi.xyz (self-hosted unaffected, AGPL unchanged). One 
 1. **Codex multi-tenant ToS** (owner-accepted) — account pool + upstream error monitoring in place; a ban still takes all Pro users down at once.
 2. **E2E `billing.spec.ts`** never run against the live server — selectors may need tweaks.
 3. **Webhook retry storm** — LS retries 500s indefinitely. If the handler ever throws on real payloads, the DB accumulates duplicates (harmless due to idempotency key) but noise grows. Monitor `billing.webhook.processed status=error`.
+
+## Post-rollout fix 2026-04-22
+
+`Failed to start checkout` surfaced in the browser on the first live attempt — LS returned 401 on the pod's `createCheckout` call. Root cause: `.env.production` had the JWT wrapped in single quotes (`LEMONSQUEEZY_API_KEY='eyJ...'`), and `kubectl create secret --from-env-file` does **not** strip quotes the way a shell `source` would. The pod therefore saw the literal value `'eyJ...'` (length 1037 instead of 1035), and LS rejected it.
+
+Fix: stripped the quotes from the env file, re-applied the secret, rolled the deployment. JWT values don't need quoting — they're base64-URL so have no shell-special characters. Keep all future additions to `.env.production` unquoted.
