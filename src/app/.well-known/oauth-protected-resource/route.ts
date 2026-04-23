@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPublicOrigin } from "@/lib/public-origin";
 import { OAUTH_SCOPES } from "@/server/integrations/oauth-clients";
 
-export async function GET(request: NextRequest) {
-  const origin = request.nextUrl.origin;
+export function GET(request: NextRequest) {
+  const origin = getPublicOrigin(request);
 
   return NextResponse.json({
     resource: `${origin}/api/mcp`,

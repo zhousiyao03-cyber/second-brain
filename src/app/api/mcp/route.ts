@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { getPublicOrigin } from "@/lib/public-origin";
 import { getEntitlements } from "@/server/billing/entitlements";
 import { callKnosiMcpTool, KNOSI_MCP_TOOLS } from "@/server/integrations/mcp-tools";
 import { OAUTH_SCOPES } from "@/server/integrations/oauth-clients";
-import { validateBearerAccessToken } from "@/server/integrations/oauth";
+import { OAuthError, validateBearerAccessToken } from "@/server/integrations/oauth";
 
 function withMcpHeaders(response: NextResponse, sessionId?: string) {
   response.headers.set("Cache-Control", "no-store");
@@ -22,6 +23,42 @@ function jsonRpcError(id: unknown, code: number, message: string) {
   return withMcpHeaders(
     NextResponse.json({ jsonrpc: "2.0", id, error: { code, message } }, { status: 400 })
   );
+}
+
+const OAUTH_CHALLENGE_CODES = new Set([
+  "missing_bearer_token",
+  "access_token_not_found",
+  "access_token_expired",
+  "access_token_revoked",
+  "insufficient_scope",
+]);
+
+function jsonRpcAuthError(
+  request: NextRequest,
+  id: unknown,
+  oauthError: OAuthError,
+  requiredScopes: readonly string[]
+) {
+  const origin = getPublicOrigin(request);
+  const resourceMetadataUrl = `${origin}/.well-known/oauth-protected-resource`;
+  const challengeParts: string[] = [`resource_metadata="${resourceMetadataUrl}"`];
+  if (oauthError.code === "insufficient_scope") {
+    challengeParts.push(`error="insufficient_scope"`, `scope="${requiredScopes.join(" ")}"`);
+  } else {
+    challengeParts.push(`error="invalid_token"`);
+  }
+  challengeParts.push(`error_description="${oauthError.message.replace(/"/g, '\\"')}"`);
+
+  const response = NextResponse.json(
+    {
+      jsonrpc: "2.0",
+      id,
+      error: { code: -32001, message: oauthError.message, data: { oauth_code: oauthError.code } },
+    },
+    { status: 401 }
+  );
+  response.headers.set("WWW-Authenticate", `Bearer ${challengeParts.join(", ")}`);
+  return withMcpHeaders(response);
 }
 
 export function GET() {
@@ -122,11 +159,12 @@ export async function POST(request: NextRequest) {
       ? (body.params.arguments as Record<string, unknown>)
       : {};
 
+  const requiredScopes =
+    toolName === "save_to_knosi"
+      ? [OAUTH_SCOPES.knowledgeWriteInbox]
+      : [OAUTH_SCOPES.knowledgeRead];
+
   try {
-    const requiredScopes =
-      toolName === "save_to_knosi"
-        ? [OAUTH_SCOPES.knowledgeWriteInbox]
-        : [OAUTH_SCOPES.knowledgeRead];
     const auth = await validateBearerAccessToken({
       authorization: request.headers.get("authorization"),
       requiredScopes,
@@ -154,6 +192,9 @@ export async function POST(request: NextRequest) {
       structuredContent: structured,
     });
   } catch (error) {
+    if (error instanceof OAuthError && OAUTH_CHALLENGE_CODES.has(error.code)) {
+      return jsonRpcAuthError(request, body.id ?? null, error, requiredScopes);
+    }
     const message = error instanceof Error ? error.message : "MCP tool call failed";
     return jsonRpcError(body.id ?? null, -32000, message);
   }
