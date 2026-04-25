@@ -10,6 +10,8 @@ import { getDefaultBaseUrl, loadConfig } from "./config.mjs";
 import { setClaudeBin } from "./spawn-claude.mjs";
 import { handleChatTask } from "./handler-chat.mjs";
 import { handleStructuredTask } from "./handler-structured.mjs";
+import { ChatWorkerPool } from "./chat-worker-pool.mjs";
+import { setChatWorkerClaudeBin } from "./chat-worker.mjs";
 import { runUsageSync } from "./usage-reporter.mjs";
 import {
   getDelayUntilNextDailyPing,
@@ -64,8 +66,11 @@ export async function runDaemon(args) {
   configure(serverUrl);
   setAuthToken(config.accessToken);
   setClaudeBin(claudeBinArg);
+  setChatWorkerClaudeBin(claudeBinArg);
 
   if (!checkClaude(claudeBinArg)) process.exit(1);
+
+  const chatPool = new ChatWorkerPool();
 
   let chatRunning = 0;
   let structuredRunning = 0;
@@ -125,7 +130,7 @@ export async function runDaemon(args) {
 
           if (taskType === "chat") {
             chatRunning++;
-            handleChatTask(task)
+            handleChatTask(task, chatPool)
               .catch(() => {})
               .finally(() => {
                 chatRunning--;
@@ -312,6 +317,7 @@ export async function runDaemon(args) {
     process.on(sig, () => {
       stopped = true;
       notificationsAbortController?.abort();
+      chatPool.shutdown();
       console.log(`\n[${ts()}] daemon stopped`);
       process.exit(0);
     });

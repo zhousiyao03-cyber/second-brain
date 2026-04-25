@@ -6,75 +6,10 @@ export function setClaudeBin(bin) {
   claudeBin = bin;
 }
 
-/**
- * Chat mode: streams text deltas via onText callback, returns final text.
- */
-export function spawnClaudeForChat({ prompt, systemPrompt, model, onText }) {
-  return new Promise((resolve, reject) => {
-    const args = [
-      "-p", prompt,
-      "--system-prompt", systemPrompt,
-      "--tools", "",
-      "--output-format", "stream-json",
-      "--include-partial-messages",
-      "--verbose",
-    ];
-    if (model) args.push("--model", model);
-
-    const child = cpSpawn(claudeBin, args, {
-      detached: true,
-      stdio: ["ignore", "pipe", "pipe"],
-      // On Windows, `claude` resolves to `claude.cmd`, which Node spawns via cmd.exe.
-      // Without this flag, Windows creates a visible console window for cmd.exe that
-      // flashes briefly every time AskAI runs. `CREATE_NO_WINDOW` suppresses it.
-      windowsHide: true,
-    });
-
-    const stderrChunks = [];
-    let finalResult = "";
-    let lineBuf = "";
-
-    child.stdout.on("data", (chunk) => {
-      lineBuf += chunk.toString("utf8");
-      const lines = lineBuf.split("\n");
-      lineBuf = lines.pop();
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const event = JSON.parse(line);
-          if (event.type === "stream_event" && event.event) {
-            const se = event.event;
-            if (
-              se.type === "content_block_delta" &&
-              se.delta?.type === "text_delta" &&
-              typeof se.delta.text === "string"
-            ) {
-              onText(se.delta.text);
-            }
-            continue;
-          }
-          if (event.type === "result" && typeof event.result === "string") {
-            finalResult = event.result;
-          }
-        } catch {
-          // skip
-        }
-      }
-    });
-
-    child.stderr.on("data", (chunk) => stderrChunks.push(chunk));
-    child.on("error", (err) => reject(err));
-    child.on("close", (code) => {
-      if (code !== 0) {
-        const stderr = Buffer.concat(stderrChunks).toString("utf8");
-        reject(new Error(`claude exited with code ${code}${stderr ? `: ${stderr}` : ""}`));
-        return;
-      }
-      resolve(finalResult);
-    });
-  });
-}
+// Chat mode now lives in chat-worker.mjs (persistent stream-json subprocess
+// pool keyed on conversationKey + --resume for session continuity). The
+// previous one-shot `claude -p prompt --tools ""` chat path was removed
+// 2026-04-25 — see docs/superpowers/specs/2026-04-25-daemon-persistent-worker-design.md.
 
 /**
  * Structured mode: non-streaming, returns full text result.
