@@ -27,6 +27,7 @@ export * from "./auth";
 export * from "./oauth";
 export * from "./notes";
 export * from "./chat";
+export * from "./daemon-conversations";
 export * from "./knowledge";
 export * from "./workflows";
 export * from "./learning";

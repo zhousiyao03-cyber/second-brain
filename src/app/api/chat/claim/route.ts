@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
       userId: task.userId,
       model: task.model,
       taskType: task.taskType,
+      sourceScope: task.sourceScope,
       systemPrompt: task.systemPrompt,
       messages: parsedMessages,
     },
