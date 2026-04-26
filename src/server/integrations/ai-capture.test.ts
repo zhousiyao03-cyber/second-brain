@@ -85,6 +85,7 @@ describe("captureAiNote folder routing", () => {
   it("treats whitespace-only folder as absent and falls back to AI Inbox", async () => {
     let inboxCalls = 0;
     let namedCalls = 0;
+    let insertedFolderId = "";
 
     await captureAiNote(
       {
@@ -105,7 +106,9 @@ describe("captureAiNote folder routing", () => {
           namedCalls++;
           return "no";
         },
-        createNote: async () => {},
+        createNote: async (row) => {
+          insertedFolderId = row.folderId;
+        },
         enqueueNoteIndexJob: async () => undefined,
         invalidateNotesListForUser: () => {},
         invalidateDashboardForUser: () => {},
@@ -114,5 +117,6 @@ describe("captureAiNote folder routing", () => {
 
     expect(inboxCalls).toBe(1);
     expect(namedCalls).toBe(0);
+    expect(insertedFolderId).toBe("folder-ai-inbox");
   });
 });

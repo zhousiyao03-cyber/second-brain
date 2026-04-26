@@ -216,10 +216,12 @@ export async function captureAiConversation(
   const resolveNamedImpl =
     dependencies.resolveOrCreateNamedFolder ??
     resolveOrCreateNamedFolderBase;
+  const hasFolderResolverInjected =
+    !!dependencies.resolveOrCreateAiInboxFolder ||
+    !!dependencies.resolveOrCreateNamedFolder;
   const repo =
     dependencies.inboxRepo ??
-    (dependencies.resolveOrCreateAiInboxFolder ||
-    dependencies.resolveOrCreateNamedFolder
+    (hasFolderResolverInjected
       ? undefined
       : await getDefaultAiInboxFolderRepository());
   const createNote =
