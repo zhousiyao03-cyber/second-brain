@@ -16,6 +16,11 @@ function makeDeps(overrides: Partial<KnosiMcpDeps> = {}): KnosiMcpDeps {
       folderId: "folder-1",
       title: "Title",
     }),
+    captureMarkdownNote: async () => ({
+      noteId: "note-2",
+      folderId: "folder-1",
+      title: "Markdown Title",
+    }),
     ...overrides,
   };
 }
@@ -130,5 +135,59 @@ describe("callKnosiMcpTool structuredContent shape", () => {
       })
     );
     expect(receivedFolder).toBeUndefined();
+  });
+
+  it("forwards create_note title/body/folder to captureMarkdownNote", async () => {
+    let received: { title?: string; body?: string; folder?: string | null } = {};
+    const result = await callKnosiMcpTool(
+      {
+        userId: "u1",
+        name: "create_note",
+        arguments: {
+          title: "Daily Digest",
+          body: "# Hello\n\nWorld",
+          folder: "Reports",
+        },
+      },
+      makeDeps({
+        captureMarkdownNote: async (input) => {
+          received = {
+            title: input.title,
+            body: input.body,
+            folder: input.folder ?? null,
+          };
+          return { noteId: "n42", folderId: "f-reports", title: input.title };
+        },
+      })
+    );
+    expect(received).toEqual({
+      title: "Daily Digest",
+      body: "# Hello\n\nWorld",
+      folder: "Reports",
+    });
+    expect(result).toEqual({
+      noteId: "n42",
+      folderId: "f-reports",
+      title: "Daily Digest",
+    });
+  });
+
+  it("create_note coerces missing title/body to empty strings", async () => {
+    let received: { title?: string; body?: string } = {};
+    const result = await callKnosiMcpTool(
+      {
+        userId: "u1",
+        name: "create_note",
+        arguments: {},
+      },
+      makeDeps({
+        captureMarkdownNote: async (input) => {
+          received = { title: input.title, body: input.body };
+          return { noteId: "n0", folderId: "f0", title: "Untitled" };
+        },
+      })
+    );
+    expect(received).toEqual({ title: "", body: "" });
+    expect(isPlainObject(result)).toBe(true);
   });
 });

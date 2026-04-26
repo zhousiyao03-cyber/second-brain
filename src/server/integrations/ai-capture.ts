@@ -287,3 +287,80 @@ export async function captureAiNote(
 ) {
   return captureAiConversation(input, dependencies);
 }
+
+export type MarkdownNoteInput = {
+  userId: string;
+  title: string;
+  body: string;
+  folder?: string | null;
+};
+
+// Save a standalone markdown note without the "Raw Excerpt"/"Metadata" framing
+// that captureAiConversation adds. Used by MCP `create_note` for agent-generated
+// content (daily summaries, scheduled reports, etc.) where agents can't
+// reliably nest content into a messages array.
+export async function captureMarkdownNote(
+  input: MarkdownNoteInput,
+  dependencies: AiCaptureDependencies = {}
+) {
+  const randomUUID = dependencies.randomUUID ?? crypto.randomUUID;
+  const markdownToTiptapImpl =
+    dependencies.markdownToTiptap ?? markdownToTiptap;
+  const resolveInboxImpl =
+    dependencies.resolveOrCreateAiInboxFolder ??
+    resolveOrCreateAiInboxFolderBase;
+  const resolveNamedImpl =
+    dependencies.resolveOrCreateNamedFolder ??
+    resolveOrCreateNamedFolderBase;
+  const hasFolderResolverInjected =
+    !!dependencies.resolveOrCreateAiInboxFolder ||
+    !!dependencies.resolveOrCreateNamedFolder;
+  const repo =
+    dependencies.inboxRepo ??
+    (hasFolderResolverInjected
+      ? undefined
+      : await getDefaultAiInboxFolderRepository());
+  const createNote =
+    dependencies.createNote ?? (await getDefaultAiCaptureNoteWriter());
+  const enqueueNoteIndexJobImpl =
+    dependencies.enqueueNoteIndexJob ?? (await getDefaultEnqueueNoteIndexJob());
+  const invalidateNotesListImpl =
+    dependencies.invalidateNotesListForUser ??
+    (await import("../cache/instances")).invalidateNotesListForUser;
+  const invalidateDashboardImpl =
+    dependencies.invalidateDashboardForUser ??
+    (await import("../cache/instances")).invalidateDashboardForUser;
+
+  const title = input.title.trim().slice(0, 160) || "Untitled";
+  const body = normalizeText(input.body);
+  const trimmedFolder =
+    typeof input.folder === "string" ? input.folder.trim() : "";
+  const folderId = trimmedFolder
+    ? await resolveNamedImpl(input.userId, trimmedFolder, {
+        repo,
+        randomUUID,
+      })
+    : await resolveInboxImpl(input.userId, {
+        repo,
+        randomUUID,
+      });
+  const noteId = randomUUID();
+  const content = JSON.stringify(markdownToTiptapImpl(body));
+
+  await createNote({
+    id: noteId,
+    userId: input.userId,
+    title,
+    content,
+    plainText: body,
+    folderId,
+    type: "note",
+  });
+
+  await enqueueNoteIndexJobImpl(noteId, "create-note");
+
+  invalidateNotesListImpl(input.userId);
+  invalidateDashboardImpl(input.userId);
+
+  return { noteId, folderId, title };
+}

@@ -1,4 +1,4 @@
-import { captureAiNote } from "./ai-capture";
+import { captureAiNote, captureMarkdownNote } from "./ai-capture";
 import {
   getKnowledgeItem,
   listRecentKnowledge,
@@ -75,6 +75,32 @@ export const KNOSI_MCP_TOOLS = [
       required: ["sourceApp", "messages"],
     },
   },
+  {
+    name: "create_note",
+    description:
+      "Create a note in the user's Knosi knowledge base from raw markdown. " +
+      "Use this for agent-generated content (daily summaries, scheduled reports, " +
+      "research outputs). Defaults to AI Inbox; pass `folder` to file elsewhere.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        body: {
+          type: "string",
+          description:
+            "Markdown content of the note. Headings, lists, links, and inline " +
+            "formatting (bold/italic/code) are supported.",
+        },
+        folder: {
+          type: "string",
+          description:
+            "Optional top-level folder name. Created on first use. Empty / " +
+            "omitted = AI Inbox.",
+        },
+      },
+      required: ["title", "body"],
+    },
+  },
 ] as const;
 
 export interface KnosiMcpDeps {
@@ -82,6 +108,7 @@ export interface KnosiMcpDeps {
   listRecentKnowledge: typeof listRecentKnowledge;
   getKnowledgeItem: typeof getKnowledgeItem;
   captureAiNote: typeof captureAiNote;
+  captureMarkdownNote: typeof captureMarkdownNote;
 }
 
 const defaultDeps: KnosiMcpDeps = {
@@ -89,6 +116,7 @@ const defaultDeps: KnosiMcpDeps = {
   listRecentKnowledge,
   getKnowledgeItem,
   captureAiNote,
+  captureMarkdownNote,
 };
 
 export async function callKnosiMcpTool(
@@ -166,6 +194,16 @@ export async function callKnosiMcpTool(
                 content: message.content,
               }))
           : [],
+      });
+    case "create_note":
+      return deps.captureMarkdownNote({
+        userId: input.userId,
+        title: String(input.arguments.title ?? ""),
+        body: String(input.arguments.body ?? ""),
+        folder:
+          typeof input.arguments.folder === "string"
+            ? input.arguments.folder
+            : undefined,
       });
     default:
       throw new Error(`Unsupported MCP tool: ${input.name}`);
