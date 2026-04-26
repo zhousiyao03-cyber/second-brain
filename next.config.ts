@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
     "@langfuse/tracing",
     "@langfuse/core",
     "langfuse",
+    "@zilliz/milvus2-sdk-node",
+    "@dsnp/parquetjs",
+    "thrift",
   ],
   transpilePackages: ["@excalidraw/excalidraw"],
 };

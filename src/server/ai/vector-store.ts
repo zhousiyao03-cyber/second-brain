@@ -1,8 +1,8 @@
-import {
-  MilvusClient,
-  DataType,
-  type MilvusClient as MilvusClientType,
-} from "@zilliz/milvus2-sdk-node";
+// Milvus SDK 只在运行时通过动态 import 加载。原因：@zilliz/milvus2-sdk-node
+// 的 transitive deps（@dsnp/parquetjs → thrift）是 native/optional 模块，
+// Turbopack build 阶段会尝试 resolve 失败。动态 import 让 bundler 跳过整
+// 条链，运行时由 Node 的 require 直接加载（这条路径 Node 能正确处理 native
+// optional dep）。
 
 export interface VectorRecord {
   chunkId: string;
@@ -37,58 +37,15 @@ function getCollectionName(): string {
   return process.env.MILVUS_COLLECTION?.trim() || "knosi_knowledge_chunks";
 }
 
-let cachedStore: VectorStore | null | undefined;
-let testClient: MilvusClientType | null = null;
-
-/**
- * Lazy singleton. Returns null when MILVUS_URI is unset, mirroring the
- * embeddings.ts "provider mode = none" pattern. Callers must null-check.
- */
-export function getVectorStore(): VectorStore | null {
-  if (cachedStore !== undefined) return cachedStore;
-
-  const uri = process.env.MILVUS_URI?.trim();
-  const token = process.env.MILVUS_TOKEN?.trim();
-
-  if (!uri || !token) {
-    cachedStore = null;
-    return null;
-  }
-
-  cachedStore = createMilvusVectorStore({ uri, token });
-  return cachedStore;
-}
-
-/**
- * Milvus expression strings are double-quoted. Escape backslashes and
- * double quotes; reject control characters outright.
- */
-function escapeMilvusString(value: string): string {
-  if (/[\n\r\0]/.test(value)) {
-    throw new Error("Milvus filter value contains forbidden control character");
-  }
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
-
-function buildSearchFilter(opts: {
-  userId: string;
-  sourceTypes?: ("note" | "bookmark")[];
-}): string {
-  const parts = [`user_id == "${escapeMilvusString(opts.userId)}"`];
-  if (opts.sourceTypes && opts.sourceTypes.length > 0) {
-    const list = opts.sourceTypes
-      .map((t) => `"${escapeMilvusString(t)}"`)
-      .join(", ");
-    parts.push(`source_type in [${list}]`);
-  }
-  return parts.join(" && ");
-}
-
 interface MilvusClientLike {
-  hasCollection: (args: { collection_name: string }) => Promise<{ value: boolean }>;
+  hasCollection: (args: { collection_name: string }) => Promise<{
+    value: boolean;
+  }>;
   createCollection: (args: unknown) => Promise<{ error_code?: string }>;
   createIndex: (args: unknown) => Promise<{ error_code?: string }>;
-  loadCollection: (args: { collection_name: string }) => Promise<{ error_code?: string }>;
+  loadCollection: (args: { collection_name: string }) => Promise<{
+    error_code?: string;
+  }>;
   upsert: (args: { collection_name: string; data: unknown[] }) => Promise<{
     status?: { error_code?: string; reason?: string };
   }>;
@@ -113,26 +70,88 @@ interface MilvusClientLike {
   }>;
 }
 
+let cachedStore: VectorStore | null | undefined;
+let testClient: MilvusClientLike | null = null;
+
+export function getVectorStore(): VectorStore | null {
+  if (cachedStore !== undefined) return cachedStore;
+
+  const uri = process.env.MILVUS_URI?.trim();
+  const token = process.env.MILVUS_TOKEN?.trim();
+
+  if (!uri || !token) {
+    cachedStore = null;
+    return null;
+  }
+
+  cachedStore = createMilvusVectorStore({ uri, token });
+  return cachedStore;
+}
+
+function escapeMilvusString(value: string): string {
+  if (/[\n\r\0]/.test(value)) {
+    throw new Error("Milvus filter value contains forbidden control character");
+  }
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function buildSearchFilter(opts: {
+  userId: string;
+  sourceTypes?: ("note" | "bookmark")[];
+}): string {
+  const parts = [`user_id == "${escapeMilvusString(opts.userId)}"`];
+  if (opts.sourceTypes && opts.sourceTypes.length > 0) {
+    const list = opts.sourceTypes
+      .map((t) => `"${escapeMilvusString(t)}"`)
+      .join(", ");
+    parts.push(`source_type in [${list}]`);
+  }
+  return parts.join(" && ");
+}
+
+interface MilvusModule {
+  MilvusClient: new (args: { address: string; token: string }) => MilvusClientLike;
+  DataType: { VarChar: number; FloatVector: number };
+}
+
+let milvusModulePromise: Promise<MilvusModule> | null = null;
+
+async function loadMilvusModule(): Promise<MilvusModule> {
+  if (!milvusModulePromise) {
+    milvusModulePromise = import("@zilliz/milvus2-sdk-node") as unknown as Promise<MilvusModule>;
+  }
+  return milvusModulePromise;
+}
+
 function createMilvusVectorStore(opts: { uri: string; token: string }): VectorStore {
-  const client: MilvusClientLike =
-    testClient !== null
-      ? (testClient as unknown as MilvusClientLike)
-      : (new MilvusClient({
+  let clientPromise: Promise<MilvusClientLike> | null = null;
+  let ensured = false;
+
+  async function getClient(): Promise<MilvusClientLike> {
+    if (testClient) return testClient;
+    if (!clientPromise) {
+      clientPromise = (async () => {
+        const mod = await loadMilvusModule();
+        return new mod.MilvusClient({
           address: opts.uri,
           token: opts.token,
-        }) as unknown as MilvusClientLike);
-
-  const collectionName = getCollectionName();
-  let ensured = false;
+        });
+      })();
+    }
+    return clientPromise;
+  }
 
   async function ensureCollection() {
     if (ensured) return;
+    const client = await getClient();
+    const collectionName = getCollectionName();
 
     const exists = await client.hasCollection({
       collection_name: collectionName,
     });
 
     if (!exists.value) {
+      const { DataType } = await loadMilvusModule();
       await client.createCollection({
         collection_name: collectionName,
         fields: [
@@ -180,6 +199,8 @@ function createMilvusVectorStore(opts: { uri: string; token: string }): VectorSt
   async function upsertChunkVectors(records: VectorRecord[]) {
     if (records.length === 0) return;
     await ensureCollection();
+    const client = await getClient();
+    const collectionName = getCollectionName();
 
     const BATCH_SIZE = 100;
     for (let i = 0; i < records.length; i += BATCH_SIZE) {
@@ -210,6 +231,9 @@ function createMilvusVectorStore(opts: { uri: string; token: string }): VectorSt
   async function existsByChunkIds(chunkIds: string[]): Promise<Set<string>> {
     if (chunkIds.length === 0) return new Set();
     await ensureCollection();
+    const client = await getClient();
+    const collectionName = getCollectionName();
+
     const list = chunkIds.map((id) => `"${escapeMilvusString(id)}"`).join(", ");
     const result = await client.query({
       collection_name: collectionName,
@@ -227,6 +251,9 @@ function createMilvusVectorStore(opts: { uri: string; token: string }): VectorSt
     sourceTypes?: ("note" | "bookmark")[];
   }): Promise<VectorSearchResult[]> {
     await ensureCollection();
+    const client = await getClient();
+    const collectionName = getCollectionName();
+
     const filter = buildSearchFilter({
       userId: opts.userId,
       sourceTypes: opts.sourceTypes,
@@ -249,6 +276,9 @@ function createMilvusVectorStore(opts: { uri: string; token: string }): VectorSt
   async function deleteByChunkIds(chunkIds: string[]) {
     if (chunkIds.length === 0) return;
     await ensureCollection();
+    const client = await getClient();
+    const collectionName = getCollectionName();
+
     const list = chunkIds.map((id) => `"${escapeMilvusString(id)}"`).join(", ");
     const result = await client.deleteEntities({
       collection_name: collectionName,
@@ -265,6 +295,9 @@ function createMilvusVectorStore(opts: { uri: string; token: string }): VectorSt
 
   async function deleteBySource(sourceId: string) {
     await ensureCollection();
+    const client = await getClient();
+    const collectionName = getCollectionName();
+
     const result = await client.deleteEntities({
       collection_name: collectionName,
       filter: `source_id == "${escapeMilvusString(sourceId)}"`,
@@ -295,6 +328,6 @@ export function __resetVectorStoreForTest() {
 }
 
 export function __setMilvusClientForTest(client: MilvusClientLike | null) {
-  testClient = client as MilvusClientType | null;
+  testClient = client;
   cachedStore = undefined;
 }
