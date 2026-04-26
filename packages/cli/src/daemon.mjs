@@ -88,7 +88,7 @@ export async function runDaemon(args) {
 
   if (!checkClaude(claudeBinArg)) process.exit(1);
 
-  const chatPool = new ChatWorkerPool();
+  const chatPool = new ChatWorkerPool({ idleTimeoutMs: 30 * 60 * 1000 });
 
   let chatRunning = 0;
   let structuredRunning = 0;
