@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     "better-sqlite3",
     "@libsql/client",
+    "@huggingface/transformers",
+    "onnxruntime-node",
     "@opentelemetry/api",
     "@opentelemetry/sdk-trace-node",
     "@langfuse/otel",

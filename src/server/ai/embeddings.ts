@@ -1,13 +1,20 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { embedMany } from "ai";
+import type { FeatureExtractionPipeline } from "@huggingface/transformers";
 
-type EmbeddingProviderMode = "none" | "openai" | "google" | "local";
+type EmbeddingProviderMode =
+  | "none"
+  | "openai"
+  | "google"
+  | "local"
+  | "transformers";
 
 const DEFAULT_OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
 const DEFAULT_GOOGLE_EMBEDDING_MODEL = "gemini-embedding-001";
 const DEFAULT_LOCAL_EMBEDDING_MODEL = "nomic-embed-text";
 const DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:11434/v1";
+const DEFAULT_TRANSFORMERS_MODEL_ID = "Xenova/multilingual-e5-small";
 
 function resolveValue(...values: Array<string | undefined>) {
   return values.find((value) => value?.trim())?.trim();
@@ -20,21 +27,15 @@ function getEmbeddingProviderMode(): EmbeddingProviderMode {
   if (explicitMode === "openai") return "openai";
   if (explicitMode === "google" || explicitMode === "gemini") return "google";
   if (explicitMode === "local") return "local";
-
-  // Auto-detect: prefer Google (free tier), then OpenAI, then local
-  if (resolveValue(process.env.GOOGLE_GENERATIVE_AI_API_KEY)) {
-    return "google";
+  if (explicitMode === "transformers" || explicitMode === "huggingface") {
+    return "transformers";
   }
 
-  if (resolveValue(process.env.OPENAI_API_KEY)) {
-    return "openai";
-  }
-
-  if (resolveValue(process.env.AI_BASE_URL, process.env.LOCAL_AI_BASE_URL)) {
-    return "local";
-  }
-
-  return "none";
+  // Default to in-process Transformers.js: no API quota, no external
+  // dependency, works offline. Other providers require explicit opt-in via
+  // EMBEDDING_PROVIDER, so a stray GOOGLE_GENERATIVE_AI_API_KEY (used for
+  // chat) doesn't silently re-route embeddings through a quota-limited API.
+  return "transformers";
 }
 
 function getEmbeddingModelId(mode: Exclude<EmbeddingProviderMode, "none">) {
@@ -56,6 +57,15 @@ function getEmbeddingModelId(mode: Exclude<EmbeddingProviderMode, "none">) {
     );
   }
 
+  if (mode === "transformers") {
+    return (
+      resolveValue(
+        process.env.TRANSFORMERS_EMBEDDING_MODEL,
+        process.env.EMBEDDING_MODEL
+      ) ?? DEFAULT_TRANSFORMERS_MODEL_ID
+    );
+  }
+
   return (
     resolveValue(
       process.env.AI_EMBEDDING_MODEL,
@@ -65,7 +75,9 @@ function getEmbeddingModelId(mode: Exclude<EmbeddingProviderMode, "none">) {
   );
 }
 
-function createEmbeddingModel(mode: Exclude<EmbeddingProviderMode, "none">) {
+function createEmbeddingModel(
+  mode: Exclude<EmbeddingProviderMode, "none" | "transformers">
+) {
   const modelId = getEmbeddingModelId(mode);
 
   if (mode === "google") {
@@ -105,6 +117,33 @@ function createEmbeddingModel(mode: Exclude<EmbeddingProviderMode, "none">) {
   return provider.embeddingModel(modelId);
 }
 
+/**
+ * Lazy-loaded singleton for the in-process Transformers.js feature-extraction
+ * pipeline. The model files (~120MB Q8) are downloaded on first use and cached
+ * to `~/.cache/huggingface/`. Subsequent calls reuse the same pipeline
+ * instance — model weights stay resident in memory for the process lifetime.
+ *
+ * In Next.js dev with HMR, this module-scope cache survives reloads because
+ * Next reuses the same Node worker.
+ */
+let transformersPipelinePromise: Promise<FeatureExtractionPipeline> | null = null;
+
+async function getTransformersPipeline() {
+  if (!transformersPipelinePromise) {
+    transformersPipelinePromise = (async () => {
+      // Dynamic import: transformers.js is ESM, ~10MB on disk, and we only
+      // want to pay the load cost when this provider is actually used.
+      const { pipeline } = await import("@huggingface/transformers");
+      return pipeline(
+        "feature-extraction",
+        getEmbeddingModelId("transformers"),
+        { dtype: "q8" }
+      );
+    })();
+  }
+  return transformersPipelinePromise;
+}
+
 function normalizeVector(vector: number[]) {
   const magnitude = Math.sqrt(
     vector.reduce((sum, value) => sum + value * value, 0)
@@ -136,6 +175,10 @@ export function getEmbeddingSetupHint() {
     return "请检查 AI_BASE_URL / LOCAL_AI_BASE_URL 与 embedding 模型是否可用。";
   }
 
+  if (mode === "transformers") {
+    return "进程内 Transformers.js — 首次启动会下载 ~120MB 模型文件，后续从本地缓存加载。";
+  }
+
   return "当前未配置 embedding provider，将退化为纯关键词检索。";
 }
 
@@ -144,10 +187,50 @@ export function getEmbeddingModelLabel() {
   return mode === "none" ? null : getEmbeddingModelId(mode);
 }
 
-export async function embedTexts(texts: string[]) {
+/**
+ * Kind affects nothing for OpenAI/Google/local providers, but the Transformers.js
+ * path uses it to apply the e5-family prefix convention:
+ *   - "passage: " for indexed text (documents)
+ *   - "query: " for retrieval queries
+ * Mismatched prefixes degrade similarity scores noticeably (e5 was trained
+ * with these as anchors), so callers should pass the right kind.
+ */
+type EmbedKind = "passage" | "query";
+
+async function embedWithTransformers(texts: string[], kind: EmbedKind) {
+  const extractor = await getTransformersPipeline();
+  const prefix = kind === "query" ? "query: " : "passage: ";
+  const prefixed = texts.map((t) => prefix + t);
+
+  const tensor = await extractor(prefixed, {
+    pooling: "mean",
+    normalize: true,
+  });
+
+  const dims = tensor.dims[1] ?? 0;
+  const flat = Array.from(tensor.data as Float32Array);
+  const vectors: number[][] = [];
+  for (let i = 0; i < texts.length; i += 1) {
+    vectors.push(flat.slice(i * dims, (i + 1) * dims));
+  }
+
+  return {
+    model: getEmbeddingModelId("transformers"),
+    vectors,
+  };
+}
+
+export async function embedTexts(
+  texts: string[],
+  kind: EmbedKind = "passage"
+) {
   const mode = getEmbeddingProviderMode();
   if (mode === "none" || texts.length === 0) {
     return null;
+  }
+
+  if (mode === "transformers") {
+    return embedWithTransformers(texts, kind);
   }
 
   const model = createEmbeddingModel(mode);
