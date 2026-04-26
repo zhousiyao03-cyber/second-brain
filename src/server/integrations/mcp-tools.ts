@@ -56,8 +56,9 @@ export const KNOSI_MCP_TOOLS = [
         folder: {
           type: "string",
           description:
-            "Optional top-level folder name. When non-empty, the note is filed there " +
-            "(folder is created if missing). Empty/omitted = AI Inbox.",
+            "Optional top-level folder name. When non-empty after trim, the note is " +
+            "filed there (folder is created if missing). Empty, whitespace-only, or " +
+            "omitted = AI Inbox.",
         },
         messages: {
           type: "array",
