@@ -1,16 +1,4 @@
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: knosi-data
-  namespace: knosi
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 2Gi
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,8 +8,16 @@ metadata:
     app: knosi
 spec:
   replicas: 1
+  # Production runs against remote Turso (TURSO_DATABASE_URL is set in
+  # knosi-env), so the container is stateless and can roll without a PVC.
+  # maxUnavailable=0 keeps at least one pod serving traffic at all times,
+  # eliminating the deploy-time downtime window we used to get with the old
+  # Recreate strategy + RWO local-path PVC combo.
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: knosi
@@ -67,15 +63,15 @@ spec:
             # replicas or an eu-west Turso region.
             - name: SLOW_QUERY_MS
               value: "300"
-          volumeMounts:
-            - name: data
-              mountPath: /app/data
           startupProbe:
             httpGet:
               path: /login
               port: 3000
             failureThreshold: 30
             periodSeconds: 5
+            # Cold-start /login can hit a 300-500ms Turso lookup; the default
+            # 1s probe timeout was too tight and tripped during rollouts.
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /login
@@ -97,10 +93,6 @@ spec:
             limits:
               cpu: 1000m
               memory: 768Mi
-      volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: knosi-data
 ---
 apiVersion: v1
 kind: Service
