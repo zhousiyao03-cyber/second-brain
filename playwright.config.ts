@@ -41,12 +41,16 @@ export default defineConfig({
       },
     },
   ],
+  // Each webServer gets its own KNOSI_NEXT_DIST_DIR so the two `next dev`
+  // processes don't race on the same `.next/dev/lock`. They also stay
+  // isolated from a developer's running `pnpm dev` (which uses `.next`).
   webServer: [
     {
       command: `${PLAYWRIGHT_PNPM_BIN} db:push && ${PLAYWRIGHT_PNPM_BIN} exec next dev --port 3100`,
       env: {
         ...process.env,
         PATH: PLAYWRIGHT_RUNTIME_PATH,
+        KNOSI_NEXT_DIST_DIR: ".next-e2e",
         NEXT_PUBLIC_TOKEN_USAGE_REFRESH_INTERVAL_MS: "1000",
         SQLITE_DB_PATH: PLAYWRIGHT_DB_PATH,
         TURSO_DATABASE_URL: `file:${PLAYWRIGHT_DB_PATH}`,
@@ -67,6 +71,7 @@ export default defineConfig({
       env: {
         ...process.env,
         PATH: PLAYWRIGHT_RUNTIME_PATH,
+        KNOSI_NEXT_DIST_DIR: ".next-e2e-billing",
         NEXT_PUBLIC_TOKEN_USAGE_REFRESH_INTERVAL_MS: "1000",
         SQLITE_DB_PATH: BILLING_DB_PATH,
         TURSO_DATABASE_URL: `file:${BILLING_DB_PATH}`,
