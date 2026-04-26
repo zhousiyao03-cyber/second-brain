@@ -67,6 +67,7 @@
     "@trpc/next": "^11.14.1",
     "@trpc/react-query": "^11.14.1",
     "@trpc/server": "^11.14.1",
+    "@zilliz/milvus2-sdk-node": "^2.5.0",
     "ai": "^6.0.134",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
