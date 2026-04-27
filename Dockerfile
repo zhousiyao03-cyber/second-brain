@@ -8,6 +8,17 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
+# onnxruntime-node ships the napi binding but downloads libonnxruntime.so.1
+# in its postinstall script. BuildKit's cached deps layer can sometimes
+# replay without re-running postinstall (observed on 2026-04-27: cached
+# layer had only onnxruntime_binding.node but no .so, so dlopen failed at
+# runtime). Force the install.js explicitly so we get a verifiable failure
+# at build time if it ever breaks again.
+RUN cd /app/node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node \
+    && node script/install.js \
+    && test -f bin/napi-v6/linux/x64/libonnxruntime.so.1 \
+    && echo "libonnxruntime.so.1 confirmed"
+
 # ── Stage 2: Build ────────────────────────────────────
 FROM node:22-slim AS builder
 RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
@@ -57,6 +68,22 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Pre-warmed HuggingFace model cache (~120MB) — avoids cold-start download.
 COPY --from=builder --chown=nextjs:nodejs /app/.hf-cache /app/.hf-cache
+
+# Pre-warmed transformers.js v4 internal cache. v4.x ignores HF_HOME and
+# stashes models under the package's own .cache/ instead — so the COPY
+# above is a no-op until upstream restores HF_HOME support. Until then,
+# this is the actual cache path the runtime reads from.
+COPY --from=builder --chown=nextjs:nodejs \
+  /app/node_modules/.pnpm/@huggingface+transformers@4.0.1/node_modules/@huggingface/transformers/.cache \
+  /app/node_modules/.pnpm/@huggingface+transformers@4.0.1/node_modules/@huggingface/transformers/.cache
+
+# onnxruntime-node native lib (libonnxruntime.so.1). Next.js standalone
+# tracing doesn't pick up the .so because it's loaded via dlopen at runtime
+# from a path computed in JS, not via static require(). Bring the whole
+# bin/ directory across to make the napi binding find its sibling lib.
+COPY --from=deps --chown=nextjs:nodejs \
+  /app/node_modules/.pnpm/onnxruntime-node@1.24.3/node_modules/onnxruntime-node/bin \
+  /app/node_modules/.pnpm/onnxruntime-node@1.24.3/node_modules/onnxruntime-node/bin
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
