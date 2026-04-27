@@ -168,12 +168,22 @@ function toResult(
  * Return an up-to-date MiniSearch index + chunk map for the (user, scope),
  * rebuilding only when the underlying chunk set has changed.
  *
- * Cache invalidation is fingerprint-based: `count + max(updated_at)` over the
- * user's chunks. Any insert / update / delete will move at least one of those
- * (delete moves count, insert moves count + max, update moves max), so the
- * fingerprint catches every relevant mutation. The fingerprint query itself
- * is a tiny aggregate against `knowledge_chunks_user_id_idx` — much cheaper
- * than the full SELECT it replaces on cache hits.
+ * Cache invalidation is fingerprint-based: `count + max(source_updated_at)`
+ * over the user's chunks. Any insert / delete / source-side edit will move at
+ * least one of those (delete → count, new source → both, source edit → max),
+ * so the fingerprint catches every relevant mutation.
+ *
+ * Why `source_updated_at`, not `chunks.updated_at`: the indexer can rewrite
+ * chunks for an unchanged source (background re-embed retries, dim migration,
+ * etc.) which bumps `chunks.updated_at` even though the *content* is
+ * identical. Using the source's own timestamp lets that churn pass through
+ * without invalidating the cache. We measured this in prod: with chunks own
+ * `updated_at`, indexer retry storms shifted the fingerprint every few
+ * seconds and dragged the cache hit rate to nearly zero.
+ *
+ * The fingerprint query is a tiny aggregate against
+ * `knowledge_chunks_user_id_idx` — much cheaper than the full SELECT it
+ * replaces on cache hits.
  *
  * Returns `cacheHit: true` when we reused an existing index, so callers can
  * surface that to telemetry.
@@ -187,7 +197,7 @@ async function getOrBuildIndex(
   const fingerprintRows = await db
     .select({
       total: count(),
-      maxUpdated: max(knowledgeChunks.updatedAt),
+      maxSourceUpdated: max(knowledgeChunks.sourceUpdatedAt),
     })
     .from(knowledgeChunks)
     .where(eq(knowledgeChunks.userId, userId));
@@ -195,10 +205,13 @@ async function getOrBuildIndex(
   const total = Number(fpRow?.total ?? 0);
   // drizzle returns max() as the column type; for a timestamp-mode integer
   // column that's a Date | null. Coerce defensively because aggregates over
-  // empty sets return NULL.
-  const maxUpdatedAt =
-    fpRow?.maxUpdated instanceof Date ? fpRow.maxUpdated.getTime() : 0;
-  const fingerprint = `${total}:${maxUpdatedAt}`;
+  // empty sets return NULL, and source_updated_at itself is nullable in the
+  // schema (legacy rows pre-source-tracking).
+  const maxSourceUpdatedAt =
+    fpRow?.maxSourceUpdated instanceof Date
+      ? fpRow.maxSourceUpdated.getTime()
+      : 0;
+  const fingerprint = `${total}:${maxSourceUpdatedAt}`;
 
   const existing = indexCache.get(cacheKey);
   if (existing && existing.fingerprint === fingerprint) {
