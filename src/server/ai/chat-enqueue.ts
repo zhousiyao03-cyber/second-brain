@@ -13,6 +13,7 @@ import {
 import { injectPreambleIntoLatestUser } from "@/server/ai/inject-preamble";
 import type { AskAiSourceScope } from "@/lib/ask-ai";
 import { observe, updateActiveObservation } from "@langfuse/tracing";
+import { startAskTimer } from "@/server/ai/ask-timing";
 
 const SKIP_RAG_KEYWORDS = ["不用搜索", "直接回答", "不需要搜索", "不要搜索"];
 
@@ -27,6 +28,8 @@ export async function enqueueChatTask({
   messages,
   sourceScope,
 }: EnqueueInput): Promise<{ taskId: string }> {
+  const timer = startAskTimer("enqueue");
+
   const lastUserMessage = [...messages]
     .reverse()
     .find((message) => message.role === "user");
@@ -87,6 +90,7 @@ export async function enqueueChatTask({
 
     context = await tracedRetrieval();
   }
+  timer.mark("rag");
 
   const systemPrompt = buildSystemPromptStable(sourceScope, {
     preferStructuredBlocks: false,
@@ -110,10 +114,19 @@ export async function enqueueChatTask({
     systemPrompt,
     model,
   });
+  timer.mark("dbInsert");
+
   await publishDaemonTaskNotification({
     kind: "wake",
     userId,
     taskType: "chat",
+  });
+  timer.mark("notify");
+
+  timer.end({
+    skipRag,
+    ctxItems: context.length,
+    scope: sourceScope,
   });
 
   return { taskId };

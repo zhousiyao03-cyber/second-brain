@@ -7,6 +7,7 @@ import { embedTexts } from "./embeddings";
 import { ensureKnowledgeBaseSeeded } from "./indexer";
 import { tokenize, tokenizeForIndex } from "./tokenizer";
 import { getVectorStore } from "./vector-store";
+import { startAskTimer } from "./ask-timing";
 
 export interface AgenticRetrievalResult {
   blockType: string | null;
@@ -129,7 +130,10 @@ export async function retrieveAgenticContext(
     return [] satisfies AgenticRetrievalResult[];
   }
 
+  const timer = startAskTimer("agentic-rag");
+
   await ensureKnowledgeBaseSeeded();
+  timer.mark("ensureSeed");
 
   const profile = buildQueryProfile(query);
   const allChunks = await db
@@ -139,8 +143,10 @@ export async function retrieveAgenticContext(
   const scopedChunks = allChunks.filter((chunk) =>
     matchesScope(chunk.sourceType, options.scope)
   );
+  timer.mark("selectChunks");
 
   if (scopedChunks.length === 0) {
+    timer.end({ chunks: 0, scoped: 0, scope: options.scope ?? "all" });
     return [] satisfies AgenticRetrievalResult[];
   }
 
@@ -170,6 +176,7 @@ export async function retrieveAgenticContext(
       text: chunk.text,
     }))
   );
+  timer.mark("buildIndex");
 
   const bm25Results = miniSearch.search(query, {
     tokenize,
@@ -198,6 +205,7 @@ export async function retrieveAgenticContext(
       return { chunk, score };
     })
     .filter((result) => result.score > 0);
+  timer.mark("bm25");
 
   // --- Semantic retrieval (Milvus ANN，BM25-only fallback) ---
   let semanticMatches: Array<{
@@ -211,6 +219,7 @@ export async function retrieveAgenticContext(
     );
     return null;
   });
+  timer.mark("embed");
 
   const vectorStore = getVectorStore();
   if (embeddedQuery && vectorStore) {
@@ -248,6 +257,7 @@ export async function retrieveAgenticContext(
       }
     }
   }
+  timer.mark("milvus");
 
   const fusedScores = new Map<string, number>();
   addRrfScore(
@@ -278,6 +288,15 @@ export async function retrieveAgenticContext(
     );
 
   if (seedChunks.length === 0) {
+    timer.end({
+      chunks: allChunks.length,
+      scoped: scopedChunks.length,
+      bm25Hits: keywordMatches.length,
+      semHits: semanticMatches.length,
+      seeds: 0,
+      results: 0,
+      scope: options.scope ?? "all",
+    });
     return [] satisfies AgenticRetrievalResult[];
   }
 
@@ -311,7 +330,7 @@ export async function retrieveAgenticContext(
     }
   }
 
-  return [...expanded.values()]
+  const finalResults = [...expanded.values()]
     .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;
@@ -324,4 +343,17 @@ export async function retrieveAgenticContext(
       return left.sourceTitle.localeCompare(right.sourceTitle, "zh-CN");
     })
     .slice(0, FINAL_LIMIT);
+
+  timer.mark("fuseExpand");
+  timer.end({
+    chunks: allChunks.length,
+    scoped: scopedChunks.length,
+    bm25Hits: keywordMatches.length,
+    semHits: semanticMatches.length,
+    seeds: seedChunks.length,
+    results: finalResults.length,
+    scope: options.scope ?? "all",
+  });
+
+  return finalResults;
 }

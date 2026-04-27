@@ -12,10 +12,13 @@ import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
 import { getEntitlements } from "@/server/billing/entitlements";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
 import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
+import { startAskTimer } from "@/server/ai/ask-timing";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
+  const timer = startAskTimer("/api/chat");
+
   // Auth bypass for E2E testing
   let userId: string | null = null;
   if (process.env.AUTH_BYPASS !== "true") {
@@ -36,12 +39,14 @@ export async function POST(req: Request) {
       );
     }
   }
+  timer.mark("auth");
 
   const body = await req.json();
   const parsed = chatInputSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: "Invalid input" }, { status: 400 });
   }
+  timer.mark("parse");
 
   try {
     // ─── Daemon branch ─────────────────────────────────────────────
@@ -71,11 +76,14 @@ export async function POST(req: Request) {
       if (process.env.AUTH_BYPASS !== "true") {
         void recordAiUsage(userId).catch(() => undefined);
       }
+      timer.mark("enqueue");
+      timer.end({ mode: "daemon" });
       return Response.json({ taskId, mode: "daemon" });
     }
     // ────────────────────────────────────────────────────────────────
 
     const { system, messages } = await buildChatContext(parsed.data, userId);
+    timer.mark("buildContext");
 
     const response = await streamChatResponse(
       {
@@ -86,6 +94,8 @@ export async function POST(req: Request) {
       },
       { userId },
     );
+    timer.mark("streamReady");
+    timer.end({ mode: "stream" });
 
     // Record usage (fire-and-forget, don't block the response)
     if (process.env.AUTH_BYPASS !== "true" && userId) {

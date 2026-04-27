@@ -16,6 +16,7 @@ import {
   type RetrievedKnowledgeItem,
 } from "@/server/ai/chat-system-prompt";
 import { injectPreambleIntoLatestUser } from "@/server/ai/inject-preamble";
+import { startAskTimer } from "@/server/ai/ask-timing";
 
 export const pinnedSourceSchema = z.object({
   id: z.string().min(1),
@@ -107,6 +108,8 @@ export async function buildChatContext(
   input: ChatInput,
   userId: string | null
 ): Promise<ChatContextBundle> {
+  const timer = startAskTimer("chat-prepare");
+
   const messages = sanitizeMessages(await normalizeMessages(input.messages));
   const sourceScope = input.sourceScope ?? "all";
 
@@ -114,6 +117,7 @@ export async function buildChatContext(
     .reverse()
     .find((message) => message.role === "user");
   const userQuery = getUserMessageText(lastUserMessage);
+  timer.mark("normalize");
 
   const skipRag =
     sourceScope === "direct" ||
@@ -183,11 +187,13 @@ export async function buildChatContext(
 
     context = await tracedRetrieval();
   }
+  timer.mark("rag");
 
   const pinnedSources = await resolvePinnedSources(
     input.pinnedSources ?? [],
     userId
   );
+  timer.mark("pinned");
 
   const system = buildSystemPromptStable(sourceScope, {
     preferStructuredBlocks: input.preferStructuredBlocks,
@@ -199,6 +205,13 @@ export async function buildChatContext(
     contextNoteText: input.contextNoteText,
   });
   const augmentedMessages = injectPreambleIntoLatestUser(messages, preamble);
+
+  timer.end({
+    skipRag,
+    ctxItems: context.length,
+    pinned: pinnedSources.length,
+    scope: sourceScope,
+  });
 
   return { system, messages: augmentedMessages, sourceScope };
 }
