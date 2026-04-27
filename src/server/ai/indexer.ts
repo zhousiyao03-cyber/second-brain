@@ -1,18 +1,14 @@
 import crypto from "node:crypto";
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { db } from "../db";
 import {
   bookmarks,
-  knowledgeChunkEmbeddings,
   knowledgeChunks,
   knowledgeIndexJobs,
   notes,
 } from "../db/schema";
 import { chunkKnowledgeSource, type KnowledgeSourceType } from "./chunking";
-import {
-  embedTexts,
-  vectorArrayToBuffer,
-} from "./embeddings";
+import { embedTexts } from "./embeddings";
 import { getVectorStore } from "./vector-store";
 import { enqueueJob } from "../jobs/queue";
 
@@ -90,11 +86,8 @@ async function deleteChunkRows(sourceType: KnowledgeSourceType, sourceId: string
   const chunkIds = existingChunkRows.map((row) => row.id);
 
   if (chunkIds.length > 0) {
-    await db
-      .delete(knowledgeChunkEmbeddings)
-      .where(inArray(knowledgeChunkEmbeddings.chunkId, chunkIds));
-
-    // Milvus 同步删除（dual-write 阶段）。失败让外层 catch 接管。
+    // Milvus 是 embedding 的唯一存储；删 chunks 之前先清向量。失败让外层
+    // catch 接管，job 标 failed → retry。
     const vectorStore = getVectorStore();
     if (vectorStore) {
       await vectorStore.deleteByChunkIds(chunkIds);
@@ -113,8 +106,8 @@ async function deleteChunkRows(sourceType: KnowledgeSourceType, sourceId: string
 
 /**
  * For chunks whose content is unchanged, ensure each one has a matching
- * embedding row. Used to recover from prior transient failures that left
- * chunks orphaned (e.g. Gemini rate limit during a previous attempt).
+ * vector in Milvus. Used to recover from prior transient failures (e.g.
+ * a Milvus 5xx during a previous attempt).
  *
  * Throws on embed-API failure so the caller's retry logic kicks in.
  */
@@ -123,48 +116,28 @@ async function fillMissingEmbeddingsForExistingChunks(
 ) {
   if (existing.length === 0) return;
 
-  const existingIds = existing.map((chunk) => chunk.id);
-  const embeddedRows = await db
-    .select({ chunkId: knowledgeChunkEmbeddings.chunkId })
-    .from(knowledgeChunkEmbeddings)
-    .where(inArray(knowledgeChunkEmbeddings.chunkId, existingIds));
+  const vectorStore = getVectorStore();
+  if (!vectorStore) return; // Milvus 没配 = 不索引，不算失败
 
-  const embeddedSet = new Set(embeddedRows.map((row) => row.chunkId));
-  const missing = existing.filter((chunk) => !embeddedSet.has(chunk.id));
+  const existingIds = existing.map((chunk) => chunk.id);
+  const present = await vectorStore.existsByChunkIds(existingIds);
+  const missing = existing.filter(
+    (chunk) => chunk.userId != null && !present.has(chunk.id)
+  );
   if (missing.length === 0) return;
 
   const embedded = await embedTexts(missing.map((chunk) => chunk.text));
   if (!embedded) return; // provider mode === "none" — intentionally skip
 
-  await db.insert(knowledgeChunkEmbeddings).values(
-    embedded.vectors.map((vector, index) => ({
-      chunkId: missing[index]!.id,
-      model: embedded.model,
-      dims: vector.length,
-      vector: vectorArrayToBuffer(vector),
+  await vectorStore.upsertChunkVectors(
+    missing.map((chunk, index) => ({
+      chunkId: chunk.id,
+      userId: chunk.userId!,
+      sourceType: chunk.sourceType,
+      sourceId: chunk.sourceId,
+      vector: embedded.vectors[index]!,
     }))
   );
-
-  // Milvus dual-write。userId 可能为 null（legacy chunk），那种情况下
-  // 跳过 — 没法做用户隔离的 ANN 检索。
-  const vectorStore = getVectorStore();
-  if (vectorStore) {
-    const records = missing
-      .map((chunk, index) => {
-        if (!chunk.userId) return null;
-        return {
-          chunkId: chunk.id,
-          userId: chunk.userId,
-          sourceType: chunk.sourceType,
-          sourceId: chunk.sourceId,
-          vector: embedded.vectors[index]!,
-        };
-      })
-      .filter((r): r is NonNullable<typeof r> => r !== null);
-    if (records.length > 0) {
-      await vectorStore.upsertChunkVectors(records);
-    }
-  }
 }
 
 async function syncSourceIndex({
@@ -276,16 +249,8 @@ async function syncSourceIndex({
     const embedded = await embedTexts(nextChunks.map((chunk) => chunk.text));
 
     if (embedded) {
-      await db.insert(knowledgeChunkEmbeddings).values(
-        embedded.vectors.map((vector, index) => ({
-          chunkId: insertedChunks[index]!.id,
-          model: embedded.model,
-          dims: vector.length,
-          vector: vectorArrayToBuffer(vector),
-        }))
-      );
-
-      // Milvus dual-write。失败让外层 catch 把 job 标 failed，retry 兜底。
+      // Milvus 是 embedding 唯一存储；失败让外层 catch 把 job 标 failed，
+      // retry 兜底（retry 的 deleteChunkRows 会先清旧 chunks 保证幂等）。
       const vectorStore = getVectorStore();
       if (vectorStore) {
         await vectorStore.upsertChunkVectors(
