@@ -17,3 +17,8 @@ JOBS_TICK_TOKEN=replace-with-random-hex
 # for ingestion by a log-based collector (Promtail / vector). Reads Turso
 # creds from the same .env the app pod uses.
 */15 * * * * cd /srv/knosi && set -a && . ./.env.production && set +a && node scripts/billing/emit-subscription-gauge.mjs >> /var/log/knosi/billing-gauge.log 2>&1
+# Weekly Milvus ↔ Turso reconcile. Catches drift if indexer's Milvus dual-
+# write fails silently (e.g. credentials expire or schema mismatch). Threshold
+# 50 means: under steady state we expect 0 missing chunks; alarm when more
+# than 50 fall behind. Sunday 03:00 UTC = late Saturday in Asia, low traffic.
+0 3 * * 0 cd /srv/knosi && set -a && . ./.env.production && set +a && node scripts/reconcile-milvus.mjs --alarm-threshold 50 >> /var/log/knosi/reconcile.log 2>&1

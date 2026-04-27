@@ -18,6 +18,18 @@ import { MilvusClient } from "@zilliz/milvus2-sdk-node";
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
+
+function getArg(flag) {
+  const i = args.indexOf(flag);
+  return i !== -1 && i + 1 < args.length ? args[i + 1] : null;
+}
+
+// When set, exit with non-zero code if more than this many chunks were missing
+// at the start of the run (before reconciliation). Used by the weekly cron to
+// alarm on drift — under steady-state, we expect 0 missing, so any non-trivial
+// number means indexer is dropping writes again.
+const ALARM_THRESHOLD = Number(getArg("--alarm-threshold")) || null;
+
 const VECTOR_DIM = 384;
 const PAGE_SIZE = 200;
 const EMBED_BATCH = 32;
@@ -194,3 +206,10 @@ console.log(`  扫描 chunks            : ${totalScanned}`);
 console.log(`  缺 userId 跳过         : ${totalSkippedNoUserId}`);
 console.log(`  Milvus 缺失 chunks     : ${totalMissing}`);
 console.log(`  补写到 Milvus          : ${totalUpserted}`);
+
+if (ALARM_THRESHOLD !== null && totalMissing > ALARM_THRESHOLD) {
+  console.error(
+    `[reconcile] ALARM: missing=${totalMissing} > threshold=${ALARM_THRESHOLD}`
+  );
+  process.exit(1);
+}
