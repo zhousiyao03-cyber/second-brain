@@ -13,6 +13,7 @@ import {
   embedTexts,
   vectorArrayToBuffer,
 } from "./embeddings";
+import { getVectorStore } from "./vector-store";
 import { enqueueJob } from "../jobs/queue";
 
 type ExistingChunkRow = typeof knowledgeChunks.$inferSelect;
@@ -92,6 +93,12 @@ async function deleteChunkRows(sourceType: KnowledgeSourceType, sourceId: string
     await db
       .delete(knowledgeChunkEmbeddings)
       .where(inArray(knowledgeChunkEmbeddings.chunkId, chunkIds));
+
+    // Milvus 同步删除（dual-write 阶段）。失败让外层 catch 接管。
+    const vectorStore = getVectorStore();
+    if (vectorStore) {
+      await vectorStore.deleteByChunkIds(chunkIds);
+    }
   }
 
   await db
@@ -137,6 +144,27 @@ async function fillMissingEmbeddingsForExistingChunks(
       vector: vectorArrayToBuffer(vector),
     }))
   );
+
+  // Milvus dual-write。userId 可能为 null（legacy chunk），那种情况下
+  // 跳过 — 没法做用户隔离的 ANN 检索。
+  const vectorStore = getVectorStore();
+  if (vectorStore) {
+    const records = missing
+      .map((chunk, index) => {
+        if (!chunk.userId) return null;
+        return {
+          chunkId: chunk.id,
+          userId: chunk.userId,
+          sourceType: chunk.sourceType,
+          sourceId: chunk.sourceId,
+          vector: embedded.vectors[index]!,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (records.length > 0) {
+      await vectorStore.upsertChunkVectors(records);
+    }
+  }
 }
 
 async function syncSourceIndex({
@@ -256,6 +284,20 @@ async function syncSourceIndex({
           vector: vectorArrayToBuffer(vector),
         }))
       );
+
+      // Milvus dual-write。失败让外层 catch 把 job 标 failed，retry 兜底。
+      const vectorStore = getVectorStore();
+      if (vectorStore) {
+        await vectorStore.upsertChunkVectors(
+          embedded.vectors.map((vector, index) => ({
+            chunkId: insertedChunks[index]!.id,
+            userId,
+            sourceType,
+            sourceId,
+            vector,
+          }))
+        );
+      }
     }
 
     if (jobId) await finishIndexJob(jobId, "done");
