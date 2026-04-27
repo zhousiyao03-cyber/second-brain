@@ -1,14 +1,12 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import MiniSearch from "minisearch";
 import type { AskAiSourceScope } from "@/lib/ask-ai";
 import { db } from "../db";
-import {
-  knowledgeChunkEmbeddings,
-  knowledgeChunks,
-} from "../db/schema";
-import { dotProduct, embedTexts, vectorBufferToArray } from "./embeddings";
+import { knowledgeChunks } from "../db/schema";
+import { embedTexts } from "./embeddings";
 import { ensureKnowledgeBaseSeeded } from "./indexer";
 import { tokenize, tokenizeForIndex } from "./tokenizer";
+import { getVectorStore } from "./vector-store";
 
 export interface AgenticRetrievalResult {
   blockType: string | null;
@@ -201,7 +199,7 @@ export async function retrieveAgenticContext(
     })
     .filter((result) => result.score > 0);
 
-  // --- Semantic retrieval (embedding-based, if available) ---
+  // --- Semantic retrieval (Milvus ANN，BM25-only fallback) ---
   let semanticMatches: Array<{
     chunk: typeof knowledgeChunks.$inferSelect;
     score: number;
@@ -213,36 +211,42 @@ export async function retrieveAgenticContext(
     );
     return null;
   });
-  if (embeddedQuery) {
-    const chunkIds = scopedChunks.map((chunk) => chunk.id);
-    const embeddingRows =
-      chunkIds.length > 0
-        ? await db
-            .select()
-            .from(knowledgeChunkEmbeddings)
-            .where(inArray(knowledgeChunkEmbeddings.chunkId, chunkIds))
-        : [];
 
+  const vectorStore = getVectorStore();
+  if (embeddedQuery && vectorStore) {
     const queryVector = embeddedQuery.vectors[0] ?? [];
+    if (queryVector.length > 0) {
+      try {
+        const sourceTypes: ("note" | "bookmark")[] | undefined =
+          options.scope === "notes"
+            ? ["note"]
+            : options.scope === "bookmarks"
+              ? ["bookmark"]
+              : undefined;
 
-    semanticMatches = embeddingRows
-      .map((embeddingRow) => {
-        const chunk = chunkMap.get(embeddingRow.chunkId);
-        if (!chunk) return null;
+        const milvusHits = await vectorStore.searchSimilar({
+          userId: options.userId,
+          queryVector,
+          topK: SEMANTIC_LIMIT,
+          sourceTypes,
+        });
 
-        const vector = vectorBufferToArray(embeddingRow.vector);
-        if (vector.length === 0 || vector.length !== queryVector.length) {
-          return null;
-        }
-
-        return {
-          chunk,
-          score: dotProduct(queryVector, vector),
-        };
-      })
-      .filter((result): result is NonNullable<typeof result> => result !== null)
-      .sort((left, right) => right.score - left.score)
-      .slice(0, SEMANTIC_LIMIT);
+        // 把 Milvus 返回的 chunkId 映射回内存里 scopedChunks 的 chunk 对象。
+        // 命中不到的（孤儿向量、partial delete 残留）直接丢弃 —— Turso 是
+        // source of truth，没记录的内容不能进结果集。
+        semanticMatches = milvusHits
+          .map((hit) => {
+            const chunk = chunkMap.get(hit.chunkId);
+            if (!chunk) return null;
+            return { chunk, score: hit.score };
+          })
+          .filter((r): r is NonNullable<typeof r> => r !== null);
+      } catch (err) {
+        console.warn(
+          `[rag] Milvus search failed, 退到 BM25-only — ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
   }
 
   const fusedScores = new Map<string, number>();
