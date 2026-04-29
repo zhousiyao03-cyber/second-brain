@@ -22,6 +22,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import { snapshotMetrics } from "@/server/metrics";
 import { queueSnapshot } from "@/server/jobs/queue";
 
@@ -31,7 +32,7 @@ function computeEtag(body: string) {
 }
 
 export async function GET(request: Request) {
-  if (process.env.AUTH_BYPASS !== "true") {
+  if (!isAuthBypassEnabled()) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });

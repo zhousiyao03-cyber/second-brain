@@ -27,9 +27,12 @@ ARG NEXT_DEPLOYMENT_ID=local
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Default env for build (can be overridden at runtime)
+# Default env for build (can be overridden at runtime).
+# AUTH_SECRET is required by NextAuth to import; the value here is a
+# build-only placeholder and is recognized + rejected by the runtime guard
+# in src/lib/auth.ts so it cannot accidentally ship as a JWT signing key.
 ENV TURSO_DATABASE_URL=file:data/second-brain.db
-ENV AUTH_SECRET=change-me-in-production
+ENV AUTH_SECRET=knosi-build-only-placeholder-do-not-use-at-runtime
 ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
 
 # Pre-download the embedding + reranker models so the first runtime

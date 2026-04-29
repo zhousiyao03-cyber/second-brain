@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import { NextResponse } from "next/server";
 
 export default auth((req) => {
-  // E2E test bypass
-  if (process.env.AUTH_BYPASS === "true") {
+  // E2E test bypass — also gated on NODE_ENV !== "production" inside the
+  // helper so a misconfigured production deploy can't slip through.
+  if (isAuthBypassEnabled()) {
     return NextResponse.next();
   }
 

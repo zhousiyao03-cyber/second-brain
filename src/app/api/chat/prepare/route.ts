@@ -1,6 +1,7 @@
 import type { ModelMessage } from "ai";
 import { buildChatContext, chatInputSchema } from "@/server/ai/chat-prepare";
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
 import { getEntitlements } from "@/server/billing/entitlements";
 import { getAIErrorMessage } from "@/server/ai/provider";
@@ -47,7 +48,7 @@ function toPreparedMessages(messages: ModelMessage[]): PreparedChatMessage[] {
 
 export async function POST(req: Request) {
   let userId: string | null = null;
-  if (process.env.AUTH_BYPASS !== "true") {
+  if (!isAuthBypassEnabled()) {
     const session = await auth();
     if (!session?.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
   try {
     const { system, messages } = await buildChatContext(parsed.data, userId);
 
-    if (process.env.AUTH_BYPASS !== "true" && userId) {
+    if (!isAuthBypassEnabled() && userId) {
       void recordAiUsage(userId).catch(() => undefined);
     }
 

@@ -17,6 +17,7 @@
 
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import { processJobs } from "@/server/jobs/worker";
 import { markOpsJobFailure, markOpsJobSuccess } from "@/server/ops/job-heartbeats";
 
@@ -46,7 +47,7 @@ export const GET = handle;
 export const POST = handle;
 
 async function isAuthorized(request: Request): Promise<boolean> {
-  if (process.env.AUTH_BYPASS === "true") return true;
+  if (isAuthBypassEnabled()) return true;
 
   const header = request.headers.get("authorization");
 

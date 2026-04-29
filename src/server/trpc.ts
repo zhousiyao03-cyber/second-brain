@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import { getEntitlements, PRO_UNLIMITED } from "./billing/entitlements";
 import { logger, newRequestId } from "./logger";
 import { recordProcedureCall } from "./metrics";
@@ -86,8 +87,10 @@ const loggingMiddleware = t.middleware(async ({ path, type, next }) => {
 });
 
 const authMiddleware = t.middleware(async ({ next }) => {
-  // Allow bypass for E2E testing
-  if (process.env.AUTH_BYPASS === "true") {
+  // Allow bypass for E2E testing. The helper additionally enforces
+  // NODE_ENV !== "production" so a stale env var cannot turn this into a
+  // multi-tenant data exfil endpoint in production.
+  if (isAuthBypassEnabled()) {
     return next({ ctx: { userId: process.env.AUTH_BYPASS_USER_ID ?? "test-user" } });
   }
 

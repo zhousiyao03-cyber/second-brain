@@ -1,5 +1,7 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
+import { safeFetch, SsrfBlockedError } from "@/server/ai/safe-fetch";
+import { logger } from "@/server/logger";
 
 interface FetchContentResult {
   title: string | null;
@@ -21,7 +23,7 @@ function stripHtmlTags(html: string): string {
 
 export async function fetchContent(url: string): Promise<FetchContentResult> {
   try {
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         "User-Agent":
@@ -60,7 +62,16 @@ export async function fetchContent(url: string): Promise<FetchContentResult> {
       content,
       success: content !== null,
     };
-  } catch {
+  } catch (err) {
+    // SSRF rejections are expected — log them at info so we don't pollute
+    // error metrics when a user pastes localhost / a private IP. All other
+    // errors (network, parse) get the existing silent-failure semantics.
+    if (err instanceof SsrfBlockedError) {
+      logger.info(
+        { event: "fetch_content.ssrf_blocked", reason: err.message },
+        "blocked unsafe URL fetch"
+      );
+    }
     return { title: null, content: null, success: false };
   }
 }

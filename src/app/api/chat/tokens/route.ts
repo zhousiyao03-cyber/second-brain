@@ -7,6 +7,7 @@ import {
   daemonHeartbeats,
 } from "@/server/db/schema";
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import {
   subscribeToChatEvents,
   type DaemonChatEvent,
@@ -129,7 +130,7 @@ export function __resetChatTokensTestLoaders() {
 export async function GET(request: NextRequest) {
   // --- Auth ---
   let userId: string | null = null;
-  if (process.env.AUTH_BYPASS !== "true") {
+  if (!isAuthBypassEnabled()) {
     const session = await auth();
     if (!session?.user?.id) {
       return new Response("Unauthorized", { status: 401 });

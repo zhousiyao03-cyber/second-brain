@@ -41,7 +41,11 @@ export const bookmarksRouter = router({
   create: protectedProcedure
     .input(
       z.object({
-        url: z.string().optional(),
+        // .url() rejects file:/gopher:/data:/etc. at the boundary; the actual
+        // SSRF defense (DNS + private-IP filter) lives in safe-fetch.ts and
+        // runs before fetch-content opens a socket. Both layers exist on
+        // purpose — this one cheaply filters obvious garbage.
+        url: z.string().url().optional(),
         title: z.string().optional(),
         content: z.string().optional(),
         tags: z.string().optional(),

@@ -1,4 +1,7 @@
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "./bypass";
+
+export { isAuthBypassEnabled };
 
 export type RequestSession = {
   user?: {
@@ -17,10 +20,6 @@ function buildBypassSession(): RequestSession {
     },
     expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   } as RequestSession;
-}
-
-export function isAuthBypassEnabled() {
-  return process.env.AUTH_BYPASS === "true";
 }
 
 export async function getRequestSession(): Promise<RequestSession> {

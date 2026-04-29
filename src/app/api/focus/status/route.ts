@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import { db } from "@/server/db";
 import { activitySessions, focusDevices } from "@/server/db/schema";
 import { getLocalDayRange, buildDailyStats } from "@/server/focus/aggregates";
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
   const userId = await resolveIngestUserId({
     authorization: request.headers.get("authorization"),
     deviceId: parsed.data.deviceId,
-    authBypassEnabled: process.env.AUTH_BYPASS === "true",
+    authBypassEnabled: isAuthBypassEnabled(),
     authBypassUserId: process.env.AUTH_BYPASS_USER_ID ?? "test-user",
     configuredApiKey: process.env.FOCUS_INGEST_API_KEY?.trim(),
     configuredUserId: process.env.FOCUS_INGEST_USER_ID?.trim(),

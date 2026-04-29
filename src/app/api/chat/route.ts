@@ -8,6 +8,7 @@ import {
 } from "@/server/ai/chat-system-prompt";
 import { buildChatContext, chatInputSchema } from "@/server/ai/chat-prepare";
 import { auth } from "@/lib/auth";
+import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
 import { getEntitlements } from "@/server/billing/entitlements";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
@@ -19,9 +20,9 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   const timer = startAskTimer("/api/chat");
 
-  // Auth bypass for E2E testing
+  // Auth bypass for E2E testing — gated on NODE_ENV !== "production".
   let userId: string | null = null;
-  if (process.env.AUTH_BYPASS !== "true") {
+  if (!isAuthBypassEnabled()) {
     const session = await auth();
     if (!session?.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
         messages,
         sourceScope,
       });
-      if (process.env.AUTH_BYPASS !== "true") {
+      if (!isAuthBypassEnabled()) {
         void recordAiUsage(userId).catch(() => undefined);
       }
       timer.mark("enqueue");
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
     timer.end({ mode: "stream" });
 
     // Record usage (fire-and-forget, don't block the response)
-    if (process.env.AUTH_BYPASS !== "true" && userId) {
+    if (!isAuthBypassEnabled() && userId) {
       void recordAiUsage(userId).catch(() => undefined);
     }
 
