@@ -1,7 +1,11 @@
 import { NextRequest } from "next/server";
 import { and, asc, eq, gt } from "drizzle-orm";
 import { db } from "@/server/db";
-import { daemonChatMessages, chatTasks } from "@/server/db/schema";
+import {
+  daemonChatMessages,
+  chatTasks,
+  daemonHeartbeats,
+} from "@/server/db/schema";
 import { auth } from "@/lib/auth";
 import {
   subscribeToChatEvents,
@@ -11,6 +15,39 @@ import {
 const POLL_INTERVAL_MS = 200;
 const STREAM_TIMEOUT_MS = 150 * 1000; // 2.5 min server-side guard
 const QUEUED_TIMEOUT_MS = 8 * 1000; // 8s — if still queued, daemon is likely offline
+const HEARTBEAT_FRESH_MS = 90 * 1000;
+const DAEMON_HEARTBEAT_KIND = "daemon";
+
+async function buildDaemonNotPickingUpError(
+  userId: string | null
+): Promise<string> {
+  if (!userId) {
+    return "The AI daemon did not pick up this task. Make sure the daemon is running on your local machine: run `knosi login` then `knosi`.";
+  }
+
+  const [hb] = await db
+    .select({ lastSeenAt: daemonHeartbeats.lastSeenAt })
+    .from(daemonHeartbeats)
+    .where(
+      and(
+        eq(daemonHeartbeats.userId, userId),
+        eq(daemonHeartbeats.kind, DAEMON_HEARTBEAT_KIND)
+      )
+    );
+
+  if (!hb) {
+    return "No daemon has connected for this account yet. Run `knosi login` from this Google account, then `knosi` to start the daemon.";
+  }
+
+  const ageMs = Date.now() - hb.lastSeenAt.getTime();
+  if (ageMs > HEARTBEAT_FRESH_MS) {
+    const ageSec = Math.round(ageMs / 1000);
+    const ageStr = ageSec < 60 ? `${ageSec}s` : `${Math.round(ageSec / 60)}m`;
+    return `Your daemon is offline (last seen ${ageStr} ago). Restart it on your local machine with \`knosi\`.`;
+  }
+
+  return "Your daemon is online but did not claim this task within 8s. This usually means the CLI is authenticated as a different account than the one signed in here. Run `knosi login` from the same Google account, then restart `knosi`.";
+}
 
 const testLoaders: {
   loadChatDeltaRows?: ((taskId: string, afterSeq: number) => Promise<Array<{
@@ -184,8 +221,7 @@ export async function GET(request: NextRequest) {
           }
           if (!wasPickedUp && current.status === "queued" && Date.now() > queuedDeadline) {
             send("error", {
-              error:
-                "The AI daemon did not pick up this task. Make sure the daemon is running on your local machine: run `knosi login` then `knosi`.",
+              error: await buildDaemonNotPickingUpError(userId),
             });
             break;
           }
@@ -243,8 +279,7 @@ export async function GET(request: NextRequest) {
           }
           if (!wasPickedUp && current.status === "queued" && Date.now() > queuedDeadline) {
             send("error", {
-              error:
-                "The AI daemon did not pick up this task. Make sure the daemon is running on your local machine: run `knosi login` then `knosi`.",
+              error: await buildDaemonNotPickingUpError(userId),
             });
             controller.close();
             return;

@@ -1,11 +1,31 @@
-import { sqliteTable, text, integer, uniqueIndex, index } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  uniqueIndex,
+  index,
+  primaryKey,
+} from "drizzle-orm/sqlite-core";
 import { users } from "./auth";
 
-export const daemonHeartbeats = sqliteTable("daemon_heartbeats", {
-  kind: text("kind").primaryKey(), // "chat" | "analysis" | "usage"
-  lastSeenAt: integer("last_seen_at", { mode: "timestamp" }).notNull(),
-  version: text("version"),
-});
+export const daemonHeartbeats = sqliteTable(
+  "daemon_heartbeats",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // "chat" | "daemon" | "analysis" | "usage"
+    lastSeenAt: integer("last_seen_at", { mode: "timestamp" }).notNull(),
+    version: text("version"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.kind] }),
+    index("daemon_heartbeats_kind_last_seen_idx").on(
+      table.kind,
+      table.lastSeenAt,
+    ),
+  ],
+);
 
 export const opsJobHeartbeats = sqliteTable("ops_job_heartbeats", {
   jobName: text("job_name").primaryKey(),

@@ -170,12 +170,15 @@ function getReadableErrorMessage(error: Error | undefined | null) {
     // not JSON — use rawMessage
   }
 
-  if (
-    message.includes("daemon") ||
-    message.includes("enqueue failed") ||
-    message.includes("AI_PROVIDER")
-  ) {
-    return "The AI daemon is not running. Please start it on your local machine: run `knosi login` to authenticate, then `knosi` to start the daemon.";
+  // The server now produces specific, actionable messages for daemon-related
+  // failures (missing heartbeat / stale heartbeat / userId mismatch). Pass them
+  // through verbatim and only substitute for low-level transport errors that
+  // would be confusing on their own.
+  if (/^Chat enqueue failed:\s*\d+/i.test(message)) {
+    return "Could not start the chat. The server returned an error — try again, or check your daemon with `knosi`.";
+  }
+  if (message.includes("AI_PROVIDER=claude-code-daemon")) {
+    return "Server is not configured for daemon chat. If this is your own deployment, set AI_PROVIDER=claude-code-daemon.";
   }
 
   return message;

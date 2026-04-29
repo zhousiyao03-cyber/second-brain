@@ -1,4 +1,4 @@
-import { count, desc, eq, sql } from "drizzle-orm";
+import { count, desc, eq, max, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { hasTable } from "@/server/db/metadata";
 import { chatTasks, daemonHeartbeats } from "@/server/db/schema";
@@ -94,13 +94,26 @@ async function getDaemonStatus() {
     };
   }
 
+  // Aggregate across users: ops dashboard reports "is at least one daemon alive
+  // somewhere right now". Each user's daemon writes its own heartbeat row under
+  // (user_id, kind="daemon"), so we take the most recent timestamp.
   const [row] = await db
-    .select()
+    .select({ lastSeenAt: max(daemonHeartbeats.lastSeenAt) })
     .from(daemonHeartbeats)
-    .where(eq(daemonHeartbeats.kind, "chat"))
-    .limit(1);
+    .where(eq(daemonHeartbeats.kind, "daemon"));
 
-  if (!row) {
+  if (!row || row.lastSeenAt == null) {
+    return {
+      status: "degraded" as const,
+      lastSeenAt: null,
+    };
+  }
+
+  // `max(...)` over an integer-timestamp column comes back as a number of
+  // milliseconds (not a Date instance) on libsql, so normalize manually.
+  const lastSeenMs =
+    row.lastSeenAt instanceof Date ? row.lastSeenAt.getTime() : Number(row.lastSeenAt);
+  if (!Number.isFinite(lastSeenMs)) {
     return {
       status: "degraded" as const,
       lastSeenAt: null,
@@ -109,8 +122,8 @@ async function getDaemonStatus() {
 
   const staleBefore = Date.now() - 1000 * 60 * 2;
   return {
-    status: row.lastSeenAt.getTime() >= staleBefore ? ("healthy" as const) : ("degraded" as const),
-    lastSeenAt: row.lastSeenAt.toISOString(),
+    status: lastSeenMs >= staleBefore ? ("healthy" as const) : ("degraded" as const),
+    lastSeenAt: new Date(lastSeenMs).toISOString(),
   };
 }
 
