@@ -70,6 +70,13 @@ export const learningNotes = sqliteTable(
     plainText: text("plain_text"),
     tags: text("tags"),
     aiSummary: text("ai_summary"),
+    viewCount: integer("view_count").notNull().default(0),
+    mastery: text("mastery", {
+      enum: ["not_started", "learning", "mastered"],
+    })
+      .notNull()
+      .default("not_started"),
+    lastViewedAt: integer("last_viewed_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
     updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   },

@@ -73,3 +73,7 @@ HANDOFF.md
 # RAG eval — keep ground-truth.json，忽略具体跑分结果（可能含 chunk 内容）
 /eval/results/
 /.backfill-milvus-failed.json
+
+# learning migration: local config (per-user) and prod dumps stay local
+/scripts/migrate-config*.json
+/backups/

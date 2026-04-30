@@ -4,6 +4,7 @@ import {
   listRecentKnowledge,
   searchKnowledge,
 } from "./knowledge-read";
+import { createLearningCard } from "./learning-card";
 
 export const KNOSI_MCP_TOOLS = [
   {
@@ -101,6 +102,42 @@ export const KNOSI_MCP_TOOLS = [
       required: ["title", "body"],
     },
   },
+  {
+    name: "create_learning_card",
+    description:
+      "Create a learning card in the user's Knosi learning module. Use this " +
+      "for interview-prep Q+A cards, theory review notes, and other content " +
+      "the user wants to study and re-read over time. Cards are grouped by " +
+      "topic name; new topics are created on first use. Body is markdown.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        topicName: {
+          type: "string",
+          description:
+            "Topic name to group cards under (e.g. 'React 原理', '浏览器渲染'). " +
+            "Created on first use; reused for subsequent cards.",
+        },
+        title: {
+          type: "string",
+          description: "Card title — usually the question or concept name.",
+        },
+        body: {
+          type: "string",
+          description:
+            "Markdown content of the card. Headings, lists, code blocks, " +
+            "tables, and inline formatting (bold/italic/code/links) are " +
+            "supported.",
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Optional tags for filtering and grouping inside a topic.",
+        },
+      },
+      required: ["topicName", "title", "body"],
+    },
+  },
 ] as const;
 
 export interface KnosiMcpDeps {
@@ -109,6 +146,7 @@ export interface KnosiMcpDeps {
   getKnowledgeItem: typeof getKnowledgeItem;
   captureAiNote: typeof captureAiNote;
   captureMarkdownNote: typeof captureMarkdownNote;
+  createLearningCard: typeof createLearningCard;
 }
 
 const defaultDeps: KnosiMcpDeps = {
@@ -117,6 +155,7 @@ const defaultDeps: KnosiMcpDeps = {
   getKnowledgeItem,
   captureAiNote,
   captureMarkdownNote,
+  createLearningCard,
 };
 
 export async function callKnosiMcpTool(
@@ -204,6 +243,18 @@ export async function callKnosiMcpTool(
           typeof input.arguments.folder === "string"
             ? input.arguments.folder
             : undefined,
+      });
+    case "create_learning_card":
+      return deps.createLearningCard({
+        userId: input.userId,
+        topicName: String(input.arguments.topicName ?? ""),
+        title: String(input.arguments.title ?? ""),
+        body: String(input.arguments.body ?? ""),
+        tags: Array.isArray(input.arguments.tags)
+          ? input.arguments.tags.filter(
+              (tag): tag is string => typeof tag === "string"
+            )
+          : undefined,
       });
     default:
       throw new Error(`Unsupported MCP tool: ${input.name}`);

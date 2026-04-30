@@ -2,6 +2,7 @@ import {
   Activity,
   FileText,
   FolderGit2,
+  GraduationCap,
   LayoutDashboard,
   MessageCircle,
   Timer,
@@ -31,6 +32,7 @@ export const navigationGroups: NavGroup[] = [
   {
     label: "LEARN",
     items: [
+      { href: "/learn", label: "Learning", icon: GraduationCap },
       { href: "/projects", label: "Projects", icon: FolderGit2 },
     ],
   },

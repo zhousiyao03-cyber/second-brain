@@ -98,12 +98,20 @@ export const learningNotebookRouter = router({
 
     if (topics.length === 0) return [];
 
-    // Batch: get note count + tags for ALL topics in one query
+    // Batch: get note count + mastered count + last review + tags in one query
     const topicIds = topics.map((t) => t.id);
     const noteMeta = await db
       .select({
         topicId: learningNotes.topicId,
         noteCount: sql<number>`count(*)`.as("note_count"),
+        masteredCount:
+          sql<number>`sum(case when ${learningNotes.mastery} = 'mastered' then 1 else 0 end)`.as(
+            "mastered_count"
+          ),
+        lastReviewedAt:
+          sql<number | null>`max(${learningNotes.lastViewedAt})`.as(
+            "last_reviewed_at"
+          ),
         allTags: sql<string>`group_concat(${learningNotes.tags})`.as("all_tags"),
       })
       .from(learningNotes)
@@ -120,6 +128,10 @@ export const learningNotebookRouter = router({
     return topics.map((topic) => {
       const meta = metaMap.get(topic.id);
       const noteCount = meta?.noteCount ?? 0;
+      const masteredCount = meta?.masteredCount ?? 0;
+      const lastReviewedAtRaw = meta?.lastReviewedAt ?? null;
+      const lastReviewedAt =
+        lastReviewedAtRaw != null ? new Date(lastReviewedAtRaw) : null;
 
       // Parse concatenated tags to get top 5
       const tagCounts = new Map<string, number>();
@@ -135,7 +147,14 @@ export const learningNotebookRouter = router({
         .slice(0, 5)
         .map(([tag]) => tag);
 
-      return { ...topic, noteCount, topTags, combinedText: "" };
+      return {
+        ...topic,
+        noteCount,
+        masteredCount,
+        lastReviewedAt,
+        topTags,
+        combinedText: "",
+      };
     });
   }),
 
@@ -204,6 +223,10 @@ export const learningNotebookRouter = router({
         topicId: z.string(),
         search: z.string().trim().optional(),
         tag: z.string().trim().optional(),
+        sort: z
+          .enum(["unmastered_first", "recent", "alphabetical"])
+          .default("unmastered_first"),
+        filter: z.enum(["all", "not_mastered", "mastered"]).default("all"),
         limit: z.number().int().min(1).max(100).default(30),
         offset: z.number().int().min(0).default(0),
       })
@@ -222,11 +245,32 @@ export const learningNotebookRouter = router({
         );
       }
 
+      if (input.filter === "not_mastered") {
+        clauses.push(
+          sql`${learningNotes.mastery} <> 'mastered'` as ReturnType<typeof eq>
+        );
+      } else if (input.filter === "mastered") {
+        clauses.push(eq(learningNotes.mastery, "mastered"));
+      }
+
+      const orderBy =
+        input.sort === "alphabetical"
+          ? [learningNotes.title]
+          : input.sort === "recent"
+            ? [desc(learningNotes.updatedAt)]
+            : // unmastered_first: not-mastered first, then never-viewed first,
+              // then oldest viewed first (so the longest-untouched cards rise to the top).
+              [
+                sql`case ${learningNotes.mastery} when 'mastered' then 2 else 1 end`,
+                sql`case when ${learningNotes.lastViewedAt} is null then 0 else 1 end`,
+                learningNotes.lastViewedAt,
+              ];
+
       let items = await db
         .select()
         .from(learningNotes)
         .where(and(...clauses))
-        .orderBy(desc(learningNotes.updatedAt))
+        .orderBy(...orderBy)
         .limit(input.limit + 1)
         .offset(input.offset);
 
@@ -331,6 +375,44 @@ export const learningNotebookRouter = router({
       });
 
       return { success: true };
+    }),
+
+  incrementView: protectedProcedure
+    .input(z.object({ noteId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await db
+        .update(learningNotes)
+        .set({
+          viewCount: sql`${learningNotes.viewCount} + 1`,
+          lastViewedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(learningNotes.id, input.noteId),
+            eq(learningNotes.userId, ctx.userId)
+          )
+        );
+      return { ok: true };
+    }),
+
+  updateMastery: protectedProcedure
+    .input(
+      z.object({
+        noteId: z.string(),
+        mastery: z.enum(["not_started", "learning", "mastered"]),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      await db
+        .update(learningNotes)
+        .set({ mastery: input.mastery, updatedAt: new Date() })
+        .where(
+          and(
+            eq(learningNotes.id, input.noteId),
+            eq(learningNotes.userId, ctx.userId)
+          )
+        );
+      return { ok: true };
     }),
 
   listReviews: protectedProcedure

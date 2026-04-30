@@ -281,6 +281,13 @@
       "when": 1777386510645,
       "tag": "0039_acoustic_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1777546305748,
+      "tag": "0040_marvelous_stepford_cuckoos",
+      "breakpoints": true
     }
   ]
 }

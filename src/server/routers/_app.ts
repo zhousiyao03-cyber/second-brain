@@ -10,6 +10,7 @@ import { usageRouter } from "./usage";
 import { portfolioRouter } from "./portfolio";
 import { ossProjectsRouter } from "./oss-projects";
 import { billingRouter } from "./billing";
+import { learningNotebookRouter } from "./learning-notebook";
 
 export const appRouter = router({
   notes: notesRouter,
@@ -23,6 +24,7 @@ export const appRouter = router({
   usage: usageRouter,
   portfolio: portfolioRouter,
   billing: billingRouter,
+  learningNotebook: learningNotebookRouter,
 });
 
 export type AppRouter = typeof appRouter;
