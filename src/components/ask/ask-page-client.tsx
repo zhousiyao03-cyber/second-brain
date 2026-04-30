@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
-import { TextStreamChatTransport } from "ai";
+import { DefaultChatTransport } from "ai";
+import { ChatMessageParts } from "@/components/ask/chat-message-parts";
 import {
   ArrowUp,
   Bookmark,
@@ -56,7 +57,7 @@ const QUICK_PROMPTS: Array<{
   },
 ];
 
-const transport = new TextStreamChatTransport({ api: "/api/chat" });
+const transport = new DefaultChatTransport({ api: "/api/chat" });
 const VISIBLE_SCOPE_OPTIONS = ASK_AI_SCOPE_OPTIONS.filter(
   (option) => option.value !== "bookmarks"
 );
@@ -557,8 +558,11 @@ function AskPageStream() {
 
                 return (
                   <article key={message.id} className="min-w-0">
-                    {cleanText ? (
-                      <MarkdownRenderer content={cleanText} />
+                    {message.parts && message.parts.length > 0 ? (
+                      <ChatMessageParts
+                        parts={message.parts}
+                        stripAssistantSources
+                      />
                     ) : isLoading ? (
                       <div className="text-sm leading-7 text-stone-600 dark:text-stone-300">
                         Thinking...

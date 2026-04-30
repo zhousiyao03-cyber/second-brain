@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { useChat } from "@ai-sdk/react";
-import { TextStreamChatTransport } from "ai";
+import { DefaultChatTransport } from "ai";
 import {
   ArrowUp,
   Bookmark,
@@ -27,7 +27,7 @@ import {
   type MentionSource,
 } from "./inline-ask-ai-mention-menu";
 
-const transport = new TextStreamChatTransport({ api: "/api/chat" });
+const transport = new DefaultChatTransport({ api: "/api/chat" });
 
 const REWRITE_QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
   { label: "More concise", prompt: "Make it more concise, keep the key information" },

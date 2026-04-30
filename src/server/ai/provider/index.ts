@@ -87,9 +87,20 @@ export async function streamChatResponse(
     );
   }
 
+  // Tool-calling is only wired up for the AI SDK path (openai + local).
+  // Codex / hosted-pool / daemon currently run single-turn — silently
+  // drop the `tools` / `maxSteps` fields so the legacy adapters don't
+  // need to know about them. Spec §5.3.
+  const optionsWithoutTools: StreamChatOptions = {
+    messages: options.messages,
+    sessionId: options.sessionId,
+    signal: options.signal,
+    system: options.system,
+  };
+
   if (user.userId && (await shouldRouteHosted(user.userId))) {
     const result = await runWithHostedAi(user.userId, (authPath) =>
-      streamChatCodex(options, { authStorePath: authPath }),
+      streamChatCodex(optionsWithoutTools, { authStorePath: authPath }),
     );
     if (!result.ok) {
       throw new Error(
@@ -102,7 +113,7 @@ export async function streamChatResponse(
   }
 
   if (mode === "codex") {
-    return streamChatCodex(options);
+    return streamChatCodex(optionsWithoutTools);
   }
 
   return streamChatAiSdk({ ...options, mode });

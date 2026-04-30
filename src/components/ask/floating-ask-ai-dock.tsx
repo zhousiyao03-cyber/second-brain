@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
-import { TextStreamChatTransport } from "ai";
+import { DefaultChatTransport } from "ai";
+import { ChatMessageParts } from "@/components/ask/chat-message-parts";
 import {
   ArrowUp,
   Bookmark,
@@ -29,7 +30,7 @@ import {
 } from "@/lib/ask-ai";
 import { cn } from "@/lib/utils";
 
-const transport = new TextStreamChatTransport({ api: "/api/chat" });
+const transport = new DefaultChatTransport({ api: "/api/chat" });
 
 const VISIBLE_SCOPE_OPTIONS = ASK_AI_SCOPE_OPTIONS.filter(
   (option) => option.value !== "bookmarks"
@@ -344,8 +345,15 @@ export function FloatingAskAiDock() {
 
                   return (
                     <article key={message.id} className="min-w-0">
-                      <div className="whitespace-pre-wrap text-[14px] leading-6 text-stone-800 dark:text-stone-100">
-                        {cleanText || (isLoading ? "Thinking..." : "")}
+                      <div className="text-[14px] leading-6 text-stone-800 dark:text-stone-100">
+                        {message.parts && message.parts.length > 0 ? (
+                          <ChatMessageParts
+                            parts={message.parts}
+                            stripAssistantSources
+                          />
+                        ) : isLoading ? (
+                          "Thinking..."
+                        ) : null}
                       </div>
                       {isLatestAssistant && cleanText && sources.length > 0 && (
                         <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1">

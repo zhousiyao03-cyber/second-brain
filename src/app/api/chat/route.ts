@@ -2,6 +2,8 @@ import {
   getAIErrorMessage,
   streamChatResponse,
 } from "@/server/ai/provider";
+import { getProviderMode } from "@/server/ai/provider/mode";
+import { maxStepsByMode } from "@/server/ai/provider/types";
 import {
   normalizeMessages,
   sanitizeMessages,
@@ -14,6 +16,11 @@ import { getEntitlements } from "@/server/billing/entitlements";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
 import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
 import { startAskTimer } from "@/server/ai/ask-timing";
+import {
+  buildAskAiTools,
+  getOrCreateUrlBudget,
+} from "@/server/ai/tools";
+import { adaptTextStreamToUiMessageStream } from "@/server/ai/legacy-stream-adapter";
 
 export const maxDuration = 30;
 
@@ -86,23 +93,64 @@ export async function POST(req: Request) {
     const { system, messages } = await buildChatContext(parsed.data, userId);
     timer.mark("buildContext");
 
+    const mode = getProviderMode();
+    // Tool-calling only on the AI SDK path. Codex / hosted-pool / daemon
+    // continue running single-turn — we run them through the legacy
+    // adapter so the front-end transport stays uniform. Spec §5.3.
+    const supportsTools =
+      (mode === "openai" || mode === "local") && Boolean(userId);
+
+    let tools: ReturnType<typeof buildAskAiTools> | undefined;
+    let toolSystemPreamble = "";
+    if (supportsTools && userId) {
+      const conversationId = parsed.data.id ?? crypto.randomUUID();
+      const ctx = {
+        userId,
+        conversationId,
+        urlBudget: getOrCreateUrlBudget(conversationId),
+      };
+      tools = buildAskAiTools(ctx);
+      toolSystemPreamble =
+        `\n\n---\n\n` +
+        `You have access to tools to extend your reach beyond the initial ` +
+        `context above:\n` +
+        `- searchKnowledge(query, scope?, topK?): re-query the user's ` +
+        `notes/bookmarks via hybrid retrieval. Use when the preamble ` +
+        `does not have enough material.\n` +
+        `- readNote(noteId): fetch the full body of a note that ` +
+        `searchKnowledge returned. Use when a snippet is not enough.\n` +
+        `- fetchUrl(url): fetch and extract readable text from a public ` +
+        `URL. Each conversation has a hard budget of 3 distinct URLs ` +
+        `total — spend them only when necessary.\n` +
+        `Do not exceed ${maxStepsByMode(mode)} steps. Stop calling tools ` +
+        `as soon as you can answer.`;
+    }
+
     const response = await streamChatResponse(
       {
         messages,
         sessionId: parsed.data.id,
         signal: req.signal,
-        system,
+        system: system + toolSystemPreamble,
+        tools,
+        maxSteps: tools ? maxStepsByMode(mode) : undefined,
       },
       { userId },
     );
     timer.mark("streamReady");
-    timer.end({ mode: "stream" });
+    timer.end({ mode: tools ? "stream-tools" : "stream" });
 
     // Record usage (fire-and-forget, don't block the response)
     if (!isAuthBypassEnabled() && userId) {
       void recordAiUsage(userId).catch(() => undefined);
     }
 
+    // The AI-SDK path (with or without tools) already returns a UI
+    // message stream Response via toUIMessageStreamResponse(); only the
+    // codex / hosted-pool / daemon legacy paths need the adapter.
+    if (!supportsTools) {
+      return adaptTextStreamToUiMessageStream(response);
+    }
     return response;
   } catch (error) {
     const isInvalidInput =
