@@ -5,6 +5,7 @@ import {
   index,
   primaryKey,
 } from "drizzle-orm/sqlite-core";
+import { users } from "./auth";
 
 /**
  * Council module — multi-agent discussion rooms.
@@ -15,7 +16,9 @@ export const councilPersonas = sqliteTable(
   "council_personas",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     avatarEmoji: text("avatar_emoji"),
     systemPrompt: text("system_prompt").notNull(),
@@ -39,7 +42,9 @@ export const councilChannels = sqliteTable(
   "council_channels",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     topic: text("topic"),
     hardLimitPerTurn: integer("hard_limit_per_turn").notNull().default(6),
