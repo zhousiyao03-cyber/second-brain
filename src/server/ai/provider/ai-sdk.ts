@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output, stepCountIs, streamText } from "ai";
+import type { ModelMessage } from "ai";
 import type { z } from "zod/v4";
 import { getCachedUserChatModel } from "./mode";
 import { resolveValue } from "./shared";
@@ -18,7 +19,7 @@ const DEFAULT_LOCAL_TASK_MODEL = "qwen2.5:14b";
 const DEFAULT_OPENAI_CHAT_MODEL = "gpt-5.4";
 const DEFAULT_OPENAI_TASK_MODEL = "gpt-5.4";
 
-type AiSdkMode = Exclude<AIProviderMode, "codex" | "claude-code-daemon">;
+export type AiSdkMode = Exclude<AIProviderMode, "codex" | "claude-code-daemon">;
 
 /**
  * Vercel AI SDK's experimental_telemetry defaults `recordInputs` and
@@ -185,6 +186,42 @@ export async function streamChatAiSdk(
   // step badges. Single-turn callers don't get tool parts so the
   // payload is functionally equivalent to a text stream.
   return { response: result.toUIMessageStreamResponse(), modelId };
+}
+
+/**
+ * Plain-text streaming for internal callers that want an AsyncIterable<string>
+ * (not an HTTP Response). Used by the council module's per-persona streaming.
+ *
+ * Limitation: this path goes through the AI SDK directly, so it ignores
+ * `claude-code-daemon` / `codex` modes — caller is responsible for falling
+ * back if the user has explicitly chosen those. Phase 1 council documents
+ * this limitation in its spec.
+ */
+export async function streamPlainTextAiSdk(
+  options: {
+    system: string;
+    messages: ModelMessage[];
+    signal?: AbortSignal;
+    mode: AiSdkMode;
+  },
+  ctx: AiSdkContext = {},
+): Promise<AsyncIterable<string>> {
+  const provider = createAiSdkProvider(options.mode);
+  const modelId = await resolveAiSdkModelId("chat", options.mode, ctx);
+  const result = streamText({
+    abortSignal: options.signal,
+    model: provider(modelId),
+    messages: options.messages,
+    system: options.system,
+    experimental_telemetry: {
+      isEnabled: true,
+      recordInputs: shouldRecordTelemetryContent(),
+      recordOutputs: shouldRecordTelemetryContent(),
+      functionId: "council-persona-stream",
+      metadata: { mode: options.mode, model: modelId },
+    },
+  });
+  return result.textStream;
 }
 
 export async function generateStructuredDataAiSdk<TSchema extends z.ZodType>(
