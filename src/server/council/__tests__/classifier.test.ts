@@ -64,4 +64,17 @@ describe("classifyShouldSpeak", () => {
     });
     expect(d).toEqual({ shouldSpeak: false, priority: 0, reason: "classifier-error" });
   });
+
+  it("re-throws AbortError instead of swallowing it", async () => {
+    const abortErr = new Error("aborted");
+    abortErr.name = "AbortError";
+    vi.mocked(generateStructuredData).mockRejectedValueOnce(abortErr);
+    await expect(
+      classifyShouldSpeak({
+        persona,
+        history: [],
+        userId: "u1",
+      })
+    ).rejects.toThrow("aborted");
+  });
 });
