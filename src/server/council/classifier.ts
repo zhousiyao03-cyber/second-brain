@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { generateStructuredData } from "@/server/ai/provider";
 import type { ClassifierDecision, Persona } from "./types";
+import { TEST_MODE, fakeClassify } from "./test-mode";
 
 const ClassifierSchema = z.object({
   shouldSpeak: z.boolean(),
@@ -67,6 +68,10 @@ export async function classifyShouldSpeak({
   userId: string;
   abortSignal?: AbortSignal;
 }): Promise<ClassifierDecision> {
+  if (TEST_MODE) {
+    return fakeClassify(persona.name);
+  }
+
   const prompt = buildClassifierPrompt({ persona, history, lastAgentMessage });
 
   try {

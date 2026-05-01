@@ -9,6 +9,7 @@ import {
   type PersonaRagHit,
 } from "./persona-rag";
 import type { HistoryEntry } from "./classifier";
+import { TEST_MODE, fakeStream } from "./test-mode";
 
 const HISTORY_WINDOW = 20;
 const RAG_CHUNK_PREVIEW = 400;
@@ -37,6 +38,11 @@ export async function* streamPersonaResponse({
   channelTopic: string | null;
   abortSignal: AbortSignal;
 }): AsyncIterable<string> {
+  if (TEST_MODE) {
+    yield* fakeStream();
+    return;
+  }
+
   const lastUser = [...history].reverse().find((e) => e.role === "user");
   const query = lastUser?.content ?? history.at(-1)?.content ?? "";
 
