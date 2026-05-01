@@ -5,7 +5,12 @@ import { trpc } from "@/lib/trpc";
 import { ModelPicker } from "./model-picker";
 
 type ProviderOption = {
-  value: "knosi-hosted" | "claude-code-daemon" | "openai" | "local";
+  value:
+    | "knosi-hosted"
+    | "claude-code-daemon"
+    | "openai"
+    | "local"
+    | "cursor";
   label: string;
   desc: string;
   proOnly?: boolean;
@@ -32,6 +37,11 @@ const OPTIONS: readonly ProviderOption[] = [
     value: "local",
     label: "Local (Ollama / LM Studio)",
     desc: "For self-hosters",
+  },
+  {
+    value: "cursor",
+    label: "Cursor (Proxy)",
+    desc: "Reuse your Cursor subscription via knosi.xyz/cursor proxy",
   },
 ] as const;
 

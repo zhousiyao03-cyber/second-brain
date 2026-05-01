@@ -30,6 +30,11 @@ const ENV_KEYS = [
   "LOCAL_AI_CHAT_MODEL",
   "LOCAL_AI_TASK_MODEL",
   "LOCAL_AI_MODEL",
+  "CURSOR_CHAT_MODEL",
+  "CURSOR_TASK_MODEL",
+  "CURSOR_MODEL",
+  "CURSOR_PROXY_URL",
+  "CURSOR_PROXY_KEY",
 ] as const;
 const savedEnv: Record<string, string | undefined> = {};
 
@@ -133,5 +138,51 @@ describe("resolveAiSdkModelIdSync — env-only path", () => {
       .where(eq(users.id, USER_ID));
 
     expect(resolveAiSdkModelIdSync("chat", "openai")).toBe("env-chat-sync");
+  });
+});
+
+describe("cursor mode (spec §3.2)", () => {
+  it("chat falls back to built-in cursor default when no user / env", async () => {
+    const id = await resolveAiSdkModelId("chat", "cursor", { userId: USER_ID });
+    expect(id).toBe("claude-4.6-sonnet-medium");
+  });
+
+  it("CURSOR_CHAT_MODEL env wins over the built-in default", async () => {
+    process.env.CURSOR_CHAT_MODEL = "claude-4.6-opus-high";
+    const id = await resolveAiSdkModelId("chat", "cursor", { userId: USER_ID });
+    expect(id).toBe("claude-4.6-opus-high");
+  });
+
+  it("CURSOR_MODEL is honored when CURSOR_CHAT_MODEL is unset", async () => {
+    process.env.CURSOR_MODEL = "gpt-5.5-medium";
+    const id = await resolveAiSdkModelId("chat", "cursor", { userId: USER_ID });
+    expect(id).toBe("gpt-5.5-medium");
+  });
+
+  it("user pref still wins over cursor env (kind=chat)", async () => {
+    process.env.CURSOR_CHAT_MODEL = "from-env-cursor";
+    await db
+      .update(users)
+      .set({ aiChatModel: "user-pick-cursor" })
+      .where(eq(users.id, USER_ID));
+
+    const id = await resolveAiSdkModelId("chat", "cursor", { userId: USER_ID });
+    expect(id).toBe("user-pick-cursor");
+  });
+
+  it("task kind ignores user pref and uses cursor task default", async () => {
+    await db
+      .update(users)
+      .set({ aiChatModel: "user-chat-only" })
+      .where(eq(users.id, USER_ID));
+
+    const id = await resolveAiSdkModelId("task", "cursor", { userId: USER_ID });
+    expect(id).toBe("claude-4.6-sonnet-medium");
+  });
+
+  it("resolveAiSdkModelIdSync returns the cursor default", () => {
+    expect(resolveAiSdkModelIdSync("chat", "cursor")).toBe(
+      "claude-4.6-sonnet-medium",
+    );
   });
 });

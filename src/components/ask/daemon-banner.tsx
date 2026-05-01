@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { trpc } from "@/lib/trpc";
 
 interface DaemonStatus {
   online: boolean;
@@ -18,6 +19,11 @@ function formatAge(seconds: number | null): string {
 
 export function DaemonBanner() {
   const [statusData, setStatusData] = useState<DaemonStatus | null>(null);
+  // Spec §3.8 — only render this banner when the user has actually opted into
+  // the claude-code-daemon provider. Otherwise users on openai/cursor/local
+  // see a misleading "daemon offline" warning that has nothing to do with
+  // their backend.
+  const { data: pref } = trpc.billing.getAiProviderPreference.useQuery();
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +47,7 @@ export function DaemonBanner() {
     };
   }, []);
 
+  if (pref?.preference !== "claude-code-daemon") return null;
   if (!statusData || statusData.online) {
     return null;
   }

@@ -27,7 +27,13 @@ export const billingRouter = router({
     .input(
       z.object({
         preference: z
-          .enum(["knosi-hosted", "claude-code-daemon", "openai", "local"])
+          .enum([
+            "knosi-hosted",
+            "claude-code-daemon",
+            "openai",
+            "local",
+            "cursor",
+          ])
           .nullable(),
       }),
     )
@@ -48,6 +54,23 @@ export const billingRouter = router({
       invalidateProviderPrefCache(userId);
       return { ok: true as const };
     }),
+
+  /**
+   * Read the user's currently-saved provider preference. Used by the
+   * daemon-banner so it only renders when the user actually opted into
+   * `claude-code-daemon` (spec §3.5 / §3.8). Returns `{ preference: null }`
+   * for self-hosted / E2E bypass and unauthenticated reads.
+   */
+  getAiProviderPreference: protectedProcedure.query(async ({ ctx }) => {
+    const userId = (ctx as { userId?: string }).userId;
+    if (!userId) return { preference: null };
+    const [row] = await db
+      .select({ preference: users.aiProviderPreference })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return { preference: row?.preference ?? null };
+  }),
 
   /**
    * Read the user's currently-saved chat model id. `null` means "use the

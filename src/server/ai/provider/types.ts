@@ -1,7 +1,12 @@
 import type { ModelMessage, ToolSet } from "ai";
 import type { z } from "zod/v4";
 
-export type AIProviderMode = "local" | "openai" | "codex" | "claude-code-daemon";
+export type AIProviderMode =
+  | "local"
+  | "openai"
+  | "codex"
+  | "claude-code-daemon"
+  | "cursor";
 
 export type GenerationKind = "chat" | "task";
 
@@ -28,13 +33,15 @@ export type StreamChatOptions = {
 /**
  * Per-mode default for `maxSteps`. Spec §5.1.
  *
- * - openai: 6 — gpt-class models can plan over a few searches without
- *   looping; we want enough headroom for "compare X vs Y" patterns
+ * - openai / cursor: 6 — gpt-class models can plan over a few searches without
+ *   looping; we want enough headroom for "compare X vs Y" patterns. Cursor
+ *   proxies through cursor-to-openai → api2.cursor.sh hosting Claude/GPT
+ *   class models, so the same headroom applies.
  * - local: 3 — qwen2.5 / smaller models tend to loop; cut early
  * - codex / claude-code-daemon: 1 — those run single-turn, no tool support
  */
 export function maxStepsByMode(mode: AIProviderMode): number {
-  if (mode === "openai") return 6;
+  if (mode === "openai" || mode === "cursor") return 6;
   if (mode === "local") return 3;
   return 1;
 }

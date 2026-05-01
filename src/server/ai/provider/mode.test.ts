@@ -142,6 +142,26 @@ describe("getProviderModeSync — sync env-only resolution", () => {
 
     expect(getProviderModeSync()).toBe("local");
   });
+
+  it("AI_PROVIDER=cursor resolves to cursor (spec §3.3)", () => {
+    process.env.AI_PROVIDER = "cursor";
+    expect(getProviderModeSync()).toBe("cursor");
+  });
+});
+
+describe("getProviderMode — cursor preference (spec §3.3)", () => {
+  it("user pref of 'cursor' is honored as cursor mode", async () => {
+    delete process.env.AI_PROVIDER;
+    delete process.env.OPENAI_API_KEY;
+
+    await db
+      .update(users)
+      .set({ aiProviderPreference: "cursor" })
+      .where(eq(users.id, USER_A));
+
+    const mode = await getProviderMode({ userId: USER_A });
+    expect(mode).toBe("cursor");
+  });
 });
 
 describe("provider-pref cache", () => {

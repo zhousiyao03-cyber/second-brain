@@ -11,7 +11,7 @@ export const users = sqliteTable("users", {
   emailVerified: integer("email_verified", { mode: "timestamp" }),
   image: text("image"),
   aiProviderPreference: text("ai_provider_preference", {
-    enum: ["knosi-hosted", "claude-code-daemon", "openai", "local"],
+    enum: ["knosi-hosted", "claude-code-daemon", "openai", "local", "cursor"],
   }),
   /**
    * Free-text per-user override for the chat model id passed to the LLM

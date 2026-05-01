@@ -41,7 +41,7 @@ test.describe("Per-user provider + model selection", () => {
    */
   async function selectProvider(
     page: import("@playwright/test").Page,
-    provider: "openai" | "local" | "claude-code-daemon",
+    provider: "openai" | "local" | "claude-code-daemon" | "cursor",
   ) {
     await page.locator(`label[for='ai-provider-${provider}']`).click();
     // Wait for the inline ModelPicker (identified by its "Model" label) to
@@ -157,6 +157,71 @@ test.describe("Per-user provider + model selection", () => {
     await expect(page.getByText("my-fancy-model:7b")).toBeVisible();
   });
 
+  test("Cursor provider option saves preference and exposes preset models", async ({
+    page,
+  }) => {
+    const trpcResponses: string[] = [];
+    page.on("response", (res) => {
+      const u = res.url();
+      if (u.includes("/api/trpc/")) {
+        trpcResponses.push(`${res.request().method()} ${u} -> ${res.status()}`);
+      }
+    });
+
+    // Selecting Cursor must POST setAiProviderPreference with "cursor".
+    const setPrefResponse = page.waitForResponse(
+      (res) =>
+        res.url().includes("billing.setAiProviderPreference") &&
+        res.request().method() === "POST",
+      { timeout: 10_000 },
+    );
+    await selectProvider(page, "cursor");
+    try {
+      await setPrefResponse;
+    } catch {
+      throw new Error(
+        `setAiProviderPreference for "cursor" never POSTed. Observed trpc traffic:\n${trpcResponses.join("\n")}`,
+      );
+    }
+
+    // The Cursor radio should now be checked and the inline ModelPicker
+    // for cursor presets should be visible (spec §3.7).
+    await expect(
+      page.locator("input[type=radio][name='ai-provider'][value='cursor']"),
+    ).toBeChecked();
+    await expect(page.getByText("claude-4.6-sonnet-medium")).toBeVisible();
+    await expect(page.getByText("gpt-5.5-medium")).toBeVisible();
+
+    // Pick a preset and verify it persists across reload via the cursor
+    // model-picker group.
+    const presetRadio = page.locator(
+      "input[type=radio][name='model-cursor'][value='claude-4.6-opus-high']",
+    );
+    const setModelResponse = page.waitForResponse(
+      (res) =>
+        res.url().includes("billing.setAiChatModel") &&
+        res.request().method() === "POST",
+      { timeout: 10_000 },
+    );
+    await presetRadio.click();
+    try {
+      await setModelResponse;
+    } catch {
+      throw new Error(
+        `setAiChatModel never POSTed. Observed trpc traffic:\n${trpcResponses.join("\n")}`,
+      );
+    }
+    await expect(presetRadio).toBeChecked();
+
+    await page.reload();
+    await selectProvider(page, "cursor");
+    await expect(
+      page.locator(
+        "input[type=radio][name='model-cursor'][value='claude-4.6-opus-high']",
+      ),
+    ).toBeChecked({ timeout: 10_000 });
+  });
+
   test("/api/chat response carries X-Knosi-Mode debug header", async ({
     page,
     request,
@@ -189,7 +254,13 @@ test.describe("Per-user provider + model selection", () => {
     // request might 401 / 429 before — accept the absence of the header
     // as "test environment skipped" rather than fail the spec.
     if (mode) {
-      expect(["openai", "local", "codex", "claude-code-daemon"]).toContain(mode);
+      expect([
+        "openai",
+        "local",
+        "codex",
+        "claude-code-daemon",
+        "cursor",
+      ]).toContain(mode);
     } else {
       test.info().annotations.push({
         type: "note",

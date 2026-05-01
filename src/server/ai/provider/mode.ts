@@ -107,6 +107,7 @@ type AiProviderPreference =
   | "claude-code-daemon"
   | "openai"
   | "local"
+  | "cursor"
   | null;
 
 type UserAiPrefRow = {
@@ -238,6 +239,9 @@ export function getProviderModeSync(): AIProviderMode {
   }
   if (explicitMode === "local") {
     return "local";
+  }
+  if (explicitMode === "cursor") {
+    return "cursor";
   }
 
   if (hasCodexAuthProfile()) {

@@ -18,6 +18,10 @@ const DEFAULT_LOCAL_CHAT_MODEL = "qwen2.5:14b";
 const DEFAULT_LOCAL_TASK_MODEL = "qwen2.5:14b";
 const DEFAULT_OPENAI_CHAT_MODEL = "gpt-5.4";
 const DEFAULT_OPENAI_TASK_MODEL = "gpt-5.4";
+// Spec §3.2 — defaults for the Cursor proxy mode. Phase B will revise these
+// once `/v1/models` is curl'd post-deployment.
+const DEFAULT_CURSOR_CHAT_MODEL = "claude-4.6-sonnet-medium";
+const DEFAULT_CURSOR_TASK_MODEL = "claude-4.6-sonnet-medium";
 
 export type AiSdkMode = Exclude<AIProviderMode, "codex" | "claude-code-daemon">;
 
@@ -50,6 +54,18 @@ function createAiSdkProvider(mode: AiSdkMode) {
     });
   }
 
+  if (mode === "cursor") {
+    const baseUrl = process.env.CURSOR_PROXY_URL?.trim();
+    const apiKey = process.env.CURSOR_PROXY_KEY?.trim();
+    if (!baseUrl || !apiKey) {
+      throw new Error(
+        "Missing CURSOR_PROXY_URL or CURSOR_PROXY_KEY. " +
+          "Set both in .env.local (or k8s secret) to use the Cursor provider."
+      );
+    }
+    return createOpenAI({ name: "cursor-proxy", baseURL: baseUrl, apiKey });
+  }
+
   return createOpenAI({
     name: "local-ai",
     baseURL:
@@ -79,6 +95,20 @@ export function resolveAiSdkModelIdSync(
           ? process.env.OPENAI_CHAT_MODEL
           : process.env.OPENAI_TASK_MODEL,
         process.env.OPENAI_MODEL
+      ) ?? fallbackModelId
+    );
+  }
+
+  if (mode === "cursor") {
+    const fallbackModelId =
+      kind === "chat" ? DEFAULT_CURSOR_CHAT_MODEL : DEFAULT_CURSOR_TASK_MODEL;
+
+    return (
+      resolveValue(
+        kind === "chat"
+          ? process.env.CURSOR_CHAT_MODEL
+          : process.env.CURSOR_TASK_MODEL,
+        process.env.CURSOR_MODEL,
       ) ?? fallbackModelId
     );
   }

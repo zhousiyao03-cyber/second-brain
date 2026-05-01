@@ -7,17 +7,28 @@ type ProviderValue =
   | "knosi-hosted"
   | "claude-code-daemon"
   | "openai"
-  | "local";
+  | "local"
+  | "cursor";
 
 /**
  * Curated model presets per provider. Free text is still allowed via the
  * "Custom..." input — these are just convenience radios. Spec §3.5.
+ *
+ * Cursor presets are tentative — Phase B will recurate from the real
+ * `/v1/models` response after the proxy is deployed (spec §5).
  */
 const PRESET_MODELS: Record<ProviderValue, readonly string[]> = {
   openai: ["gpt-5.4", "gpt-4o", "gpt-4o-mini", "o1-mini"],
   "knosi-hosted": ["gpt-5.4", "gpt-4o"],
   "claude-code-daemon": ["claude-sonnet-4-6", "claude-opus-4-7"],
   local: ["qwen2.5:14b", "llama3.2", "mistral-nemo"],
+  cursor: [
+    "claude-4.6-sonnet-medium",
+    "claude-4.6-opus-high",
+    "claude-opus-4-7-thinking-xhigh",
+    "gpt-5.5-medium",
+    "gpt-5.5-high",
+  ],
 } as const;
 
 const EMPTY_PRESETS: readonly string[] = [];
