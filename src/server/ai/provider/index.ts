@@ -165,3 +165,6 @@ export {
   getAISetupHint,
   getChatAssistantIdentity,
 } from "./identity";
+
+export { streamPlainTextAiSdk } from "./ai-sdk";
+export type { AiSdkMode } from "./ai-sdk";

@@ -37,3 +37,4 @@ export * from "./portfolio";
 export * from "./projects";
 export * from "./ops";
 export * from "./billing";
+export * from "./council";

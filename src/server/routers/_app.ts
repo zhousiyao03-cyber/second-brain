@@ -11,6 +11,7 @@ import { portfolioRouter } from "./portfolio";
 import { ossProjectsRouter } from "./oss-projects";
 import { billingRouter } from "./billing";
 import { learningNotebookRouter } from "./learning-notebook";
+import { councilRouter } from "./council";
 
 export const appRouter = router({
   notes: notesRouter,
@@ -25,6 +26,7 @@ export const appRouter = router({
   portfolio: portfolioRouter,
   billing: billingRouter,
   learningNotebook: learningNotebookRouter,
+  council: councilRouter,
 });
 
 export type AppRouter = typeof appRouter;
