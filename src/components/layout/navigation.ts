@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Timer,
   TrendingUp,
+  Users,
 } from "lucide-react";
 
 export type NavItem = {
@@ -27,6 +28,7 @@ export const navigationGroups: NavGroup[] = [
       { href: "/dashboard", label: "Home", icon: LayoutDashboard },
       { href: "/notes", label: "Notes", icon: FileText },
       { href: "/ask", label: "Ask AI", icon: MessageCircle },
+      { href: "/council", label: "Council", icon: Users },
     ],
   },
   {
