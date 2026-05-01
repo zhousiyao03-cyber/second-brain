@@ -14,8 +14,10 @@ type ProviderValue =
  * Curated model presets per provider. Free text is still allowed via the
  * "Custom..." input — these are just convenience radios. Spec §3.5.
  *
- * Cursor presets are tentative — Phase B will recurate from the real
- * `/v1/models` response after the proxy is deployed (spec §5).
+ * Cursor presets curated from `/v1/models` against the live proxy
+ * (Phase B per spec §5). The full list has ~99 entries — this is a
+ * hand-picked spread across families and reasoning tiers; anything else
+ * is reachable via the Custom… field.
  */
 const PRESET_MODELS: Record<ProviderValue, readonly string[]> = {
   openai: ["gpt-5.4", "gpt-4o", "gpt-4o-mini", "o1-mini"],
@@ -25,9 +27,12 @@ const PRESET_MODELS: Record<ProviderValue, readonly string[]> = {
   cursor: [
     "claude-4.6-sonnet-medium",
     "claude-4.6-opus-high",
+    "claude-4.6-opus-max",
     "claude-opus-4-7-thinking-xhigh",
     "gpt-5.5-medium",
     "gpt-5.5-high",
+    "gpt-5.4-medium",
+    "gemini-3.1-pro",
   ],
 } as const;
 
