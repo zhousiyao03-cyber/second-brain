@@ -37,7 +37,7 @@ Knosi 已经有相当完整的 PKM + AI 能力（Notes / Learning Notebooks / As
 | **频道模型** | 永久 Channel（Slack/Discord 风格） | Q8 |
 | **agent 上限** | 单频道 ≤ 3 个 agent（schema 不写死，UI 限制） | Q10 |
 | **persona 来源** | 预置 3 个种子 + 用户自定义（CRUD 在 Phase 2） | Q7 |
-| **persona 知识 scope** | 模块（`all` / `notes` / `learning-notebook` / `oss-project`）+ 可选 tag 白名单（Any 语义） | Q11 |
+| **persona 知识 scope** | 模块（`all` / `notes` / `bookmarks`）+ 可选 tag 白名单（Any 语义）。learning-notebook / oss-project 推迟到 Phase 3（见 §13） | Q11 (2) |
 | **turn-taking** | 去中心化：每条消息后并发跑 cheap classifier，每个 persona 决策 should-speak + priority | Q5 |
 | **节奏** | 流式异步，输入框始终可用；用户发新消息 = abort 当前流 + 新一轮 | Q9 |
 | **终止** | 硬上限 N 条 兜底；全员 no 即自然结束；用户可随时手动 Stop | Q12 (1) |
@@ -46,6 +46,8 @@ Knosi 已经有相当完整的 PKM + AI 能力（Notes / Learning Notebooks / As
 | **MVP 分期** | Phase 1 (d1) 跑通 → Phase 2 (d2) 产品化 | Q13d |
 
 > (1) 终止决策原始 Q12 选项 c 是 "硬上限 + 连续 M 个 no 取较小"。spec 自审时发现：reclassify 之间上下文不变化的情况下，"连续 no" 与 "全员 no" 等价（重试 classifier 输入相同，输出大概率相同）。简化为"全员 no = 立即终止"，去掉 `consecutiveNoToStop` 字段，消除冗余参数。
+>
+> (2) Q11 原决策包含 `learning-notebook` / `oss-project` 两个 scope。plan 阶段读现有代码发现 Knosi 的 hybrid RAG 当前只索引 `note` / `bookmark` 两类（见 `src/server/db/schema/knowledge.ts`）。扩展索引器支持 learning-notes / project-notes 的工程量大且与 multi-agent 核心目标无关，**Phase 1 缩减 scope 到 `all` / `notes` / `bookmarks`**，配合 tag 过滤已能覆盖差异化需求。learning-notebook / oss-project scope 推迟到 Phase 3（伴随 RAG 索引扩展）。
 
 ---
 
@@ -53,9 +55,9 @@ Knosi 已经有相当完整的 PKM + AI 能力（Notes / Learning Notebooks / As
 
 | Name | scope | systemPrompt 关键点 |
 |---|---|---|
-| **AI 工程师** | `notes` + tags `[ai, rag, agent, llm, prompt]`；冷启动退化 `all` | 资深 AI 工程师。熟悉 RAG、agent 架构、prompt engineering、模型选型、推理优化。基于具体实验数据和论文讨论，必要时引用 source |
-| **后端架构师** | `notes` + tags `[backend, architecture, system-design, database]`；冷启动退化 `all` | 资深后端架构师。从可扩展性、数据一致性、运维成本角度切入。会指出隐含的扩展性陷阱 |
-| **产品经理** | `all` + tags `[product, ux, growth]`（可选）；冷启动 `all` | 资深 PM。从用户价值、使用场景、ROI 角度切入。"Don't be diplomatic. Push back when you think a feature isn't worth building." |
+| **AI 工程师** | `notes` + tags `[ai, rag, agent, llm, prompt]`；冷启动退化 `all` (无 tag 过滤) | 资深 AI 工程师。熟悉 RAG、agent 架构、prompt engineering、模型选型、推理优化。基于具体实验数据和论文讨论，必要时引用 source |
+| **后端架构师** | `notes` + tags `[backend, architecture, system-design, database]`；冷启动退化 `all` (无 tag 过滤) | 资深后端架构师。从可扩展性、数据一致性、运维成本角度切入。会指出隐含的扩展性陷阱 |
+| **产品经理** | `all` + tags `[product, ux, growth]`（可选）；冷启动 `all` (无 tag 过滤) | 资深 PM。从用户价值、使用场景、ROI 角度切入。"Don't be diplomatic. Push back when you think a feature isn't worth building." |
 
 **冷启动降级**：如果用户没有对应 tag 或 notebook，scope 退化为 `all`，避免新用户开 channel 后所有 agent 都"我没相关知识"。
 
@@ -138,8 +140,8 @@ export const personas = sqliteTable("council_personas", {
   styleHint: text("style_hint"),
 
   // RAG scope (Q11 d: 模块 + 可选 tag 白名单)
-  scopeKind: text("scope_kind").notNull(),  // 'all' | 'notes' | 'learning-notebook' | 'oss-project'
-  scopeRefId: text("scope_ref_id"),         // notebook/project id; null for all/notes
+  scopeKind: text("scope_kind").notNull(),  // Phase 1: 'all' | 'notes' | 'bookmarks'; Phase 3 加 'learning-notebook' | 'oss-project'
+  scopeRefId: text("scope_ref_id"),         // notebook/project id; Phase 1 始终 null
   scopeTags: text("scope_tags"),            // JSON string[]; empty = no filter
 
   isPreset: integer("is_preset", { mode: "boolean" }).default(false),
@@ -425,13 +427,15 @@ export async function searchKnowledgeForPersona({
 }
 
 function buildSourceFilter(p: Persona) {
+  // Phase 1 复用 AskAiSourceScope 现有的 'all' | 'notes' | 'bookmarks' 三个值
   switch (p.scopeKind) {
-    case "all":               return {};
-    case "notes":             return { sourceType: "note" };
-    case "learning-notebook": return { sourceType: "learning-note", notebookId: p.scopeRefId };
-    case "oss-project":       return { sourceType: "project-note", projectId: p.scopeRefId };
+    case "all":       return { scope: "all" as const };
+    case "notes":     return { scope: "notes" as const };
+    case "bookmarks": return { scope: "bookmarks" as const };
   }
 }
+// Phase 3 扩展：当 RAG 索引器开始索引 learning-notes / project-notes 时，
+// 加 'learning-notebook' / 'oss-project' 两个 scopeKind，并在此 switch 加分支
 ```
 
 ### 设计要点
@@ -654,6 +658,7 @@ E2E 数据隔离沿用现有 isolated DB（`docs/changelog/e2e-isolated-test-db.
 
 ### Phase 3+（不在本 spec 范围）
 
+- **RAG 索引器扩展支持 learning-notes / project-notes**（扩展 `knowledgeChunks.sourceType` enum + indexer + vector-store + agentic-rag），随后 `scopeKind` 加 `learning-notebook` / `oss-project`
 - Async daemon 模式（让讨论在后台跑完）
 - Checkpoint / 断线恢复
 - 多频道 cross-reference（一个频道引用另一个的讨论）
