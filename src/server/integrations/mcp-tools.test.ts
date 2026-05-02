@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { callKnosiMcpTool, type KnosiMcpDeps } from "./mcp-tools";
+import {
+  callKnosiMcpTool,
+  defaultDeps,
+  type KnosiMcpDeps,
+} from "./mcp-tools";
 
 // MCP `structuredContent` must be a JSON object (not array/null). Claude Code's
 // MCP client rejects array-shaped responses with
@@ -189,5 +193,137 @@ describe("callKnosiMcpTool structuredContent shape", () => {
     );
     expect(received).toEqual({ title: "", body: "" });
     expect(isPlainObject(result)).toBe(true);
+  });
+});
+
+describe("knosi_pref_* MCP tool dispatches", () => {
+  const userId = "user-pref";
+
+  it("dispatches knosi_pref_list with no scope", async () => {
+    const calls: unknown[] = [];
+    const deps = {
+      ...defaultDeps,
+      listPreferences: async (
+        input: { userId: string; scope?: string }
+      ) => {
+        calls.push(input);
+        return [
+          {
+            id: "p1",
+            scope: "global",
+            key: "k",
+            value: "v",
+            description: null,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ];
+      },
+    } as never;
+
+    const result = await callKnosiMcpTool(
+      { userId, name: "knosi_pref_list", arguments: {} },
+      deps
+    );
+
+    expect(calls).toEqual([{ userId }]);
+    expect(result).toEqual({
+      items: [
+        {
+          id: "p1",
+          scope: "global",
+          key: "k",
+          value: "v",
+          description: null,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
+  });
+
+  it("dispatches knosi_pref_list with scope filter", async () => {
+    const calls: unknown[] = [];
+    const deps = {
+      ...defaultDeps,
+      listPreferences: async (
+        input: { userId: string; scope?: string }
+      ) => {
+        calls.push(input);
+        return [];
+      },
+    } as never;
+
+    await callKnosiMcpTool(
+      {
+        userId,
+        name: "knosi_pref_list",
+        arguments: { scope: "project:knosi" },
+      },
+      deps
+    );
+
+    expect(calls).toEqual([{ userId, scope: "project:knosi" }]);
+  });
+
+  it("dispatches knosi_pref_set", async () => {
+    const calls: unknown[] = [];
+    const deps = {
+      ...defaultDeps,
+      setPreference: async (input: unknown) => {
+        calls.push(input);
+        return { id: "p2", created: true };
+      },
+    } as never;
+
+    const result = await callKnosiMcpTool(
+      {
+        userId,
+        name: "knosi_pref_set",
+        arguments: {
+          scope: "global",
+          key: "package_manager",
+          value: "pnpm",
+          description: "use pnpm",
+        },
+      },
+      deps
+    );
+
+    expect(calls).toEqual([
+      {
+        userId,
+        scope: "global",
+        key: "package_manager",
+        value: "pnpm",
+        description: "use pnpm",
+      },
+    ]);
+    expect(result).toEqual({ id: "p2", created: true });
+  });
+
+  it("dispatches knosi_pref_delete", async () => {
+    const calls: unknown[] = [];
+    const deps = {
+      ...defaultDeps,
+      deletePreference: async (input: unknown) => {
+        calls.push(input);
+        return { deleted: true };
+      },
+    } as never;
+
+    const result = await callKnosiMcpTool(
+      {
+        userId,
+        name: "knosi_pref_delete",
+        arguments: { scope: "global", key: "package_manager" },
+      },
+      deps
+    );
+
+    expect(calls).toEqual([
+      { userId, scope: "global", key: "package_manager" },
+    ]);
+    expect(result).toEqual({ deleted: true });
   });
 });
