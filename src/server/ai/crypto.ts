@@ -30,8 +30,17 @@ function loadMasterKey(): Buffer {
   return key;
 }
 
-// load-once at module init; missing-key validation is covered by boot smoke-test, not unit tests.
-const masterKey = loadMasterKey();
+// Lazy: validated on first encrypt/decrypt, not at module import.
+// Eager validation broke `pnpm build` ("Collecting page data" imports
+// every route module, including ones that touch crypto), and the prod
+// runtime catches a missing key on the first request anyway.
+let masterKey: Buffer | null = null;
+
+function getMasterKey(): Buffer {
+  if (masterKey) return masterKey;
+  masterKey = loadMasterKey();
+  return masterKey;
+}
 
 export class ApiKeyDecryptionError extends Error {
   constructor(cause?: unknown) {
@@ -47,7 +56,7 @@ export function encryptApiKey(plain: string): string {
     throw new Error("encryptApiKey: plaintext must be a non-empty string.");
   }
   const iv = randomBytes(IV_LEN);
-  const cipher = createCipheriv(ALGO, masterKey, iv);
+  const cipher = createCipheriv(ALGO, getMasterKey(), iv);
   const ct = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return Buffer.concat([iv, ct, tag]).toString("base64");
@@ -62,7 +71,7 @@ export function decryptApiKey(enc: string): string {
     const iv = buf.subarray(0, IV_LEN);
     const tag = buf.subarray(buf.length - 16);
     const ct = buf.subarray(IV_LEN, buf.length - 16);
-    const decipher = createDecipheriv(ALGO, masterKey, iv);
+    const decipher = createDecipheriv(ALGO, getMasterKey(), iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(ct), decipher.final()]).toString(
       "utf8",
