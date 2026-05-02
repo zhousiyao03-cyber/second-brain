@@ -166,9 +166,11 @@ users columns: id, name, email, email_verified, image, created_at
   legacy ai_chat_model: GONE ✓
 ```
 
-### 3. Deploy
+### 3. Deploy — DONE 2026-05-02
 
-`git push origin feat/model-provider-refactor` → open PR → squash-merge to main triggers `deploy-hetzner.yml`. Smoke-test on https://knosi.xyz/settings: add a real OpenAI key, set Chat role, send Ask AI message. Confirm `X-Knosi-Kind: openai-compatible` header in /api/chat response.
+PR #4 squash-merged to main as `d54a303` triggered `deploy-hetzner.yml`. **First attempt failed** because `crypto.ts` validated `KNOSI_SECRET_KEY` at module-import time, which broke Docker's `pnpm build` step ("Collecting page data" imports every route module). Fixed in `9d5a3c0` by switching to lazy initialization — the master key is loaded on the first `encrypt`/`decrypt` call instead of at import. Build doesn't encrypt anything, so no key needed during build; runtime still fails fast on the first AI request if it's missing. Second deploy attempt succeeded.
+
+Verified `https://www.knosi.xyz/login` → HTTP 200. User-facing smoke test (add provider, set chat role, send Ask AI message) is on the user once they sign in.
 
 ### 4. Post-deploy follow-ups
 
