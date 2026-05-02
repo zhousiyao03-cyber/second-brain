@@ -62,6 +62,7 @@ export default defineConfig({
         ENABLE_TOKEN_USAGE: "false",
         NEXT_PUBLIC_ENABLE_TOKEN_USAGE: "false",
         DRIFTER_E2E_MOCK: "1",
+        KNOSI_SECRET_KEY: "0".repeat(64),
       },
       url: "http://localhost:3100/",
       reuseExistingServer: false,
@@ -84,6 +85,7 @@ export default defineConfig({
         ENABLE_TOKEN_USAGE: "false",
         NEXT_PUBLIC_ENABLE_TOKEN_USAGE: "false",
         KNOSI_HOSTED_MODE: "true",
+        KNOSI_SECRET_KEY: "0".repeat(64),
         // Intentionally no KNOSI_BILLING_LAUNCH_DATE — the grandfather path
         // must stay dormant so the "expired trial" assertion holds.
       },
