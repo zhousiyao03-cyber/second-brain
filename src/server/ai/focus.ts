@@ -87,7 +87,7 @@ type SessionForSummary = {
 
 export async function classifyActivitySessions(
   sessions: SessionForClassification[],
-  opts?: { userId?: string | null },
+  opts: { userId: string },
 ) {
   if (sessions.length === 0) {
     return [];
@@ -112,7 +112,7 @@ ${sessionList}`,
         schema: sessionSummarySchema,
         signal: createFocusAiTimeoutSignal(),
       },
-      { userId: opts?.userId ?? null },
+      { userId: opts.userId },
     );
 
     return result.sessions.map((session) => ({
@@ -140,7 +140,7 @@ export async function generateDailySummary(
     appSwitches: number;
     date: string;
   },
-  opts?: { userId?: string | null },
+  opts: { userId: string },
 ) {
   if (input.sessions.length === 0) {
     return null;
@@ -184,7 +184,7 @@ ${timeline}`,
         schema: z.object({ summary: z.string() }),
         signal: createFocusAiTimeoutSignal(),
       },
-      { userId: opts?.userId ?? null },
+      { userId: opts.userId },
     );
 
     return (
@@ -234,7 +234,7 @@ const dailyInsightSchema = z.object({
 
 export async function generateDailyInsight(
   input: DailyInsightInput,
-  opts?: { userId?: string | null },
+  opts: { userId: string },
 ) {
   if (input.sessions.length === 0) {
     return { insights: [], aiGenerated: false };
@@ -283,7 +283,7 @@ Be specific with app names and times. Each insight should be 1-2 sentences. Don'
         schema: dailyInsightSchema,
         signal: createFocusAiTimeoutSignal(),
       },
-      { userId: opts?.userId ?? null },
+      { userId: opts.userId },
     );
     return { insights: result.insights, aiGenerated: true };
   } catch {

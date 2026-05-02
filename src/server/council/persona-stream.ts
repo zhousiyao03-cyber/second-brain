@@ -1,8 +1,8 @@
 import {
   streamPlainTextAiSdk,
-  type AiSdkMode,
+  MissingAiRoleError,
 } from "@/server/ai/provider";
-import { getProviderMode } from "@/server/ai/provider/mode";
+import { resolveAiCall } from "@/server/ai/provider/resolve";
 import type { Persona } from "./types";
 import {
   searchKnowledgeForPersona,
@@ -21,9 +21,9 @@ const RAG_CHUNK_PREVIEW = 400;
  * message as the query. Falls back to "answer from general knowledge" if
  * scope yields no hits.
  *
- * Provider routing: this path goes through the AI SDK directly. If the
- * user has set claude-code-daemon mode, council falls back to the AI SDK
- * default (per spec phase-1 limitation).
+ * Provider routing: council requires HTTP-backed streaming (openai-compatible
+ * or local). If the user's chat role is assigned to claude-code-daemon or
+ * transformers, we yield a fixed message asking them to reassign.
  */
 export async function* streamPersonaResponse({
   persona,
@@ -43,6 +43,24 @@ export async function* streamPersonaResponse({
     return;
   }
 
+  let provider;
+  try {
+    provider = await resolveAiCall("chat", userId);
+  } catch (e) {
+    if (e instanceof MissingAiRoleError) {
+      yield "[Council needs a Chat provider configured in Settings.]";
+      return;
+    }
+    throw e;
+  }
+  if (
+    provider.kind === "claude-code-daemon" ||
+    provider.kind === "transformers"
+  ) {
+    yield "[Council only supports OpenAI-compatible or Local providers. Reassign Chat in Settings.]";
+    return;
+  }
+
   const lastUser = [...history].reverse().find((e) => e.role === "user");
   const query = lastUser?.content ?? history.at(-1)?.content ?? "";
 
@@ -58,35 +76,18 @@ export async function* streamPersonaResponse({
     channelTopic,
   });
 
-  const mode = await resolveCouncilMode(userId);
-
-  const stream = await streamPlainTextAiSdk(
-    {
-      system,
-      messages: [{ role: "user", content: user }],
-      signal: abortSignal,
-      mode,
-    },
-    { userId },
-  );
+  const stream = await streamPlainTextAiSdk({
+    system,
+    messages: [{ role: "user", content: user }],
+    signal: abortSignal,
+    userId,
+    role: "chat",
+  });
 
   for await (const chunk of stream) {
     if (abortSignal.aborted) return;
     yield chunk;
   }
-}
-
-/**
- * Council Phase 1 only supports AI-SDK-backed providers (openai/local).
- * If the user has chosen codex or claude-code-daemon, we fall back to
- * "openai" if that env is configured, else "local".
- */
-async function resolveCouncilMode(userId: string): Promise<AiSdkMode> {
-  const mode = await getProviderMode({ userId });
-  if (mode === "openai" || mode === "local") return mode;
-  // Fallback selection
-  if (process.env.OPENAI_API_KEY?.trim()) return "openai";
-  return "local";
 }
 
 function buildPersonaPrompt({

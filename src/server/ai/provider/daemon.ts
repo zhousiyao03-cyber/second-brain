@@ -6,30 +6,29 @@ import { publishDaemonTaskNotification } from "@/server/ai/daemon-task-notificat
 import { buildStructuredJsonPrompt, extractJsonObject } from "./shared";
 import type { GenerateStructuredDataOptions } from "./types";
 
-export async function generateStructuredDataDaemon<TSchema extends z.ZodType>({
-  description,
-  name,
-  prompt,
-  schema,
-  signal,
-}: GenerateStructuredDataOptions<TSchema>): Promise<z.infer<TSchema>> {
+export async function generateStructuredDataDaemon<TSchema extends z.ZodType>(
+  options: GenerateStructuredDataOptions<TSchema> & {
+    modelId: string;
+    userId: string;
+  },
+): Promise<z.infer<TSchema>> {
+  const { description, name, prompt, schema, signal, modelId, userId } = options;
   const fullPrompt = buildStructuredJsonPrompt({ description, name, prompt, schema });
-  const model = process.env.CLAUDE_CODE_CHAT_MODEL?.trim() || "sonnet";
 
   const taskId = crypto.randomUUID();
   await db.insert(chatTasks).values({
     id: taskId,
-    userId: "system",
+    userId,
     status: "queued",
     taskType: "structured",
     sourceScope: "direct",
     messages: "[]",
     systemPrompt: fullPrompt,
-    model,
+    model: modelId,
   });
   await publishDaemonTaskNotification({
     kind: "wake",
-    userId: "system",
+    userId,
     taskType: "structured",
   });
 
@@ -39,7 +38,8 @@ export async function generateStructuredDataDaemon<TSchema extends z.ZodType>({
 
   while (Date.now() < deadline) {
     if (signal?.aborted) {
-      await db.update(chatTasks)
+      await db
+        .update(chatTasks)
         .set({ status: "cancelled" })
         .where(and(eq(chatTasks.id, taskId), eq(chatTasks.status, "queued")));
       throw new Error("Aborted");
@@ -67,7 +67,8 @@ export async function generateStructuredDataDaemon<TSchema extends z.ZodType>({
     await new Promise((r) => setTimeout(r, POLL_INTERVAL));
   }
 
-  await db.update(chatTasks)
+  await db
+    .update(chatTasks)
     .set({ status: "cancelled" })
     .where(and(eq(chatTasks.id, taskId), eq(chatTasks.status, "queued")));
   throw new Error(`Daemon structured task timed out: ${taskId}`);

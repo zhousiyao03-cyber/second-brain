@@ -21,12 +21,14 @@ interface EnqueueInput {
   userId: string;
   messages: ModelMessage[];
   sourceScope: AskAiSourceScope;
+  modelId: string;
 }
 
 export async function enqueueChatTask({
   userId,
   messages,
   sourceScope,
+  modelId,
 }: EnqueueInput): Promise<{ taskId: string }> {
   const timer = startAskTimer("enqueue");
 
@@ -93,7 +95,7 @@ export async function enqueueChatTask({
   }
   timer.mark("rag");
 
-  const systemPrompt = buildSystemPromptStable(sourceScope, {
+  const systemPrompt = await buildSystemPromptStable(sourceScope, userId, {
     preferStructuredBlocks: false,
   });
   const preamble = buildUserPreamble({
@@ -102,7 +104,6 @@ export async function enqueueChatTask({
     pinnedSources: [],
   });
   const augmentedMessages = injectPreambleIntoLatestUser(messages, preamble);
-  const model = process.env.CLAUDE_CODE_CHAT_MODEL?.trim() || "opus";
 
   const taskId = crypto.randomUUID();
   await db.insert(chatTasks).values({
@@ -113,7 +114,7 @@ export async function enqueueChatTask({
     sourceScope,
     messages: JSON.stringify(augmentedMessages),
     systemPrompt,
-    model,
+    model: modelId,
   });
   timer.mark("dbInsert");
 

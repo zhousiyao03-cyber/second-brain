@@ -291,18 +291,29 @@ AI_DAILY_LIMIT=50   # Per-user daily AI call cap; set to 0 for unlimited
 
 ## AI Provider Setup
 
-Knosi supports four AI provider modes. Set `AI_PROVIDER` in `.env.local`.
+AI providers are configured **per-user** in `/settings`, not via env vars. Sign in, click **+ Add provider**, and pick one of:
 
-### Option A — Claude Code Daemon (recommended for Claude subscribers)
+- **OpenAI-compatible API** — OpenAI, DeepSeek, Moonshot, SiliconFlow, Groq, or any custom OpenAI-compatible endpoint. Provide the base URL, API key, and a label.
+- **Local Model (Ollama / LM Studio)** — point to your local OpenAI-compatible server (`http://127.0.0.1:11434/v1` by default).
+- **Claude Code Daemon** — route Ask AI through your local Claude Pro/Max subscription via the Knosi CLI daemon. No API key required.
+- **Transformers.js** — in-process embedding-only kind for the RAG indexer when you don't want to call out at all.
 
-Route **all AI features** (Ask AI chat, focus analysis, learning outlines, portfolio summaries, and more) through your existing Claude Pro/Max subscription. No API key required.
+After adding providers, assign one to each AI Role (Chat / Task / Embedding) in the same Settings page. Each role can use a different provider and model — Chat → DeepSeek, Task → GPT-4o-mini, Embedding → OpenAI text-embedding-3-small is a typical setup.
+
+### Required deployment env
+
+The single AI-related env var on the deployment is the encryption master key for stored API keys:
 
 ```bash
-AI_PROVIDER=claude-code-daemon
-CLAUDE_CODE_CHAT_MODEL=sonnet   # opus | sonnet | haiku | full model id
+# .env.local — generate once and keep it in your secret store
+KNOSI_SECRET_KEY=$(openssl rand -hex 32)
 ```
 
-Then run the daemon on your local machine:
+Without `KNOSI_SECRET_KEY` the server refuses to start. Losing it requires every user to re-enter their API keys.
+
+### Claude Code Daemon
+
+To use the daemon kind, run on your local machine:
 
 ```bash
 npx @knosi/cli --url https://www.knosi.xyz
@@ -314,9 +325,7 @@ Or during local development:
 npm run daemon
 ```
 
-The daemon opens a lightweight notification stream for queued AI tasks, falls back to coarse claim checks if notifications are unavailable, executes tasks via your local Claude CLI, and streams results back. The server also keeps a very short in-process cache of validated daemon bearer tokens so repeated claim/progress/complete calls do not hammer the auth token table. All AI-powered features work through this single daemon process.
-
-**Requirements:** [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) installed and logged in (`claude login`).
+The daemon opens a notification stream for queued AI tasks, executes them via your local Claude CLI, and streams results back. **Requirements:** [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) installed and logged in (`claude login`).
 
 ### Claude Web Connector
 
@@ -351,51 +360,16 @@ cat payload.json | npx @knosi/cli save-ai-note --json
 
 The installed skill template is written to `~/.claude/skills/save-to-knosi/SKILL.md` and is intended for explicit user-triggered saves only.
 
-### Option B — OpenAI API
+### Pulling a local model
 
-```bash
-AI_PROVIDER=openai
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL=gpt-4o
-```
-
-### Option C — Local OpenAI-compatible runtime (Ollama, LM Studio, vLLM)
-
-```bash
-AI_PROVIDER=local
-AI_BASE_URL=http://127.0.0.1:11434/v1   # Ollama default
-AI_MODEL=qwen2.5:14b
-AI_API_KEY=local
-```
-
-Pull a model first:
+If you're using the Local kind with Ollama, pull a model first:
 
 ```bash
 ollama pull qwen2.5:14b
+ollama pull nomic-embed-text   # for embeddings
 ```
 
-### Option D — Codex / OpenClaw (legacy)
-
-```bash
-AI_PROVIDER=codex
-# No API key needed — reads ~/.openclaw auth state automatically
-```
-
-### Semantic Embeddings (optional)
-
-If no embedding provider is configured, Ask AI uses keyword recall only. To enable semantic search:
-
-```bash
-# Use OpenAI embeddings alongside any chat provider
-EMBEDDING_PROVIDER=openai
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-
-# Or use a local embedding model
-EMBEDDING_PROVIDER=local
-AI_BASE_URL=http://127.0.0.1:11434/v1
-AI_EMBEDDING_MODEL=nomic-embed-text
-```
+Then in /settings, add a Local provider pointing at `http://127.0.0.1:11434/v1` and select the model in the Chat / Embedding role rows.
 
 ---
 

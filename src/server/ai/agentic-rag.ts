@@ -327,7 +327,10 @@ export async function retrieveAgenticContext(
     score: number;
   }> = [];
 
-  const embeddedQuery = await embedTexts([query], "query").catch((error) => {
+  const embeddedQuery = await embedTexts([query], {
+    userId: options.userId,
+    kind: "query",
+  }).catch((error) => {
     console.warn(
       `[rag] query embedding failed — ${error instanceof Error ? error.message : String(error)}`
     );

@@ -1,9 +1,10 @@
 import {
   getAIErrorMessage,
   streamChatResponse,
+  MissingAiRoleError,
 } from "@/server/ai/provider";
-import { getProviderMode } from "@/server/ai/provider/mode";
-import { maxStepsByMode } from "@/server/ai/provider/types";
+import { resolveAiCall } from "@/server/ai/provider/resolve";
+import { maxStepsForKind } from "@/server/ai/provider/types";
 import {
   normalizeMessages,
   sanitizeMessages,
@@ -14,7 +15,6 @@ import { isAuthBypassEnabled } from "@/server/auth/request-session";
 import { checkAiRateLimit, recordAiUsage } from "@/server/ai-rate-limit";
 import { getEntitlements } from "@/server/billing/entitlements";
 import { enqueueChatTask } from "@/server/ai/chat-enqueue";
-import { shouldUseDaemonForChat } from "@/server/ai/daemon-mode";
 import { startAskTimer } from "@/server/ai/ask-timing";
 import {
   buildAskAiTools,
@@ -24,19 +24,12 @@ import { adaptTextStreamToUiMessageStream } from "@/server/ai/legacy-stream-adap
 
 export const maxDuration = 30;
 
-/**
- * Re-emit a streaming Response with `X-Knosi-Mode` / `X-Knosi-Model`
- * debug headers. Spec §6.2 — kept permanently, used by the per-user
- * provider E2E to assert routing actually changed when Settings was
- * updated. We pass `body` straight through so the SSE stream is not
- * buffered.
- */
 function withDebugHeaders(
   source: Response,
-  meta: { mode: string; modelId: string | null },
+  meta: { kind: string; modelId: string | null },
 ): Response {
   const headers = new Headers(source.headers);
-  headers.set("X-Knosi-Mode", meta.mode);
+  headers.set("X-Knosi-Kind", meta.kind);
   if (meta.modelId) {
     headers.set("X-Knosi-Model", meta.modelId);
   }
@@ -50,7 +43,6 @@ function withDebugHeaders(
 export async function POST(req: Request) {
   const timer = startAskTimer("/api/chat");
 
-  // Auth bypass for E2E testing — gated on NODE_ENV !== "production".
   let userId: string | null = null;
   if (!isAuthBypassEnabled()) {
     const session = await auth();
@@ -79,30 +71,35 @@ export async function POST(req: Request) {
   }
   timer.mark("parse");
 
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let provider;
   try {
-    // ─── Daemon branch ─────────────────────────────────────────────
-    if (shouldUseDaemonForChat()) {
-      if (!userId) {
-        // AUTH_BYPASS=true path: the queue requires a userId, so reject
-        // daemon mode entirely in E2E/bypass environments. Tests should
-        // run with AI_PROVIDER=codex instead.
-        return Response.json(
-          { error: "Daemon chat mode is not available in AUTH_BYPASS environments" },
-          { status: 400 }
-        );
-      }
+    provider = await resolveAiCall("chat", userId);
+  } catch (e) {
+    if (e instanceof MissingAiRoleError) {
+      return Response.json(
+        { error: e.message, code: "MISSING_AI_ROLE" },
+        { status: 412 },
+      );
+    }
+    throw e;
+  }
+  timer.mark("resolveProvider");
+
+  try {
+    if (provider.kind === "claude-code-daemon") {
       const messages = sanitizeMessages(
         await normalizeMessages(parsed.data.messages)
       );
       const sourceScope = parsed.data.sourceScope ?? "all";
-      // TODO(ask-ai M1/M2 follow-up): daemon mode currently ignores
-      // contextNoteText and pinnedSources. Inline editor Ask AI uses stream
-      // mode (sourceScope "direct"), so this is acceptable until the inline
-      // feature also needs to run against daemon mode.
       const { taskId } = await enqueueChatTask({
         userId,
         messages,
         sourceScope,
+        modelId: provider.modelId,
       });
       if (!isAuthBypassEnabled()) {
         void recordAiUsage(userId).catch(() => undefined);
@@ -111,21 +108,23 @@ export async function POST(req: Request) {
       timer.end({ mode: "daemon" });
       return Response.json({ taskId, mode: "daemon" });
     }
-    // ────────────────────────────────────────────────────────────────
+
+    if (provider.kind === "transformers") {
+      return Response.json(
+        { error: "Transformers kind cannot serve chat. Reassign chat role in Settings." },
+        { status: 412 }
+      );
+    }
 
     const { system, messages } = await buildChatContext(parsed.data, userId);
     timer.mark("buildContext");
 
-    const mode = await getProviderMode({ userId });
-    // Tool-calling only on the AI SDK path. Codex / hosted-pool / daemon
-    // continue running single-turn — we run them through the legacy
-    // adapter so the front-end transport stays uniform. Spec §5.3.
     const supportsTools =
-      (mode === "openai" || mode === "local") && Boolean(userId);
+      provider.kind === "openai-compatible" || provider.kind === "local";
 
     let tools: ReturnType<typeof buildAskAiTools> | undefined;
     let toolSystemPreamble = "";
-    if (supportsTools && userId) {
+    if (supportsTools) {
       const conversationId = parsed.data.id ?? crypto.randomUUID();
       const ctx = {
         userId,
@@ -145,40 +144,33 @@ export async function POST(req: Request) {
         `- fetchUrl(url): fetch and extract readable text from a public ` +
         `URL. Each conversation has a hard budget of 3 distinct URLs ` +
         `total — spend them only when necessary.\n` +
-        `Do not exceed ${maxStepsByMode(mode)} steps. Stop calling tools ` +
+        `Do not exceed ${maxStepsForKind(provider.kind)} steps. Stop calling tools ` +
         `as soon as you can answer.`;
     }
 
-    const { response: rawResponse, modelId } = await streamChatResponse(
+    const { response: rawResponse, modelId, kind } = await streamChatResponse(
       {
         messages,
         sessionId: parsed.data.id,
         signal: req.signal,
         system: system + toolSystemPreamble,
         tools,
-        maxSteps: tools ? maxStepsByMode(mode) : undefined,
+        maxSteps: tools ? maxStepsForKind(provider.kind) : undefined,
       },
-      { userId },
+      { userId, role: "chat" },
     );
     timer.mark("streamReady");
     timer.end({ mode: tools ? "stream-tools" : "stream" });
 
-    // Record usage (fire-and-forget, don't block the response)
-    if (!isAuthBypassEnabled() && userId) {
+    if (!isAuthBypassEnabled()) {
       void recordAiUsage(userId).catch(() => undefined);
     }
 
-    // The AI-SDK path (with or without tools) already returns a UI
-    // message stream Response via toUIMessageStreamResponse(); only the
-    // codex / hosted-pool / daemon legacy paths need the adapter.
     const finalResponse = supportsTools
       ? rawResponse
       : adaptTextStreamToUiMessageStream(rawResponse);
 
-    // Spec §6.2: surface routing decisions as response headers for E2E
-    // assertions and for human debugging in dev tools. Cheap to keep on
-    // permanently — header bytes are negligible vs the SSE body.
-    return withDebugHeaders(finalResponse, { mode, modelId });
+    return withDebugHeaders(finalResponse, { kind, modelId });
   } catch (error) {
     const isInvalidInput =
       error instanceof Error &&

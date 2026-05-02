@@ -7,7 +7,8 @@ import { hasTable } from "@/server/db/metadata";
 import { getOpsOwnerAccess } from "@/server/ops/authorization";
 import { userCredentials, users } from "@/server/db/schema";
 import { updateAccountPassword, updateAccountProfile } from "./actions";
-import { AiProviderSection } from "./ai-provider-section";
+import { ProvidersSection } from "./providers/providers-section";
+import { RolesSection } from "./providers/roles-section";
 import { AnalysisPromptsSection } from "./analysis-prompts-section";
 
 const profileErrorMessages: Record<string, string> = {
@@ -258,7 +259,9 @@ export default async function SettingsPage({
         )}
       </section>
 
-      <AiProviderSection />
+      <ProvidersSection />
+
+      <RolesSection />
 
       <AnalysisPromptsSection />
     </div>

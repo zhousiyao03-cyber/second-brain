@@ -1,14 +1,51 @@
 import type { ModelMessage, ToolSet } from "ai";
 import type { z } from "zod/v4";
 
-export type AIProviderMode =
+export type ProviderKind =
+  | "openai-compatible"
   | "local"
-  | "openai"
-  | "codex"
   | "claude-code-daemon"
-  | "cursor";
+  | "transformers";
 
-export type GenerationKind = "chat" | "task";
+export type AiRole = "chat" | "task" | "embedding";
+
+export type ResolvedProvider =
+  | {
+      kind: "openai-compatible";
+      providerId: string;
+      label: string;
+      baseURL: string;
+      apiKey: string;
+      modelId: string;
+    }
+  | {
+      kind: "local";
+      providerId: string;
+      label: string;
+      baseURL: string;
+      modelId: string;
+    }
+  | {
+      kind: "claude-code-daemon";
+      providerId: string;
+      label: string;
+      modelId: string;
+    }
+  | {
+      kind: "transformers";
+      providerId: string;
+      label: string;
+      modelId: string;
+    };
+
+export class MissingAiRoleError extends Error {
+  constructor(public readonly role: AiRole) {
+    super(
+      `No provider assigned to AI role "${role}". Configure one in Settings.`,
+    );
+    this.name = "MissingAiRoleError";
+  }
+}
 
 export type StreamChatOptions = {
   messages: ModelMessage[];
@@ -16,35 +53,16 @@ export type StreamChatOptions = {
   signal?: AbortSignal;
   system: string;
   /**
-   * Optional tool set that the model may call mid-stream. Honored only by
-   * providers that support multi-step tool calling (currently the Vercel AI
-   * SDK path: openai + local). Codex / claude-code-daemon ignore this field
-   * and continue running single-turn — see `provider/index.ts`.
+   * Tools are honored only by `openai-compatible` and `local` providers.
+   * `claude-code-daemon` and `transformers` ignore them (single-turn / N/A).
    */
   tools?: ToolSet;
   /**
-   * Maximum number of LLM steps in a single response. A "step" is one
-   * model call + any tool resolutions; the loop stops once the model
-   * stops emitting tool calls or this cap is hit. Honored alongside `tools`.
+   * Maximum number of LLM steps (model call + tool resolutions). Honored
+   * alongside `tools`. Defaulted by `maxStepsForKind()` below when omitted.
    */
   maxSteps?: number;
 };
-
-/**
- * Per-mode default for `maxSteps`. Spec §5.1.
- *
- * - openai / cursor: 6 — gpt-class models can plan over a few searches without
- *   looping; we want enough headroom for "compare X vs Y" patterns. Cursor
- *   proxies through cursor-to-openai → api2.cursor.sh hosting Claude/GPT
- *   class models, so the same headroom applies.
- * - local: 3 — qwen2.5 / smaller models tend to loop; cut early
- * - codex / claude-code-daemon: 1 — those run single-turn, no tool support
- */
-export function maxStepsByMode(mode: AIProviderMode): number {
-  if (mode === "openai" || mode === "cursor") return 6;
-  if (mode === "local") return 3;
-  return 1;
-}
 
 export type GenerateStructuredDataOptions<TSchema extends z.ZodType> = {
   description: string;
@@ -54,35 +72,16 @@ export type GenerateStructuredDataOptions<TSchema extends z.ZodType> = {
   signal?: AbortSignal;
 };
 
-export type CodexProfile = {
-  access: string;
-  accountId?: string;
-  expires: number;
-  provider?: string;
-  refresh: string;
-  type?: string;
-  [key: string]: unknown;
-};
-
-export type CodexAuthStore = {
-  order?: Record<string, string[]>;
-  profiles?: Record<string, CodexProfile>;
-  usageStats?: Record<string, unknown>;
-  version?: unknown;
-  [key: string]: unknown;
-};
-
-export type CodexSseEvent = {
-  delta?: string;
-  item?: {
-    content?: Array<{ text?: string; type?: string }>;
-    error?: { message?: string };
-    type?: string;
-  };
-  message?: string;
-  response?: {
-    error?: { message?: string };
-    status?: string;
-  };
-  type?: string;
-};
+/**
+ * Default tool-loop step cap by provider kind.
+ *
+ *   openai-compatible: 6 — gpt-class / Claude can plan a few searches
+ *   local:             3 — qwen2.5 / smaller models loop, cut early
+ *   claude-code-daemon: 1 — single-turn, no tool support
+ *   transformers:      1 — embedding only, no tool support
+ */
+export function maxStepsForKind(kind: ProviderKind): number {
+  if (kind === "openai-compatible") return 6;
+  if (kind === "local") return 3;
+  return 1;
+}
