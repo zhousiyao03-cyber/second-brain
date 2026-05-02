@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 export const OAUTH_SCOPES = {
   knowledgeRead: "knowledge:read",
   knowledgeWriteInbox: "knowledge:write_inbox",
+  preferencesRead: "preferences:read",
+  preferencesWrite: "preferences:write",
 } as const;
 
 export type OAuthScope = (typeof OAUTH_SCOPES)[keyof typeof OAUTH_SCOPES];
@@ -60,6 +62,8 @@ const STATIC_OAUTH_CLIENTS: Record<string, OAuthClient> = {
     allowedScopes: [
       OAUTH_SCOPES.knowledgeRead,
       OAUTH_SCOPES.knowledgeWriteInbox,
+      OAUTH_SCOPES.preferencesRead,
+      OAUTH_SCOPES.preferencesWrite,
     ],
   },
   "knosi-cli": {
@@ -72,6 +76,8 @@ const STATIC_OAUTH_CLIENTS: Record<string, OAuthClient> = {
     allowedScopes: [
       OAUTH_SCOPES.knowledgeRead,
       OAUTH_SCOPES.knowledgeWriteInbox,
+      OAUTH_SCOPES.preferencesRead,
+      OAUTH_SCOPES.preferencesWrite,
     ],
   },
 };

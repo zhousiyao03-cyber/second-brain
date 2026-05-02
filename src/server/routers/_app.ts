@@ -13,6 +13,7 @@ import { billingRouter } from "./billing";
 import { learningNotebookRouter } from "./learning-notebook";
 import { councilRouter } from "./council";
 import { aiSettingsRouter } from "./ai-settings";
+import { preferencesRouter } from "./preferences";
 
 export const appRouter = router({
   notes: notesRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   learningNotebook: learningNotebookRouter,
   council: councilRouter,
   aiSettings: aiSettingsRouter,
+  preferences: preferencesRouter,
 });
 
 export type AppRouter = typeof appRouter;

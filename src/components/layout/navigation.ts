@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Leaf,
   MessageCircle,
+  Settings2,
   Timer,
   TrendingUp,
   Users,
@@ -50,6 +51,7 @@ export const navigationGroups: NavGroup[] = [
     label: "INSIGHTS",
     items: [
       { href: "/usage", label: "Usage", icon: Activity },
+      { href: "/preferences", label: "Preferences", icon: Settings2 },
     ],
   },
   {

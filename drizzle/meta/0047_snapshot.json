@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "2c5cd1b9-dcd8-4448-aa79-b893be515848",
-  "prevId": "937a44e8-453f-4197-b1aa-6fd1345086c0",
+  "id": "404f83e0-0148-4481-a59f-a4273c21dca8",
+  "prevId": "2c5cd1b9-dcd8-4448-aa79-b893be515848",
   "tables": {
     "accounts": {
       "name": "accounts",
@@ -212,20 +212,6 @@
         },
         "image": {
           "name": "image",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "ai_provider_preference": {
-          "name": "ai_provider_preference",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "ai_chat_model": {
-          "name": "ai_chat_model",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

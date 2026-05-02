@@ -5,17 +5,11 @@ import { getRequestSession } from "@/server/auth/request-session";
 import { db } from "@/server/db";
 import { hasTable } from "@/server/db/metadata";
 import { getOpsOwnerAccess } from "@/server/ops/authorization";
-import {
-  oauthAccessTokens,
-  oauthRefreshTokens,
-  userCredentials,
-  users,
-} from "@/server/db/schema";
+import { userCredentials, users } from "@/server/db/schema";
 import { updateAccountPassword, updateAccountProfile } from "./actions";
 import { ProvidersSection } from "./providers/providers-section";
 import { RolesSection } from "./providers/roles-section";
 import { AnalysisPromptsSection } from "./analysis-prompts-section";
-import { ConnectedAiClientsSection } from "./connected-ai-clients-section";
 
 const profileErrorMessages: Record<string, string> = {
   invalid: "Check your name and email, then try again.",
@@ -36,11 +30,6 @@ const passwordErrorMessages: Record<string, string> = {
 
 const passwordStatusMessages: Record<string, string> = {
   updated: "Password updated.",
-};
-
-const aiClientStatusMessages: Record<string, string> = {
-  revoked: "AI client access revoked.",
-  invalid: "Could not revoke that AI client credential.",
 };
 
 export default async function SettingsPage({
@@ -96,38 +85,7 @@ export default async function SettingsPage({
     passwordStatusMessages[getParam("passwordStatus") ?? ""] ??
     passwordErrorMessages[getParam("passwordError") ?? ""] ??
     null;
-  const aiClientsMessage =
-    aiClientStatusMessages[getParam("aiClientsStatus") ?? ""] ?? null;
   const hasPassword = credentialsTableAvailable && Boolean(userRecord.passwordHash);
-  const aiClientTablesAvailable =
-    (await hasTable("oauth_access_tokens")) &&
-    (await hasTable("oauth_refresh_tokens"));
-  const [accessTokenRows, refreshTokenRows] = aiClientTablesAvailable
-    ? await Promise.all([
-        db
-          .select({
-            id: oauthAccessTokens.id,
-            clientId: oauthAccessTokens.clientId,
-            tokenPreview: oauthAccessTokens.tokenPreview,
-            scopes: oauthAccessTokens.scopes,
-            createdAt: oauthAccessTokens.createdAt,
-            revokedAt: oauthAccessTokens.revokedAt,
-          })
-          .from(oauthAccessTokens)
-          .where(eq(oauthAccessTokens.userId, session.user.id)),
-        db
-          .select({
-            id: oauthRefreshTokens.id,
-            clientId: oauthRefreshTokens.clientId,
-            tokenPreview: oauthRefreshTokens.tokenPreview,
-            scopes: oauthRefreshTokens.scopes,
-            createdAt: oauthRefreshTokens.createdAt,
-            revokedAt: oauthRefreshTokens.revokedAt,
-          })
-          .from(oauthRefreshTokens)
-          .where(eq(oauthRefreshTokens.userId, session.user.id)),
-      ])
-    : [[], []];
   const passwordDescription = !credentialsTableAvailable
     ? "Local password management is not enabled here, but you can still update your account details."
     : hasPassword
@@ -304,24 +262,6 @@ export default async function SettingsPage({
       <ProvidersSection />
 
       <RolesSection />
-
-      <ConnectedAiClientsSection
-        schemaAvailable={aiClientTablesAvailable}
-        statusMessage={aiClientsMessage}
-        connections={[
-          ...refreshTokenRows.map((row) => ({
-            ...row,
-            tokenType: "refresh" as const,
-          })),
-          ...accessTokenRows.map((row) => ({
-            ...row,
-            tokenType: "access" as const,
-          })),
-        ].sort(
-          (left, right) =>
-            (right.createdAt?.getTime() ?? 0) - (left.createdAt?.getTime() ?? 0)
-        )}
-      />
 
       <AnalysisPromptsSection />
     </div>

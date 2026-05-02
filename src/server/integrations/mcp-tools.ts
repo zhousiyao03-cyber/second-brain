@@ -5,6 +5,11 @@ import {
   searchKnowledge,
 } from "./knowledge-read";
 import { createLearningCard } from "./learning-card";
+import {
+  listPreferences,
+  setPreference,
+  deletePreference,
+} from "./preferences-store";
 
 export const KNOSI_MCP_TOOLS = [
   {
@@ -138,6 +143,63 @@ export const KNOSI_MCP_TOOLS = [
       required: ["topicName", "title", "body"],
     },
   },
+  {
+    name: "knosi_pref_list",
+    description:
+      "List the user's cross-agent preferences from Knosi. Call once at session start. " +
+      "Pass `scope` to filter ('global' or 'project:<slug>'); omit to fetch all.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          description:
+            "Optional scope filter. 'global' for global preferences or 'project:<slug>' for a specific project.",
+        },
+      },
+    },
+  },
+  {
+    name: "knosi_pref_set",
+    description:
+      "Create or update a cross-agent preference. Upserts on (scope, key). " +
+      "Use when the user instructs a persistent constraint (e.g. 'always use pnpm').",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          description: "'global' or 'project:<slug>'",
+        },
+        key: {
+          type: "string",
+          description: "snake_case identifier, e.g. 'package_manager'",
+        },
+        value: {
+          type: "string",
+          description: "Free-form constraint text, multi-line allowed.",
+        },
+        description: {
+          type: "string",
+          description: "Optional human-readable note for the UI.",
+        },
+      },
+      required: ["scope", "key", "value"],
+    },
+  },
+  {
+    name: "knosi_pref_delete",
+    description:
+      "Delete a cross-agent preference by (scope, key). Use when the user revokes a constraint.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: { type: "string" },
+        key: { type: "string" },
+      },
+      required: ["scope", "key"],
+    },
+  },
 ] as const;
 
 export interface KnosiMcpDeps {
@@ -147,15 +209,21 @@ export interface KnosiMcpDeps {
   captureAiNote: typeof captureAiNote;
   captureMarkdownNote: typeof captureMarkdownNote;
   createLearningCard: typeof createLearningCard;
+  listPreferences: typeof listPreferences;
+  setPreference: typeof setPreference;
+  deletePreference: typeof deletePreference;
 }
 
-const defaultDeps: KnosiMcpDeps = {
+export const defaultDeps: KnosiMcpDeps = {
   searchKnowledge,
   listRecentKnowledge,
   getKnowledgeItem,
   captureAiNote,
   captureMarkdownNote,
   createLearningCard,
+  listPreferences,
+  setPreference,
+  deletePreference,
 };
 
 export async function callKnosiMcpTool(
@@ -256,6 +324,38 @@ export async function callKnosiMcpTool(
             )
           : undefined,
       });
+    case "knosi_pref_list": {
+      const scope =
+        typeof input.arguments.scope === "string"
+          ? input.arguments.scope
+          : undefined;
+      const items = await deps.listPreferences({
+        userId: input.userId,
+        ...(scope !== undefined ? { scope } : {}),
+      });
+      return { items };
+    }
+    case "knosi_pref_set": {
+      const result = await deps.setPreference({
+        userId: input.userId,
+        scope: String(input.arguments.scope ?? ""),
+        key: String(input.arguments.key ?? ""),
+        value: String(input.arguments.value ?? ""),
+        description:
+          typeof input.arguments.description === "string"
+            ? input.arguments.description
+            : undefined,
+      });
+      return { id: result.id, created: result.created };
+    }
+    case "knosi_pref_delete": {
+      const result = await deps.deletePreference({
+        userId: input.userId,
+        scope: String(input.arguments.scope ?? ""),
+        key: String(input.arguments.key ?? ""),
+      });
+      return { deleted: result.deleted };
+    }
     default:
       throw new Error(`Unsupported MCP tool: ${input.name}`);
   }

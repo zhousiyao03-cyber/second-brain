@@ -14,6 +14,7 @@
  *   portfolio  — portfolio holdings, AI-generated news summaries
  *   projects   — open-source project analysis (projects, prompts, tasks, messages)
  *   ops        — daemon/job heartbeats, CLI tokens
+ *   preferences — cross-agent preferences (Agent Context Layer Phase 1)
  *
  * Drizzle-kit picks up every `schema/*.ts` via the config glob, so migrations
  * see the complete set the same way the old single-file schema did.
@@ -40,3 +41,4 @@ export * from "./billing";
 export * from "./council";
 export * from "./drifter";
 export * from "./ai-providers";
+export * from "./preferences";
