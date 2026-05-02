@@ -6,10 +6,9 @@ import { extractWikiLinks } from "../notes/link-extractor";
 import { z } from "zod/v4";
 import crypto from "crypto";
 import {
+  enqueueNoteIndexJob,
   removeKnowledgeSourceIndex,
-  runIndexJobFor,
 } from "../ai/indexer";
-import { after } from "next/server";
 import { assertQuota } from "../billing/quota";
 import {
   createJournalTemplate,
@@ -181,7 +180,7 @@ export const notesRouter = router({
 
     await db.insert(notes).values({ id, userId: ctx.userId, ...journalInput });
 
-    after(runIndexJobFor("note", id, "note-create"));
+    await enqueueNoteIndexJob(id, "note-create");
 
     invalidateDashboardForUser(ctx.userId);
     invalidateNotesListForUser(ctx.userId);
@@ -208,7 +207,7 @@ export const notesRouter = router({
 
       const id = crypto.randomUUID();
       await db.insert(notes).values({ id, userId: ctx.userId, ...input });
-      after(runIndexJobFor("note", id, "note-create"));
+      await enqueueNoteIndexJob(id, "note-create");
       void syncNoteLinks(id, input.content ?? null).catch(() => undefined);
       invalidateDashboardForUser(ctx.userId);
       invalidateNotesListForUser(ctx.userId);
@@ -239,7 +238,7 @@ export const notesRouter = router({
         })
         .where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
 
-      after(runIndexJobFor("note", id, "note-update"));
+      await enqueueNoteIndexJob(id, "note-update");
 
       if (input.content !== undefined) {
         const [updatedNote] = await db.select().from(notes).where(and(eq(notes.id, id), eq(notes.userId, ctx.userId)));
@@ -415,7 +414,7 @@ export const notesRouter = router({
           and(eq(notes.id, input.noteId), eq(notes.userId, ctx.userId))
         );
 
-      after(runIndexJobFor("note", input.noteId, "note-append"));
+      await enqueueNoteIndexJob(input.noteId, "note-append");
 
       return { ok: true, blocksAppended: input.blocks.length };
     }),
