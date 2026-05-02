@@ -20,13 +20,7 @@ function loadMasterKey(): Buffer {
   if (/^[0-9a-fA-F]{64}$/.test(raw)) {
     key = Buffer.from(raw, "hex");
   } else {
-    try {
-      key = Buffer.from(raw, "base64");
-    } catch {
-      throw new Error(
-        "KNOSI_SECRET_KEY must be 32 random bytes encoded as hex (64 chars) or base64.",
-      );
-    }
+    key = Buffer.from(raw, "base64");
   }
   if (key.length !== KEY_LEN) {
     throw new Error(
@@ -36,6 +30,7 @@ function loadMasterKey(): Buffer {
   return key;
 }
 
+// load-once at module init; missing-key validation is covered by boot smoke-test, not unit tests.
 const masterKey = loadMasterKey();
 
 export class ApiKeyDecryptionError extends Error {
