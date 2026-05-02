@@ -12,7 +12,8 @@ import {
   users,
 } from "@/server/db/schema";
 import { updateAccountPassword, updateAccountProfile } from "./actions";
-import { AiProviderSection } from "./ai-provider-section";
+import { ProvidersSection } from "./providers/providers-section";
+import { RolesSection } from "./providers/roles-section";
 import { AnalysisPromptsSection } from "./analysis-prompts-section";
 import { ConnectedAiClientsSection } from "./connected-ai-clients-section";
 
@@ -300,7 +301,9 @@ export default async function SettingsPage({
         )}
       </section>
 
-      <AiProviderSection />
+      <ProvidersSection />
+
+      <RolesSection />
 
       <ConnectedAiClientsSection
         schemaAvailable={aiClientTablesAvailable}
