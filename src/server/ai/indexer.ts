@@ -112,7 +112,8 @@ async function deleteChunkRows(sourceType: KnowledgeSourceType, sourceId: string
  * Throws on embed-API failure so the caller's retry logic kicks in.
  */
 async function fillMissingEmbeddingsForExistingChunks(
-  existing: ExistingChunkRow[]
+  existing: ExistingChunkRow[],
+  userId: string,
 ) {
   if (existing.length === 0) return;
 
@@ -126,7 +127,9 @@ async function fillMissingEmbeddingsForExistingChunks(
   );
   if (missing.length === 0) return;
 
-  const embedded = await embedTexts(missing.map((chunk) => chunk.text));
+  const embedded = await embedTexts(missing.map((chunk) => chunk.text), {
+    userId,
+  });
   if (!embedded) return; // provider mode === "none" — intentionally skip
 
   await vectorStore.upsertChunkVectors(
@@ -218,7 +221,7 @@ async function syncSourceIndex({
       // entirely. Now any pass — including the queue's automatic retry —
       // converges on full coverage. embedTexts throws on transient failures,
       // which propagates to the job's catch and triggers another retry.
-      await fillMissingEmbeddingsForExistingChunks(existing);
+      await fillMissingEmbeddingsForExistingChunks(existing, userId);
 
       if (jobId) await finishIndexJob(jobId, "done");
       return;
@@ -246,7 +249,9 @@ async function syncSourceIndex({
     // Let exceptions propagate so the job is marked failed and the queue's
     // retry kicks in. embedTexts returns null only when no provider is
     // configured — that's intentional, not a failure.
-    const embedded = await embedTexts(nextChunks.map((chunk) => chunk.text));
+    const embedded = await embedTexts(nextChunks.map((chunk) => chunk.text), {
+      userId,
+    });
 
     if (embedded) {
       // Milvus 是 embedding 唯一存储；失败让外层 catch 把 job 标 failed，
