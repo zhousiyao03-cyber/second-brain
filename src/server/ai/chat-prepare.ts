@@ -198,7 +198,7 @@ export async function buildChatContext(
   );
   timer.mark("pinned");
 
-  const system = buildSystemPromptStable(sourceScope, {
+  const system = await buildSystemPromptStable(sourceScope, userId, {
     preferStructuredBlocks: input.preferStructuredBlocks,
   });
   const preamble = buildUserPreamble({

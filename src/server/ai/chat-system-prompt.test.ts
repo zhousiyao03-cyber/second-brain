@@ -5,29 +5,39 @@ import {
 } from "./chat-system-prompt";
 
 describe("buildSystemPromptStable", () => {
-  it("does not contain RAG / current_note / pinned_sources blocks", () => {
-    const out = buildSystemPromptStable("all", { preferStructuredBlocks: false });
+  it("does not contain RAG / current_note / pinned_sources blocks", async () => {
+    const out = await buildSystemPromptStable("all", null, {
+      preferStructuredBlocks: false,
+    });
     expect(out).not.toMatch(/<knowledge_base>/);
     expect(out).not.toMatch(/<current_note>/);
     expect(out).not.toMatch(/<pinned_sources>/);
   });
 
-  it("varies output by sourceScope", () => {
-    const all = buildSystemPromptStable("all", {});
-    const direct = buildSystemPromptStable("direct", {});
+  it("varies output by sourceScope", async () => {
+    const all = await buildSystemPromptStable("all", null, {});
+    const direct = await buildSystemPromptStable("direct", null, {});
     expect(all).not.toBe(direct);
   });
 
-  it("includes structured-blocks instructions when preferStructuredBlocks is true", () => {
-    const on = buildSystemPromptStable("all", { preferStructuredBlocks: true });
-    const off = buildSystemPromptStable("all", { preferStructuredBlocks: false });
+  it("includes structured-blocks instructions when preferStructuredBlocks is true", async () => {
+    const on = await buildSystemPromptStable("all", null, {
+      preferStructuredBlocks: true,
+    });
+    const off = await buildSystemPromptStable("all", null, {
+      preferStructuredBlocks: false,
+    });
     expect(on).toContain("<ai_blocks>");
     expect(off).not.toContain("<ai_blocks>");
   });
 
-  it("returns the same output for the same inputs (stable contract)", () => {
-    const a = buildSystemPromptStable("notes", { preferStructuredBlocks: true });
-    const b = buildSystemPromptStable("notes", { preferStructuredBlocks: true });
+  it("returns the same output for the same inputs (stable contract)", async () => {
+    const a = await buildSystemPromptStable("notes", null, {
+      preferStructuredBlocks: true,
+    });
+    const b = await buildSystemPromptStable("notes", null, {
+      preferStructuredBlocks: true,
+    });
     expect(a).toBe(b);
   });
 });

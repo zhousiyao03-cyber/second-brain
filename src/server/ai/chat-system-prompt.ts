@@ -202,11 +202,14 @@ export interface StableSystemPromptOptions {
   preferStructuredBlocks?: boolean;
 }
 
-export function buildSystemPromptStable(
+export async function buildSystemPromptStable(
   sourceScope: AskAiSourceScope,
+  userId: string | null,
   options?: StableSystemPromptOptions
-): string {
-  const identityLine = getChatAssistantIdentity();
+): Promise<string> {
+  const identityLine = userId
+    ? await getChatAssistantIdentity(userId)
+    : "你是 Second Brain 的 AI 助手。";
 
   const baseRules = sourceScope === "direct"
     ? `${identityLine} 当前请求选择了直接回答模式，不要引用知识库，直接用中文回答用户的问题，简洁准确。`
@@ -307,12 +310,15 @@ ${block}
   return parts.join("\n\n---\n\n") + "\n\n---\n\n";
 }
 
-export function buildSystemPrompt(
+export async function buildSystemPrompt(
   context: RetrievedKnowledgeItem[],
   sourceScope: AskAiSourceScope,
+  userId: string | null,
   options?: BuildSystemPromptOptions
-): string {
-  const identityLine = getChatAssistantIdentity();
+): Promise<string> {
+  const identityLine = userId
+    ? await getChatAssistantIdentity(userId)
+    : "你是 Second Brain 的 AI 助手。";
 
   if (context.length === 0) {
     if (sourceScope === "direct") {

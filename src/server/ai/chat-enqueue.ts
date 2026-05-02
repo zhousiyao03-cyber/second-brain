@@ -93,7 +93,7 @@ export async function enqueueChatTask({
   }
   timer.mark("rag");
 
-  const systemPrompt = buildSystemPromptStable(sourceScope, {
+  const systemPrompt = await buildSystemPromptStable(sourceScope, userId, {
     preferStructuredBlocks: false,
   });
   const preamble = buildUserPreamble({
