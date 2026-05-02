@@ -159,10 +159,21 @@ export async function POST(request: NextRequest) {
       ? (body.params.arguments as Record<string, unknown>)
       : {};
 
-  const requiredScopes =
-    toolName === "save_to_knosi"
-      ? [OAUTH_SCOPES.knowledgeWriteInbox]
-      : [OAUTH_SCOPES.knowledgeRead];
+  const requiredScopes = (() => {
+    switch (toolName) {
+      case "save_to_knosi":
+      case "create_note":
+      case "create_learning_card":
+        return [OAUTH_SCOPES.knowledgeWriteInbox];
+      case "knosi_pref_list":
+        return [OAUTH_SCOPES.preferencesRead];
+      case "knosi_pref_set":
+      case "knosi_pref_delete":
+        return [OAUTH_SCOPES.preferencesWrite];
+      default:
+        return [OAUTH_SCOPES.knowledgeRead];
+    }
+  })();
 
   try {
     const auth = await validateBearerAccessToken({
