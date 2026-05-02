@@ -35,6 +35,7 @@ import { trpc } from "@/lib/trpc";
 import { cn, truncateText } from "@/lib/utils";
 import { useDaemonChat } from "@/components/ask/use-daemon-chat";
 import { DaemonBanner } from "@/components/ask/daemon-banner";
+import { MissingChatRoleBanner } from "@/components/ask/missing-role-banner";
 import { AskPageLocal } from "@/components/ask/ask-page-local";
 
 const QUICK_PROMPTS: Array<{
@@ -827,6 +828,7 @@ function AskPageDaemon() {
         >
           {messages.length === 0 ? (
             <section className="flex flex-col items-center pb-6 pt-[12vh] text-center">
+              <MissingChatRoleBanner />
               <DaemonBanner />
 
               <div className="flex h-10 w-10 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-600 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300">
@@ -839,6 +841,7 @@ function AskPageDaemon() {
             </section>
           ) : (
             <section className="flex w-full flex-col gap-5 pb-10 pt-6">
+              <MissingChatRoleBanner />
               <DaemonBanner />
 
               {messages.map((message) => {
