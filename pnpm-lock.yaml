@@ -200,6 +200,9 @@ importers:
       next-auth:
         specifier: 5.0.0-beta.30
         version: 5.0.0-beta.30(next@16.2.1(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
+      phaser:
+        specifier: ^4.1.0
+        version: 4.1.0
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -5796,6 +5799,9 @@ packages:
 
   perfect-freehand@1.2.0:
     resolution: {integrity: sha512-h/0ikF1M3phW7CwpZ5MMvKnfpHficWoOEyr//KVNTxV4F6deRK1eYMtHyBKEAKFK0aXIEUK9oBvlF6PNXMDsAw==}
+
+  phaser@4.1.0:
+    resolution: {integrity: sha512-ZXv5Bhyg2BqJGAAxNI2xvmzGXW9q+TwUG1RLri5ZDBYGGtcma6aWUO/eJ7EbozeqRd5fKdpo4ycNMQt+Bi5iYg==}
 
   pica@7.1.1:
     resolution: {integrity: sha512-WY73tMvNzXWEld2LicT9Y260L43isrZ85tPuqRyvtkljSDLmnNFQmZICt4xUJMVulmcc6L9O7jbBrtx3DOz/YQ==}
@@ -13531,6 +13537,10 @@ snapshots:
   pathe@2.0.3: {}
 
   perfect-freehand@1.2.0: {}
+
+  phaser@4.1.0:
+    dependencies:
+      eventemitter3: 5.0.4
 
   pica@7.1.1:
     dependencies:

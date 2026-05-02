@@ -61,6 +61,7 @@ export default defineConfig({
         OPS_OWNER_EMAIL: "e2e@test.local",
         ENABLE_TOKEN_USAGE: "false",
         NEXT_PUBLIC_ENABLE_TOKEN_USAGE: "false",
+        DRIFTER_E2E_MOCK: "1",
       },
       url: "http://localhost:3100/",
       reuseExistingServer: false,

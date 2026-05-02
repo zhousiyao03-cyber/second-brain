@@ -4,6 +4,7 @@ import {
   FolderGit2,
   GraduationCap,
   LayoutDashboard,
+  Leaf,
   MessageCircle,
   Timer,
   TrendingUp,
@@ -49,6 +50,12 @@ export const navigationGroups: NavGroup[] = [
     label: "INSIGHTS",
     items: [
       { href: "/usage", label: "Usage", icon: Activity },
+    ],
+  },
+  {
+    label: "REST",
+    items: [
+      { href: "/drifter", label: "Drifter", icon: Leaf },
     ],
   },
 ];
