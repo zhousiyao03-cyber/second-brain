@@ -17,7 +17,6 @@ import {
 const USER = "resolve-test-user";
 
 beforeAll(async () => {
-  process.env.KNOSI_SECRET_KEY = "0".repeat(64);
   await migrate(db, {
     migrationsFolder: path.resolve(process.cwd(), "drizzle"),
   });
@@ -100,6 +99,28 @@ describe("resolveAiCall", () => {
     expect(r.kind).toBe("claude-code-daemon");
     if (r.kind !== "claude-code-daemon") throw new Error("type narrow");
     expect(r.modelId).toBe("opus");
+  });
+
+  it("resolves a transformers provider for embedding role", async () => {
+    const id = crypto.randomUUID();
+    await db.insert(aiProviders).values({
+      id,
+      userId: USER,
+      kind: "transformers",
+      label: "Local Embedding",
+    });
+    await db.insert(aiRoleAssignments).values({
+      userId: USER,
+      role: "embedding",
+      providerId: id,
+      modelId: "Xenova/multilingual-e5-small",
+    });
+
+    const r = await resolveAiCall("embedding", USER);
+    expect(r.kind).toBe("transformers");
+    if (r.kind !== "transformers") throw new Error("type narrow");
+    expect(r.modelId).toBe("Xenova/multilingual-e5-small");
+    expect(r.label).toBe("Local Embedding");
   });
 
   it("rejects daemon provider for embedding role even if assigned", async () => {

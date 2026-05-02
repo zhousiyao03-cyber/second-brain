@@ -15,6 +15,7 @@ export default defineConfig({
     // touching the local dev DB. Must be set before `@/server/db` loads.
     env: {
       TURSO_DATABASE_URL: "file::memory:?cache=shared",
+      KNOSI_SECRET_KEY: "0".repeat(64),
     },
   },
 });
