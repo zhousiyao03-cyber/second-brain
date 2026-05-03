@@ -39,6 +39,28 @@ pnpm test:e2e
 - CRUD 功能必须测试：创建 → 列表展示 → 编辑 → 删除 完整流程
 - 测试必须全部通过后才能认为 Phase 完成
 
+### 3.1 AI / RAG 改动必须跑 eval
+
+**触发条件**：修改了以下任一文件：
+- `src/server/ai/agentic-rag.ts`、`chat-prepare.ts`、`chat-system-prompt.ts`、`reranker.ts`、`embeddings.ts`
+- `src/server/ai/provider/*.ts`、`src/server/ai/tools/*.ts`
+- `eval/ground-truth.json` 或 `eval/agent-cases.json`
+
+**流程**：
+```bash
+pnpm eval:prepare                                              # 准备 env（首次/key 轮换后）
+pnpm eval:rag --user <id> --top-k 16 --out eval/results/run-<label>.json
+pnpm eval:agent --user <id> --out eval/results/agent/run-<label>.json
+pnpm eval:compare eval/results/baseline.json eval/results/run-<label>.json
+pnpm eval:compare eval/results/agent/baseline.json eval/results/agent/run-<label>.json
+```
+
+把 compare 输出粘到 commit message 或 PR description。
+
+不要因为"改动很小"就跳过 —— ranking 类小改动正是会让多个 case 各 ±0.1 抵消的，aggregate 看不出来，per-case Δ 才看得出来。
+
+完整文档见 `docs/eval/README.md`。
+
 ### 4. 数据库变更规范
 
 - schema 修改后必须运行 `pnpm db:generate` 生成迁移

@@ -17,7 +17,11 @@
     "daemon": "node packages/cli/src/index.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "eval:prepare": "node scripts/eval-prepare-env.mjs",
+    "eval:rag": "tsx --env-file=eval/.eval-env scripts/eval-rag.mjs",
+    "eval:agent": "tsx --env-file=eval/.eval-env scripts/eval-agent.mjs",
+    "eval:compare": "node scripts/eval-compare.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.62",

@@ -1,11 +1,11 @@
 {
   "aggregate": {
-    "n": 15,
-    "recall5": 0.15,
-    "recall10": 0.21666666666666667,
-    "mrr": 0.2887789987789987,
-    "p50LatencyMs": 1082,
-    "p95LatencyMs": 7906
+    "n": 17,
+    "recall5": 0.2029411764705882,
+    "recall10": 0.2617647058823529,
+    "mrr": 0.3724520577461754,
+    "p50LatencyMs": 1100,
+    "p95LatencyMs": 7695
   },
   "perQuery": [
     {
@@ -14,7 +14,7 @@
       "recall5": 0.2,
       "recall10": 0.2,
       "mrr": 0.5,
-      "latencyMs": 7906,
+      "latencyMs": 7695,
       "rankedTopK": [
         "82bed2d5-61a9-4380-bcbc-3aa5cc404094",
         "4718acd2-0d01-4719-a677-8bba178aab64",
@@ -34,12 +34,58 @@
       ]
     },
     {
+      "id": "q-002",
+      "query": "Summarize my recent notes",
+      "recall5": 0.2,
+      "recall10": 0.2,
+      "mrr": 1,
+      "latencyMs": 784,
+      "rankedTopK": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "0a825faf-d183-4041-b831-881ff32c2e16",
+        "675b84e4-6e05-45c0-8d38-a279f85c81db",
+        "1497dd45-b7c5-4026-830f-f8785d115427",
+        "f96203b0-ada4-40ee-bba3-59057a65a7ee",
+        "3be12490-3b3b-4035-8703-f741935a6874",
+        "82bed2d5-61a9-4380-bcbc-3aa5cc404094"
+      ],
+      "relevant": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "aefec373-18fd-4118-a0c4-7589a96357e7",
+        "653ddadb-ce15-425e-a1e6-503301ffc2db",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f"
+      ]
+    },
+    {
+      "id": "q-003",
+      "query": "看看我今天的日记写的啥",
+      "recall5": 1,
+      "recall10": 1,
+      "mrr": 1,
+      "latencyMs": 736,
+      "rankedTopK": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "0a825faf-d183-4041-b831-881ff32c2e16",
+        "675b84e4-6e05-45c0-8d38-a279f85c81db",
+        "1497dd45-b7c5-4026-830f-f8785d115427",
+        "f96203b0-ada4-40ee-bba3-59057a65a7ee",
+        "3be12490-3b3b-4035-8703-f741935a6874",
+        "82bed2d5-61a9-4380-bcbc-3aa5cc404094"
+      ],
+      "relevant": [
+        "4718acd2-0d01-4719-a677-8bba178aab64"
+      ]
+    },
+    {
       "id": "q-004",
       "query": "看看我是什么样的人",
       "recall5": 0,
       "recall10": 0,
       "mrr": 0,
-      "latencyMs": 3173,
+      "latencyMs": 1168,
       "rankedTopK": [
         "b8c398ed-1a3f-4c3c-8461-55e25c6ef8e1",
         "f3872f0f-49bb-4600-b56e-a395402d92e6",
@@ -72,7 +118,7 @@
       "recall5": 0,
       "recall10": 0,
       "mrr": 0,
-      "latencyMs": 1413,
+      "latencyMs": 1155,
       "rankedTopK": [
         "c4cd45e1-c7b3-4e28-8c57-d8a69e9cf831",
         "3d3e5036-4729-4c87-a2ed-9dd1939c40b1",
@@ -104,7 +150,7 @@
       "recall5": 0.2,
       "recall10": 0.2,
       "mrr": 0.3333333333333333,
-      "latencyMs": 679,
+      "latencyMs": 720,
       "rankedTopK": [
         "1497dd45-b7c5-4026-830f-f8785d115427",
         "82bed2d5-61a9-4380-bcbc-3aa5cc404094",
@@ -129,7 +175,7 @@
       "recall5": 0.2,
       "recall10": 0.2,
       "mrr": 1,
-      "latencyMs": 676,
+      "latencyMs": 900,
       "rankedTopK": [
         "4718acd2-0d01-4719-a677-8bba178aab64",
         "b1678faf-660d-4ef7-a10e-f21465cc4efd",
@@ -154,7 +200,7 @@
       "recall5": 0.4,
       "recall10": 0.4,
       "mrr": 1,
-      "latencyMs": 680,
+      "latencyMs": 729,
       "rankedTopK": [
         "b1678faf-660d-4ef7-a10e-f21465cc4efd",
         "4718acd2-0d01-4719-a677-8bba178aab64",
@@ -179,7 +225,7 @@
       "recall5": 0,
       "recall10": 0,
       "mrr": 0,
-      "latencyMs": 682,
+      "latencyMs": 786,
       "rankedTopK": [
         "b1678faf-660d-4ef7-a10e-f21465cc4efd",
         "4718acd2-0d01-4719-a677-8bba178aab64",
@@ -204,7 +250,7 @@
       "recall5": 0.75,
       "recall10": 0.75,
       "mrr": 1,
-      "latencyMs": 1112,
+      "latencyMs": 1133,
       "rankedTopK": [
         "d40dd03a-17a9-47a4-b890-548f465e6179",
         "052270c0-9b04-40ed-97dc-20bf6a2aeaf1",
@@ -236,7 +282,7 @@
       "recall5": 0,
       "recall10": 0,
       "mrr": 0,
-      "latencyMs": 1193,
+      "latencyMs": 1173,
       "rankedTopK": [
         "225caba3-e2c0-4381-a82d-07c6b0f04085",
         "6968e9dd-9dd3-4106-a1c1-fb470a27508f",
@@ -268,7 +314,7 @@
       "recall5": 0.5,
       "recall10": 1,
       "mrr": 0.25,
-      "latencyMs": 1185,
+      "latencyMs": 1145,
       "rankedTopK": [
         "46ff8f31-d4fb-4a7b-8db2-a59fb62ceaec",
         "7ad77e80-11fa-4477-b12f-10bd2b4f31dd",
@@ -300,7 +346,7 @@
       "recall5": 0,
       "recall10": 0,
       "mrr": 0,
-      "latencyMs": 1061,
+      "latencyMs": 1238,
       "rankedTopK": [
         "4aba949e-a685-42a7-bbd0-1a9837d85c6f",
         "1961402e-0c79-421d-81d9-da9c82016edb",
@@ -329,7 +375,7 @@
       "recall5": 0,
       "recall10": 0,
       "mrr": 0.07692307692307693,
-      "latencyMs": 1096,
+      "latencyMs": 1100,
       "rankedTopK": [
         "31c86f43-8582-4bb7-bd19-46aac1026e4a",
         "762a8fa3-c5a5-4164-8827-bbe28a22a307",
@@ -358,7 +404,7 @@
       "recall5": 0,
       "recall10": 0.5,
       "mrr": 0.1,
-      "latencyMs": 1056,
+      "latencyMs": 1099,
       "rankedTopK": [
         "ca427f94-0f40-4dd9-9a6e-05241a95e69f",
         "3e054be2-7df9-4302-92d1-cecc5f12c8e6",
@@ -388,7 +434,7 @@
       "recall5": 0,
       "recall10": 0,
       "mrr": 0.07142857142857142,
-      "latencyMs": 1082,
+      "latencyMs": 1142,
       "rankedTopK": [
         "75d5bbf7-e106-4849-a3f5-79e59a1e8570",
         "67f9fcfb-fae0-49a2-883a-6ebe984f9187",
@@ -416,7 +462,7 @@
       "recall5": 0,
       "recall10": 0,
       "mrr": 0,
-      "latencyMs": 1011,
+      "latencyMs": 1053,
       "rankedTopK": [
         "ef7d7a73-4de3-4467-a0f9-68448b4c913f",
         "d7f6c940-37b3-4c99-b9da-00fd4aa1cd96",
