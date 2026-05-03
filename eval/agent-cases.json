@@ -1,0 +1,300 @@
+{
+  "_doc": "End-to-end agent eval cases. Each case runs through the real Ask AI pipeline (buildChatContext + runChatStream + buildAskAiTools) via scripts/eval-agent.mjs and is scored on three dimensions: tool-touched note id coverage, must_mention substring presence, must_not_mention substring absence.",
+  "_provenance": "Cases mirror the 18 RAG queries in eval/ground-truth.json (same query text, same user 5dcad5a2-... on Turso prod). expected_tool_touched_note_ids was derived by mapping each query's relevant chunks back to their parent note_ids. This deliberately tests whether the agent (via searchKnowledge/readNote tools) reaches the right NOTES — coarser than chunk-level RAG eval but closer to user-perceived correctness.",
+  "_schema": {
+    "id": "stable case id (ask-001 ... ask-018)",
+    "query": "what the user types into Ask AI",
+    "category": "tag for future M4 grouping; not used in v1 scoring",
+    "expected_tool_touched_note_ids": "agent must call searchKnowledge or readNote on at least these note ids. Subset relationship: actual ⊇ expected.",
+    "must_mention": "case-insensitive substrings that MUST appear in the final answer",
+    "must_not_mention": "case-insensitive substrings that MUST NOT appear",
+    "rubric": "human-readable note explaining the case"
+  },
+  "_user_id_hint": "5dcad5a2-1d20-43df-818c-d640958ddb8a",
+  "cases": [
+    {
+      "id": "ask-001",
+      "query": "我最近干了啥",
+      "category": "recency-recent-days",
+      "expected_tool_touched_note_ids": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "3b965cbe-8d03-4dd9-8d92-195ee6693094",
+        "13e559d5-5898-4207-9fdb-5ecf4cc7a8c5"
+      ],
+      "must_mention": [
+        "5"
+      ],
+      "must_not_mention": [
+        "I don't know",
+        "I cannot find",
+        "no information",
+        "我没有"
+      ],
+      "rubric": "Agent should reach for recent diary notes (5/3, 5/2, 5/1). Answer should mention May / 5月 because all recent activity is in May. Failure mode: agent retrieves random ancient diaries and pretends they're recent."
+    },
+    {
+      "id": "ask-002",
+      "query": "Summarize my recent notes",
+      "category": "recency-recent-days",
+      "expected_tool_touched_note_ids": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "4676fa64-2593-4c88-b896-b6c0c0a9e699",
+        "ab06ab6d-c614-4b97-8207-981294a09b55",
+        "a8a1c99e-1b67-4858-813d-1e7efb225638"
+      ],
+      "must_mention": [],
+      "must_not_mention": [
+        "I don't know",
+        "no notes found",
+        "I cannot find"
+      ],
+      "rubric": "Asked 13 times in real history. Agent should hit at least one recent diary plus one recent topical note (RAG / openclaw). must_mention is empty — substring assertions are too brittle for free-form summary; rely on citation coverage instead."
+    },
+    {
+      "id": "ask-003",
+      "query": "看看我今天的日记写的啥",
+      "category": "recency-today",
+      "expected_tool_touched_note_ids": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "must_mention": [
+        "AI"
+      ],
+      "must_not_mention": [
+        "I don't know",
+        "no diary",
+        "我没有找到"
+      ],
+      "rubric": "Today = 2026-05-03. Single target note: '2026年5月3日 星期日'. Content mentions 'AI' (chunk: '想到公司的破事就烦，但学习 AI 就很舒服'). Agent must understand 'today' refers to current date, not retrieve any old diary."
+    },
+    {
+      "id": "ask-004",
+      "query": "看看我是什么样的人",
+      "category": "global-synthesis",
+      "expected_tool_touched_note_ids": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "13e559d5-5898-4207-9fdb-5ecf4cc7a8c5",
+        "34fe94ee-3720-4c0e-879a-05de86b37c0c"
+      ],
+      "must_mention": [],
+      "must_not_mention": [
+        "I don't know",
+        "no information about you"
+      ],
+      "rubric": "Open-ended synthesis. Agent should reach for diaries (personality signal) + the career-planning note (life-snapshot signal). Free-form output, so no must_mention."
+    },
+    {
+      "id": "ask-005",
+      "query": "评价一下我",
+      "category": "global-synthesis",
+      "expected_tool_touched_note_ids": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "e046e964-1da2-48d8-9ba1-8234f88a3cb4",
+        "34fe94ee-3720-4c0e-879a-05de86b37c0c"
+      ],
+      "must_mention": [],
+      "must_not_mention": [
+        "I don't know enough"
+      ],
+      "rubric": "Variant of ask-004. Agent must produce something substantive, not punt with 'I need more info'."
+    },
+    {
+      "id": "ask-006",
+      "query": "我最近在干啥",
+      "category": "recency-recent-days",
+      "expected_tool_touched_note_ids": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "3b965cbe-8d03-4dd9-8d92-195ee6693094",
+        "df8113a6-4bcd-44c5-9fb4-f618e3461ef7"
+      ],
+      "must_mention": [],
+      "must_not_mention": [
+        "I don't know",
+        "no recent"
+      ],
+      "rubric": "Phrasing variant of ask-001. '五一开始了' (4/29) explicitly sets recent context."
+    },
+    {
+      "id": "ask-007",
+      "query": "看到我最近的日子",
+      "category": "recency-recent-days",
+      "expected_tool_touched_note_ids": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "3b965cbe-8d03-4dd9-8d92-195ee6693094",
+        "13e559d5-5898-4207-9fdb-5ecf4cc7a8c5"
+      ],
+      "must_mention": [],
+      "must_not_mention": [
+        "I don't know"
+      ],
+      "rubric": "Tests whether retriever maps '日子' to 'diary entries'. If only one of these three target notes is touched, partial credit."
+    },
+    {
+      "id": "ask-008",
+      "query": "最新的笔记",
+      "category": "recency-newest",
+      "expected_tool_touched_note_ids": [
+        "47850b93-74f7-4f81-9851-5e74dc6cb489",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4"
+      ],
+      "must_mention": [],
+      "must_not_mention": [
+        "I don't know",
+        "I cannot determine"
+      ],
+      "rubric": "Newest = chronological top regardless of topic. Should hit 5/3 'Knosi 项目完整讲稿' OR 5/3 diary OR 5/2 GitHub trending."
+    },
+    {
+      "id": "ask-009",
+      "query": "我最近写过什么关于 RAG 的笔记",
+      "category": "topic-recency",
+      "expected_tool_touched_note_ids": [
+        "4676fa64-2593-4c88-b896-b6c0c0a9e699",
+        "ab06ab6d-c614-4b97-8207-981294a09b55"
+      ],
+      "must_mention": [
+        "RAG"
+      ],
+      "must_not_mention": [
+        "I don't know",
+        "no notes about RAG"
+      ],
+      "rubric": "Hybrid topic + recency. Both '一文搞懂 RAG（一）/（二）' (5/2) are direct hits."
+    },
+    {
+      "id": "ask-010",
+      "query": "规划一下我的职业发展",
+      "category": "topic-deep",
+      "expected_tool_touched_note_ids": [
+        "34fe94ee-3720-4c0e-879a-05de86b37c0c"
+      ],
+      "must_mention": [],
+      "must_not_mention": [
+        "I don't know"
+      ],
+      "rubric": "Asked 5+ times in real history. Direct hit: '新加坡DA职业发展规划_AI方向必要性_横纵分析报告'. RAG layer already scored 0.75 here, so agent should easily reach the note."
+    },
+    {
+      "id": "ask-011",
+      "query": "对比一下主流编程语言",
+      "category": "topic-deep",
+      "expected_tool_touched_note_ids": [
+        "e19eafd9-36f7-4d2b-8ff1-5e5d2bf84328"
+      ],
+      "must_mention": [
+        "Python"
+      ],
+      "must_not_mention": [
+        "I don't know"
+      ],
+      "rubric": "Direct hit: '主流编程语言（Go/Python/Rust/Java/Node.js）_横纵分析报告' (4/29). RAG layer scored 0 (likely tokenization issue with parens) — interesting case to see if agent's tool call recovers."
+    },
+    {
+      "id": "ask-012",
+      "query": "openclaw 和 hermes agent 的架构区别",
+      "category": "topic-deep",
+      "expected_tool_touched_note_ids": [
+        "a8a1c99e-1b67-4858-813d-1e7efb225638"
+      ],
+      "must_mention": [
+        "openclaw"
+      ],
+      "must_not_mention": [
+        "I don't know"
+      ],
+      "rubric": "Direct hit: 'openclaw vs hermes-agent — 架构对比笔记' (5/2). RAG layer scored 1.0, agent should be a no-brainer."
+    },
+    {
+      "id": "ask-013",
+      "query": "Knosi 项目的整体架构",
+      "category": "topic-deep",
+      "expected_tool_touched_note_ids": [
+        "47850b93-74f7-4f81-9851-5e74dc6cb489"
+      ],
+      "must_mention": [
+        "Knosi"
+      ],
+      "must_not_mention": [
+        "I don't know",
+        "no information about Knosi"
+      ],
+      "rubric": "Single direct hit: 'Knosi 项目完整讲稿 — 整体设计 / 前后端 / 算法 / 部署 / 亮点' (5/3 03:41 — newest note). RAG layer scored 0 (suspicious — title is a direct match). If agent also fails this, it's a strong signal title BM25 is broken."
+    },
+    {
+      "id": "ask-014",
+      "query": "Redis ZSet 为什么用跳表",
+      "category": "topic-algorithm",
+      "expected_tool_touched_note_ids": [
+        "963f36da-4b1b-445a-ad71-0edf99eb7d98"
+      ],
+      "must_mention": [
+        "log"
+      ],
+      "must_not_mention": [
+        "I don't know"
+      ],
+      "rubric": "Single direct hit: '跳表 (Skip List) — Redis ZSet 为什么用它'. Answer must mention O(log N) — that's the punchline."
+    },
+    {
+      "id": "ask-015",
+      "query": "布隆过滤器误判率怎么算",
+      "category": "topic-algorithm",
+      "expected_tool_touched_note_ids": [
+        "5f10f291-8243-4176-b043-935a81937f1e"
+      ],
+      "must_mention": [
+        "hash"
+      ],
+      "must_not_mention": [
+        "I don't know"
+      ],
+      "rubric": "Single direct hit: '布隆过滤器原理 + 误判率 + 工程应用'. Mention assertion checks the algorithm core (hash count drives error rate)."
+    },
+    {
+      "id": "ask-016",
+      "query": "GitHub 5月1日的热门项目",
+      "category": "metadata-by-date",
+      "expected_tool_touched_note_ids": [
+        "af54e71c-29f3-4424-9325-1aab9d0fc430"
+      ],
+      "must_mention": [],
+      "must_not_mention": [
+        "I don't know",
+        "no GitHub trending"
+      ],
+      "rubric": "Single direct hit: 'GitHub 热门 · 2026-05-01'. Tests whether retriever can match a date in the title."
+    },
+    {
+      "id": "ask-017",
+      "query": "5月有哪些 TODO",
+      "category": "metadata-by-month",
+      "expected_tool_touched_note_ids": [
+        "2a9324a2-5964-4b56-a1cb-8436bf4d67cd"
+      ],
+      "must_mention": [
+        "TODO"
+      ],
+      "must_not_mention": [
+        "I don't know",
+        "no TODO"
+      ],
+      "rubric": "Single direct hit: '5月份 TODO'. Title-direct hit; if this fails, BM25 title boost is broken."
+    },
+    {
+      "id": "ask-018",
+      "query": "我笔记里写过用 Rust 实现什么具体的项目吗",
+      "category": "negative",
+      "expected_tool_touched_note_ids": [],
+      "must_mention": [
+        "no",
+        "Rust"
+      ],
+      "must_not_mention": [
+        "tokio",
+        "actix"
+      ],
+      "rubric": "Negative case. User has notes ABOUT Rust as a language but no Rust project implementation notes. Agent must say 'no, I don't see any Rust project notes' (or equivalent), without fabricating one. Empty expected_tool_touched_note_ids = citationScore is auto-1; rubric is enforced by must_mention='no' (a 'no'-ish answer required) and must_not_mention=specific Rust framework names (no fabrication)."
+    }
+  ]
+}

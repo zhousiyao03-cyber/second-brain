@@ -139,9 +139,29 @@ async function runOneCase(c) {
     }
   }
 
+  // 7. Also count note ids that buildChatContext pre-injected into the user
+  // preamble. The agent sees these without calling any tool, so for the
+  // purpose of "did the agent get the right context" they should count.
+  // Format produced by buildUserPreamble: <source id="<noteId>" type="note" ...>
+  const preambleNoteIds = new Set();
+  for (const m of messages) {
+    if (m.role !== "user") continue;
+    const text =
+      typeof m.content === "string"
+        ? m.content
+        : Array.isArray(m.content)
+          ? m.content.map((p) => p.text ?? "").join("")
+          : "";
+    for (const match of text.matchAll(/<source\s+id="([^"]+)"/g)) {
+      preambleNoteIds.add(match[1]);
+    }
+  }
+  for (const id of preambleNoteIds) touchedNoteIds.add(id);
+
   return {
     answer,
     touchedNoteIds: [...touchedNoteIds],
+    preambleNoteIds: [...preambleNoteIds],
     latencyMs: Date.now() - t0,
   };
 }
@@ -190,7 +210,7 @@ for (const c of cases) {
     scored = scoreCase(c, run);
   } catch (err) {
     runtimeError = err.message ?? String(err);
-    run = { answer: "", touchedNoteIds: [], latencyMs: 0 };
+    run = { answer: "", touchedNoteIds: [], preambleNoteIds: [], latencyMs: 0 };
     scored = {
       citationScore: 0,
       mentionScore: 0,
@@ -207,6 +227,7 @@ for (const c of cases) {
     ...scored,
     answer: run.answer,
     touchedNoteIds: run.touchedNoteIds,
+    preambleNoteIds: run.preambleNoteIds ?? [],
     latencyMs: run.latencyMs,
     runtimeError,
   });
