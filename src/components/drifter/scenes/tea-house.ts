@@ -38,6 +38,7 @@ export function createTeaHouseScene(
     private currentEmotion: DrifterEmotion = "gentle";
     private weatherParticles?: Phaser.GameObjects.Particles.ParticleEmitter;
     private lampGlow!: Phaser.GameObjects.Arc;
+    private lampCone!: Phaser.GameObjects.Graphics;
     private steamGroup!: Phaser.GameObjects.Container;
 
     constructor() {
@@ -45,13 +46,21 @@ export function createTeaHouseScene(
     }
 
     preload() {
-      // No external assets in placeholder mode. We build a 1x1 white pixel
-      // texture for particle emitters since we can't load image files.
+      // Build a 1x1 white pixel texture for particle emitters (cannot load
+      // images for particles directly via geometry — they need a texture
+      // reference).
       const g = this.add.graphics({ x: 0, y: 0 });
       g.fillStyle(0xffffff, 1);
       g.fillRect(0, 0, 4, 4);
       g.generateTexture("dot4", 4, 4);
       g.destroy();
+
+      // External textures. Failure to load is non-fatal — drawXxx methods
+      // check `this.textures.exists("tex-wood")` etc. and fall back to
+      // fillStyle.
+      this.load.image("tex-wood", "/drifter/textures/wood-wall.webp");
+      this.load.image("tex-paper", "/drifter/textures/paper-warm.webp");
+      this.load.image("tex-stars", "/drifter/textures/stars-night.png");
     }
 
     create() {
@@ -64,7 +73,7 @@ export function createTeaHouseScene(
       this.drawLamp(width, height);
       this.drawMug(width, height);
       this.drawPip(width, height);
-      this.drawVignette(width, height);
+      this.drawAtmosphere(width, height);
 
       this.spawnWeather(init.weather);
 
@@ -87,16 +96,23 @@ export function createTeaHouseScene(
       this.drawLamp(width, height);
       this.drawMug(width, height);
       this.drawPip(width, height);
-      this.drawVignette(width, height);
+      this.drawAtmosphere(width, height);
       this.spawnWeather(init.weather);
     };
 
     private drawBackWall(w: number, h: number) {
+      if (this.textures.exists("tex-wood")) {
+        const tile = this.add.tileSprite(0, 0, w, h, "tex-wood");
+        tile.setOrigin(0, 0);
+        tile.setTint(0x6a4226);
+      }
+
+      // Multiply-blend gradient on top to keep the cozy warm-to-dark falloff
       const g = this.add.graphics();
-      g.fillGradientStyle(0x2a1a14, 0x2a1a14, 0x140a08, 0x140a08, 1);
+      g.fillGradientStyle(0x2a1a14, 0x2a1a14, 0x140a08, 0x140a08, 0.7);
       g.fillRect(0, 0, w, h);
 
-      // soft warm ambient light from the lamp area
+      // Soft warm ambient light from the lamp area
       const glow = this.add.circle(w * 0.7, h * 0.55, w * 0.45, 0xd4a05a, 0.18);
       glow.setBlendMode(Phaser.BlendModes.SCREEN);
     }
@@ -112,6 +128,9 @@ export function createTeaHouseScene(
       sky.fillGradientStyle(0x1a2a4a, 0x1a2a4a, 0x0e1a3a, 0x0e1a3a, 1);
       sky.fillRect(wx, wy, ww, wh);
 
+      // Parallax scenery (hills, forest, mist, optional stars)
+      this.drawWindowParallax(wx, wy, ww, wh);
+
       // Frame
       const frame = this.add.graphics();
       frame.lineStyle(6, 0x5a3520, 1);
@@ -120,10 +139,96 @@ export function createTeaHouseScene(
       frame.lineBetween(wx + ww / 2, wy, wx + ww / 2, wy + wh);
       frame.lineBetween(wx, wy + wh / 2, wx + ww, wy + wh / 2);
 
+      // Paper texture overlay on frame for weathered feel.
+      // The sky is already dark enough that the multiply blend reads as a
+      // subtle warm tint on the wooden frame without a dedicated mask.
+      if (this.textures.exists("tex-paper")) {
+        const paper = this.add.tileSprite(wx, wy, ww, wh, "tex-paper");
+        paper.setOrigin(0, 0);
+        paper.setBlendMode(Phaser.BlendModes.MULTIPLY);
+        paper.setAlpha(0.25);
+      }
+
       // Sill
       const sill = this.add.graphics();
       sill.fillStyle(0x6b4226, 1);
       sill.fillRect(wx - 8, wy + wh, ww + 16, 10);
+    }
+
+    private drawWindowParallax(wx: number, wy: number, ww: number, wh: number) {
+      // Mask so silhouettes only render inside the window. The mask source
+      // graphics must NOT be on the display list (Phaser warns otherwise),
+      // so we use `this.make.graphics()` which creates an off-display object.
+      const mask = this.make.graphics({ x: 0, y: 0 });
+      mask.fillStyle(0xffffff);
+      mask.fillRect(wx, wy, ww, wh);
+      const geomMask = mask.createGeometryMask();
+
+      // Far hills
+      const hills = this.add.graphics();
+      hills.fillStyle(0x2a3a5a, 0.9);
+      hills.fillTriangle(
+        wx,
+        wy + wh * 0.7,
+        wx + ww * 0.4,
+        wy + wh * 0.4,
+        wx + ww * 0.7,
+        wy + wh * 0.7,
+      );
+      hills.fillTriangle(
+        wx + ww * 0.3,
+        wy + wh * 0.7,
+        wx + ww * 0.6,
+        wy + wh * 0.5,
+        wx + ww,
+        wy + wh * 0.7,
+      );
+      hills.setMask(geomMask);
+
+      // Near forest silhouette (denser, darker)
+      const forest = this.add.graphics();
+      forest.fillStyle(0x101820, 1);
+      for (let i = 0; i < 6; i++) {
+        const baseX = wx + (ww / 5) * i;
+        forest.fillTriangle(baseX - 12, wy + wh, baseX, wy + wh * 0.55, baseX + 12, wy + wh);
+      }
+      forest.setMask(geomMask);
+
+      // Mist — multiple slow-drifting ellipses
+      for (let i = 0; i < 3; i++) {
+        const mist = this.add.ellipse(
+          wx + ww * (0.2 + i * 0.3),
+          wy + wh * 0.7,
+          ww * 0.6,
+          wh * 0.15,
+          0xc8d8e8,
+          0.18,
+        );
+        mist.setBlendMode(Phaser.BlendModes.SCREEN);
+        mist.setMask(geomMask);
+        this.tweens.add({
+          targets: mist,
+          x: { from: mist.x - 20, to: mist.x + 20 },
+          duration: 12000 + i * 2000,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+        });
+      }
+
+      // Stars — only show in clear weather
+      if (init.weather === "clear" && this.textures.exists("tex-stars")) {
+        const stars = this.add.tileSprite(wx, wy, ww, wh * 0.6, "tex-stars");
+        stars.setOrigin(0, 0);
+        stars.setAlpha(0.7);
+        stars.setMask(geomMask);
+        this.tweens.add({
+          targets: stars,
+          tilePositionX: { from: 0, to: -100 },
+          duration: 60000,
+          repeat: -1,
+        });
+      }
     }
 
     private drawShelf(w: number, h: number) {
@@ -152,6 +257,19 @@ export function createTeaHouseScene(
       desk.fillRect(0, dy, w, h - dy);
       desk.lineStyle(2, 0x8b5a3c, 1);
       desk.lineBetween(0, dy, w, dy);
+
+      // Front-edge highlight
+      const highlight = this.add.line(0, 0, 0, dy, w, dy, 0xb87a4a, 0.7);
+      highlight.setOrigin(0, 0);
+      highlight.setLineWidth(1.5);
+
+      // Paper texture overlay on desk
+      if (this.textures.exists("tex-paper")) {
+        const paper = this.add.tileSprite(0, dy, w, h - dy, "tex-paper");
+        paper.setOrigin(0, 0);
+        paper.setBlendMode(Phaser.BlendModes.MULTIPLY);
+        paper.setAlpha(0.3);
+      }
     }
 
     private drawLamp(w: number, h: number) {
@@ -177,15 +295,27 @@ export function createTeaHouseScene(
       // Bulb glow under shade
       this.lampGlow = this.add.circle(cx, shadeY + 32, 100, 0xffd690, 0.35);
       this.lampGlow.setBlendMode(Phaser.BlendModes.SCREEN);
-      this.tweens.add({
-        targets: this.lampGlow,
-        scale: { from: 1, to: 1.06 },
-        alpha: { from: 0.32, to: 0.4 },
-        duration: 2200,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
+
+      // Light cone projected onto back wall
+      const cone = this.add.graphics();
+      cone.fillStyle(0xd4a05a, 0.08);
+      cone.fillTriangle(cx, shadeY, cx - w * 0.25, h, cx + w * 0.25, h);
+      cone.setBlendMode(Phaser.BlendModes.SCREEN);
+      this.lampCone = cone;
+    }
+
+    update(time: number) {
+      if (this.lampGlow) {
+        const flicker =
+          Math.sin(time * 0.003) * 0.03 + Math.sin(time * 0.011) * 0.025;
+        this.lampGlow.setAlpha(0.36 + flicker);
+        this.lampGlow.setScale(1 + flicker * 0.5);
+      }
+      if (this.lampCone) {
+        const flicker =
+          Math.sin(time * 0.003) * 0.02 + Math.sin(time * 0.011) * 0.015;
+        this.lampCone.setAlpha(0.08 + flicker);
+      }
     }
 
     private drawMug(w: number, h: number) {
@@ -265,6 +395,31 @@ export function createTeaHouseScene(
       this.mouth = this.add.graphics();
       this.pipBody.add(this.mouth);
 
+      // ----- Fluff layers (drawn behind body and head; insert at index 0) -----
+      const fluffShades = [0x6b3e1f, 0x7a4828, 0x8b5a3c];
+      for (let i = 0; i < 6; i++) {
+        const fluff = this.add.ellipse(
+          0,
+          30,
+          80 + i * 4,
+          90 + i * 4,
+          fluffShades[i % fluffShades.length],
+          0.18 - i * 0.02,
+        );
+        // Insert at index 0 (behind body)
+        this.pipBody.addAt(fluff, 0);
+
+        const fluffHead = this.add.ellipse(
+          0,
+          -28,
+          70 + i * 3,
+          60 + i * 3,
+          fluffShades[i % fluffShades.length],
+          0.18 - i * 0.02,
+        );
+        this.pipBody.addAt(fluffHead, 0);
+      }
+
       this.applyEmotion("gentle");
 
       // Idle breathing
@@ -286,13 +441,84 @@ export function createTeaHouseScene(
         repeat: -1,
         ease: "Sine.easeInOut",
       });
+
+      // ----- Blink scheduling -----
+      const scheduleBlink = () => {
+        this.time.delayedCall(Phaser.Math.Between(4000, 7000), () => {
+          if (!this.scene.isActive()) return;
+          this.tweens.add({
+            targets: [this.leftEye, this.rightEye],
+            scaleY: 0.05,
+            duration: 60,
+            yoyo: true,
+            onComplete: scheduleBlink,
+          });
+        });
+      };
+      scheduleBlink();
+
+      // ----- Glance scheduling -----
+      // Cache initial eye x once so offsets do NOT compound across glances.
+      const baseLeftX = this.leftEye.x;
+      const baseRightX = this.rightEye.x;
+      const scheduleGlance = () => {
+        this.time.delayedCall(Phaser.Math.Between(6000, 10000), () => {
+          if (!this.scene.isActive()) return;
+          const dx = Phaser.Math.Between(-2, 2);
+          this.tweens.add({
+            targets: this.leftEye,
+            x: { from: baseLeftX, to: baseLeftX + dx },
+            duration: 500,
+            yoyo: true,
+            ease: "Sine.easeInOut",
+          });
+          this.tweens.add({
+            targets: this.rightEye,
+            x: { from: baseRightX, to: baseRightX + dx },
+            duration: 500,
+            yoyo: true,
+            ease: "Sine.easeInOut",
+            onComplete: scheduleGlance,
+          });
+        });
+      };
+      scheduleGlance();
+
+      // ----- Sigh (deeper periodic breath) -----
+      this.time.addEvent({
+        delay: Phaser.Math.Between(12000, 18000),
+        loop: true,
+        callback: () => {
+          this.tweens.add({
+            targets: this.pipBody,
+            scaleY: { from: 1.025, to: 1.06 },
+            duration: 1400,
+            yoyo: true,
+            ease: "Sine.easeInOut",
+          });
+        },
+      });
     }
 
-    private drawVignette(w: number, h: number) {
+    private drawAtmosphere(w: number, h: number) {
+      // Warm color filter (subtle)
+      const warm = this.add.rectangle(0, 0, w, h, 0xffd690, 0.06);
+      warm.setOrigin(0, 0);
+      warm.setBlendMode(Phaser.BlendModes.MULTIPLY);
+
+      // Vignette: 4 corner triangles + top/bottom strips, layered alphas
       const v = this.add.graphics();
-      v.fillStyle(0x000000, 0.35);
-      v.fillRect(0, 0, w, 60);
-      v.fillRect(0, h - 60, w, 60);
+      v.fillStyle(0x000000, 0.45);
+      v.fillRect(0, 0, w, 80);
+      v.fillRect(0, h - 80, w, 80);
+
+      // Soft radial darkening at corners — overlap rectangles + ellipse cutout
+      const corners = this.add.graphics();
+      corners.fillStyle(0x000000, 0.25);
+      corners.fillTriangle(0, 0, 0, h * 0.4, w * 0.3, 0);
+      corners.fillTriangle(w, 0, w, h * 0.4, w * 0.7, 0);
+      corners.fillTriangle(0, h, 0, h * 0.6, w * 0.3, h);
+      corners.fillTriangle(w, h, w, h * 0.6, w * 0.7, h);
     }
 
     private spawnWeather(weather: DrifterWeather) {

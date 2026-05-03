@@ -7,6 +7,8 @@ import { DrifterHud } from "@/components/drifter/hud";
 import { LeaveButton } from "@/components/drifter/leave-button";
 import { DialogueBox } from "@/components/drifter/dialogue-box";
 import { InputBar } from "@/components/drifter/input-bar";
+import { AudioEngine } from "@/components/drifter/audio-engine";
+import { MuteToggle } from "@/components/drifter/mute-toggle";
 import {
   pickClientLang,
   t,
@@ -34,7 +36,29 @@ export function DrifterClient() {
   const [pipPending, setPipPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [phaserOk, setPhaserOk] = useState(true);
+  const [muted, setMuted] = useState(false);
   const sceneReadyRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("drifter:muted");
+      if (v === "1") setMuted(true);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    setMuted((m) => {
+      const next = !m;
+      try {
+        localStorage.setItem("drifter:muted", next ? "1" : "0");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
 
   // Initial session bootstrap.
   useEffect(() => {
@@ -221,12 +245,17 @@ export function DrifterClient() {
         </div>
       )}
 
+      <AudioEngine weather={session.weather} muted={muted} />
+
       <DrifterHud
         lang={lang}
         dayNumber={session.dayNumber}
         weather={session.weather}
         timeOfDay={session.timeOfDay}
       />
+      <div className="absolute top-4 right-28 z-30">
+        <MuteToggle muted={muted} onToggle={toggleMute} />
+      </div>
       <LeaveButton lang={lang} onLeave={handleLeave} />
 
       <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-6 pt-3">
