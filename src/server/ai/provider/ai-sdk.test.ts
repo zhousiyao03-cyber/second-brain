@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { streamChatAiSdk } from "./ai-sdk";
+import { runChatStream, streamChatAiSdk } from "./ai-sdk";
 import type { ResolvedProvider } from "./types";
 
 afterEach(() => vi.restoreAllMocks());
@@ -74,5 +74,31 @@ describe("streamChatAiSdk", () => {
     expect(fetchSpy).toHaveBeenCalled();
     const url = String(fetchSpy.mock.calls[0]![0]);
     expect(url).toContain("127.0.0.1:11434");
+  });
+});
+
+describe("runChatStream", () => {
+  it("returns the raw streamText result with a textStream property", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        'data: {"type":"text","value":"ok"}\n\n',
+        { headers: { "Content-Type": "text/event-stream" } },
+      ),
+    );
+
+    const result = runChatStream({
+      provider: makeOpenAi("gpt-4o-mini"),
+      system: "s",
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    expect(result).toBeDefined();
+    expect(typeof result.textStream).toBe("object");
+
+    for await (const _chunk of result.textStream) {
+      // drain
+    }
+
+    expect(fetchSpy).toHaveBeenCalled();
   });
 });

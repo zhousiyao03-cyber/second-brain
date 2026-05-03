@@ -50,15 +50,24 @@ export type StreamChatAiSdkResult = {
   modelId: string;
 };
 
-export async function streamChatAiSdk(
+/**
+ * Internal helper: run the underlying `streamText(...)` call. Returns the
+ * raw streamText result so callers can either:
+ *   - wrap it as a UI Message Stream Response (production /api/chat path), or
+ *   - consume `textStream` / `toolCalls` / `toolResults` directly (eval harness).
+ *
+ * Keeping a single source of truth here is what lets the eval harness exercise
+ * the exact same model invocation production uses without duplicating config.
+ */
+export function runChatStream(
   options: StreamChatOptions & { provider: AiSdkResolvable },
-): Promise<StreamChatAiSdkResult> {
+): ReturnType<typeof streamText> {
   const { provider, messages, signal, system, tools, maxSteps } = options;
   const sdk = createAiSdkProvider(provider);
   const recordContent = shouldRecordTelemetryContent();
   const hasTools = Boolean(tools && Object.keys(tools).length > 0);
 
-  const result = streamText({
+  return streamText({
     abortSignal: signal,
     model: sdk.chat(provider.modelId),
     messages,
@@ -86,7 +95,12 @@ export async function streamChatAiSdk(
       },
     },
   });
+}
 
+export async function streamChatAiSdk(
+  options: StreamChatOptions & { provider: AiSdkResolvable },
+): Promise<StreamChatAiSdkResult> {
+  const result = runChatStream(options);
   // The UI message stream protocol carries tool-call / tool-result parts
   // that the front-end's <ChatMessageParts> component needs to render
   // step badges. Single-turn callers don't get tool parts so the
@@ -99,7 +113,7 @@ export async function streamChatAiSdk(
         return typeof error === "string" ? error : JSON.stringify(error);
       },
     }),
-    modelId: provider.modelId,
+    modelId: options.provider.modelId,
   };
 }
 
