@@ -1,12 +1,10 @@
-import { observe, updateActiveObservation } from "@langfuse/tracing";
 import { and, eq, inArray } from "drizzle-orm";
 import type { ModelMessage } from "ai";
 import { z } from "zod/v4";
 import { ASK_AI_SOURCE_SCOPES, type AskAiSourceScope } from "@/lib/ask-ai";
 import { db } from "@/server/db";
 import { bookmarks, notes } from "@/server/db/schema";
-import { retrieveAgenticContext } from "@/server/ai/agentic-rag";
-import { retrieveContext } from "@/server/ai/rag";
+import { retrieveWithFallback } from "@/server/ai/retriever";
 import {
   buildSystemPromptStable,
   buildUserPreamble,
@@ -126,69 +124,10 @@ export async function buildChatContext(
   let context: RetrievedKnowledgeItem[] = [];
 
   if (!skipRag) {
-    const tracedRetrieval = observe(
-      async () => {
-        // Privacy: do NOT include the raw user query in the retriever input —
-        // updateActiveObservation flows to Langfuse regardless of the AI SDK's
-        // recordInputs flag. Only ship structural metadata.
-        updateActiveObservation(
-          { input: { queryLength: userQuery.length, sourceScope } },
-          { asType: "retriever" }
-        );
-
-        const tracedAgenticRag = observe(
-          () =>
-            retrieveAgenticContext(userQuery, { scope: sourceScope, userId }),
-          { name: "agentic-rag", asType: "retriever" }
-        );
-        const agenticContext = await tracedAgenticRag();
-
-        if (agenticContext.length > 0) {
-          const results = agenticContext.map((item) => ({
-            chunkId: item.chunkId,
-            chunkIndex: item.chunkIndex,
-            content: item.content,
-            id: item.sourceId,
-            score: item.score,
-            sectionPath: item.sectionPath,
-            title: item.sourceTitle,
-            type: item.sourceType,
-          }));
-          updateActiveObservation(
-            {
-              output: results.map(({ content, ...meta }) => meta),
-              metadata: { method: "agentic", chunkCount: results.length },
-            },
-            { asType: "retriever" }
-          );
-          return results;
-        }
-
-        const tracedKeywordRag = observe(
-          () => retrieveContext(userQuery, { scope: sourceScope, userId }),
-          { name: "keyword-rag-fallback", asType: "retriever" }
-        );
-        const fallbackContext = await tracedKeywordRag();
-
-        const results = fallbackContext.map((item) => ({
-          content: item.content,
-          id: item.id,
-          title: item.title,
-          type: item.type,
-        }));
-        updateActiveObservation(
-          {
-            output: results.map(({ content, ...meta }) => meta),
-            metadata: { method: "keyword-fallback", chunkCount: results.length },
-          },
-          { asType: "retriever" }
-        );
-        return results;
-      },
-      { name: "rag-retrieval", asType: "retriever" }
-    );
-
-    context = await tracedRetrieval();
+    context = await retrieveWithFallback(userQuery, {
+      scope: sourceScope,
+      userId,
+    });
   }
   timer.mark("rag");
 

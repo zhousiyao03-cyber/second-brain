@@ -105,15 +105,20 @@ function buildPersonaPrompt({
     ? `\nStyle hint: ${persona.styleHint}`
     : "";
 
+  // Same cite format as Ask AI: numbered [N] markers + "Source: <type> 'title'".
+  // Persona prompt instructs the model to cite by [N] inline, matching the
+  // shared Ask AI convention so future cite-rendering works for both.
   const knowledge =
     ragHits.length === 0
-      ? "(no scoped knowledge available — answer from your general knowledge)"
+      ? "(no knowledge retrieved for this query — answer from your general expertise)"
       : ragHits
           .map(
             (h, i) =>
-              `[${i + 1}] Source: ${h.sourceType} "${h.sourceTitle}"\n> ${h.content.slice(0, RAG_CHUNK_PREVIEW)}`,
+              `[${i + 1}] Source: ${h.sourceType} "${h.sourceTitle}"\n${h.content.slice(0, RAG_CHUNK_PREVIEW)}`,
           )
           .join("\n\n");
+
+  const lastAgent = [...history].reverse().find((e) => e.role === "agent");
 
   const conversation = history
     .slice(-HISTORY_WINDOW)
@@ -123,21 +128,32 @@ function buildPersonaPrompt({
     })
     .join("\n");
 
+  const disagreementLine = lastAgent
+    ? `If you disagree with what ${lastAgent.personaName ?? "the previous speaker"} just said, lead with a direct rebuttal — name them and explain why. Echoing them is the worst response.`
+    : "";
+
   const system = `${persona.systemPrompt}${styleLine}
+
+You are participating in a heated multi-agent roundtable.
 
 Channel topic: ${channelTopic ?? "(none)"}
 
-Knowledge from your scope:
+Knowledge retrieved for this turn:
 ${knowledge}
 
-Speak as ${persona.name}. Be concise (2-4 sentences typical, never exceed 6).
-Cite sources by [note: title] when you reference them. You can disagree with what
-others said. Do NOT repeat what was already said. Do NOT introduce yourself.`;
+How to respond as ${persona.name}:
+- Take a clear position. Vague hedging is worse than being wrong.
+- Cite sources inline by their bracket number, e.g. [1] or [2].
+- Concise: 2-4 sentences typical, never exceed 6.
+- Do NOT introduce yourself or hedge with "as a ${persona.name}…".
+- Do NOT repeat what others already said. If your point was made, push it
+  forward, sharpen it, or counter it from a new angle.
+${disagreementLine}`;
 
   const user = `Conversation so far:
 ${conversation}
 
-Now respond.`;
+Respond now.`;
 
   return { system, user };
 }

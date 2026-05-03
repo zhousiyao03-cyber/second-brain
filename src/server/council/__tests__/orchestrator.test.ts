@@ -188,6 +188,77 @@ describe("runTurn", () => {
     expect(stopped && "reason" in stopped && stopped.reason).toBe("consecutive_no");
   });
 
+  it("first-turn fan-out: all yes-voting personas speak in priority order, then re-classify", async () => {
+    // Pass 1 (initial classify, agentSpoken=0): all 3 yes with different
+    // priorities. Fan-out should let all 3 speak before re-classifying.
+    // Pass 2 (after fan-out, agentSpoken=3): everyone says no →
+    // consecutive_no stops the turn.
+    let pass = 0;
+    vi.mocked(classifyShouldSpeak).mockImplementation(async ({ persona }) => {
+      pass += 1;
+      if (pass <= 3) {
+        const priorities: Record<string, number> = { p1: 0.5, p2: 0.9, p3: 0.7 };
+        return {
+          shouldSpeak: true,
+          priority: priorities[persona.id] ?? 0.1,
+          reason: "",
+        };
+      }
+      return { shouldSpeak: false, priority: 0, reason: "" };
+    });
+    vi.mocked(streamPersonaResponse).mockImplementation(() =>
+      asyncIter(["take"])
+    );
+    const events = await collect(
+      runTurn({
+        channel,
+        personas,
+        userMessage: { content: "discuss X", id: "m1" },
+        userId: "u1",
+        abortSignal: new AbortController().signal,
+      })
+    );
+
+    // All 3 personas should have spoken in this turn.
+    const starts = events.filter((e) => e.type === "agent_start");
+    expect(starts).toHaveLength(3);
+    // Order: p2 (0.9) → p3 (0.7) → p1 (0.5)
+    expect(starts.map((e) => "personaId" in e && e.personaId)).toEqual([
+      "p2",
+      "p3",
+      "p1",
+    ]);
+    // After fan-out, re-classify returns all-no → consecutive_no.
+    const stopped = events.find((e) => e.type === "stopped");
+    expect(stopped && "reason" in stopped && stopped.reason).toBe(
+      "consecutive_no"
+    );
+  });
+
+  it("first-turn fan-out respects hardLimitPerTurn", async () => {
+    // 3 personas all want to speak, but channel only allows 2 per turn.
+    vi.mocked(classifyShouldSpeak).mockResolvedValue({
+      shouldSpeak: true,
+      priority: 0.5,
+      reason: "",
+    });
+    vi.mocked(streamPersonaResponse).mockImplementation(() =>
+      asyncIter(["take"])
+    );
+    const events = await collect(
+      runTurn({
+        channel: { ...channel, hardLimitPerTurn: 2 },
+        personas,
+        userMessage: { content: "hi", id: "m1" },
+        userId: "u1",
+        abortSignal: new AbortController().signal,
+      })
+    );
+    expect(events.filter((e) => e.type === "agent_end")).toHaveLength(2);
+    const stopped = events.find((e) => e.type === "stopped");
+    expect(stopped && "reason" in stopped && stopped.reason).toBe("hard_limit");
+  });
+
   it("isolates per-agent stream errors: emits system row + skips, turn continues", async () => {
     // First call yields p1 with priority 0.5 (only one). Stream throws.
     // Then on reclassify all return no → consecutive_no.

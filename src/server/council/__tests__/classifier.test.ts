@@ -35,7 +35,18 @@ describe("buildClassifierPrompt", () => {
     expect(prompt).toContain("AI 工程师");
     expect(prompt).toContain("技术派");
     expect(prompt).toContain("RAG reranker?");
-    expect(prompt).toContain("Don't speak just to agree");
+  });
+
+  it("biases toward speaking — silence is failure", () => {
+    const prompt = buildClassifierPrompt({
+      persona,
+      history: [{ role: "user", content: "在吗", personaName: null }],
+    });
+    // Heated-discussion bias: classifier should default to speaking, only
+    // staying silent in two narrow cases. Guards against drift back to the
+    // old "polite refusal" behavior.
+    expect(prompt).toContain("Default: shouldSpeak=true");
+    expect(prompt).toContain("silence is failure");
   });
 });
 

@@ -34,7 +34,7 @@ export function buildClassifierPrompt({
   const promptExcerpt = persona.systemPrompt.slice(0, 200);
   const styleLine = persona.styleHint ? `Style hint: ${persona.styleHint}` : "";
 
-  return `You are deciding whether the persona "${persona.name}" should speak next in a group discussion.
+  return `You are deciding whether the persona "${persona.name}" should speak next in a heated group discussion.
 
 Persona system prompt (excerpt): ${promptExcerpt}
 ${styleLine}
@@ -42,17 +42,21 @@ ${styleLine}
 Recent conversation:
 ${recent}
 
-Rules:
-1. Speak if you have something genuinely useful, contrarian, or clarifying to say.
-2. Don't speak just to agree. Don't repeat what others already said.
-3. If the last speaker was you and no new info appeared, do NOT speak again.
-4. If the topic clearly isn't your domain, do NOT speak.
+Default: shouldSpeak=true. This is a roundtable — silence is failure.
+Only return shouldSpeak=false in two narrow cases:
+  (a) You spoke literally just now AND have nothing genuinely new to add.
+  (b) The topic is so far outside your domain that any comment would be empty filler.
+
+In every other case, speak — even if you only have a partial take, a
+question to push the conversation, or a counterpoint to what someone else
+said. Disagreement is welcome. "Nothing to add" is not a valid reason if
+nobody else has covered your angle.
 
 Return JSON:
 { "shouldSpeak": boolean, "priority": 0.0-1.0, "reason": "<one short sentence>" }
-- priority 0.9+: 强烈想说 (被点名/明显错误要纠正/独到见解)
-- priority 0.5-0.8: 有想法可以分享
-- priority < 0.5: 勉强想说 (一般 false 更好)`;
+- priority 0.9+: 强烈想说 (被点名/有明显反对意见/独到见解)
+- priority 0.6-0.8: 有想法可以分享 (默认落点)
+- priority < 0.5: 没什么必要 (但通常仍 shouldSpeak=true)`;
 }
 
 export async function classifyShouldSpeak({
@@ -72,7 +76,11 @@ export async function classifyShouldSpeak({
     return fakeClassify(persona.name);
   }
 
-  const prompt = buildClassifierPrompt({ persona, history, lastAgentMessage });
+  const prompt = buildClassifierPrompt({
+    persona,
+    history,
+    lastAgentMessage,
+  });
 
   try {
     const result = await generateStructuredData(

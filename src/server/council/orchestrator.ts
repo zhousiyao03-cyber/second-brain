@@ -52,6 +52,83 @@ export async function* runTurn({
   let lastAgentMessage: { personaId: string; content: string } | null = null;
   const personaIndex = new Map(personas.map((p) => [p.id, p]));
 
+  /**
+   * Stream one persona's response, persist the resulting agent (or error) row,
+   * and yield the matching agent_start / agent_delta / agent_end SSE events.
+   * Returns whether the stream was interrupted by the client.
+   */
+  async function* runOneSpeaker(speaker: {
+    persona: Persona;
+    decision: ClassifierDecision;
+  }, history: HistoryEntry[]): AsyncGenerator<SSEEvent, { interrupted: boolean; buffer: string }> {
+    const messageId = crypto.randomUUID();
+    yield {
+      type: "agent_start",
+      turnId,
+      messageId,
+      personaId: speaker.persona.id,
+    };
+
+    let buffer = "";
+    let interrupted = false;
+    try {
+      const stream = streamPersonaResponse({
+        persona: speaker.persona,
+        history,
+        userId,
+        channelTopic: channel.topic,
+        abortSignal,
+      });
+      for await (const chunk of stream) {
+        if (abortSignal.aborted) {
+          interrupted = true;
+          break;
+        }
+        buffer += chunk;
+        yield { type: "agent_delta", messageId, delta: chunk };
+      }
+    } catch (err) {
+      if (isAbort(err)) {
+        interrupted = true;
+      } else {
+        // Persist a system error row under the SAME messageId so the SSE
+        // agent_end and the DB row reference the same identifier. Caller
+        // skips counting agentSpoken so other personas can still try.
+        await db.insert(councilChannelMessages).values({
+          id: messageId,
+          channelId: channel.id,
+          role: "system",
+          personaId: speaker.persona.id,
+          content: `agent error: ${(err as Error).message ?? "unknown"}`,
+          status: "error",
+          turnId,
+          metadata: null,
+          createdAt: Date.now(),
+        });
+        yield { type: "agent_end", messageId, status: "interrupted" };
+        return { interrupted: false, buffer: "" };
+      }
+    }
+
+    await db.insert(councilChannelMessages).values({
+      id: messageId,
+      channelId: channel.id,
+      role: "agent",
+      personaId: speaker.persona.id,
+      content: buffer,
+      status: interrupted ? "interrupted" : "complete",
+      turnId,
+      metadata: JSON.stringify({ priority: speaker.decision.priority }),
+      createdAt: Date.now(),
+    });
+    yield {
+      type: "agent_end",
+      messageId,
+      status: interrupted ? "interrupted" : "complete",
+    };
+    return { interrupted, buffer };
+  }
+
   try {
     while (true) {
       if (abortSignal.aborted) {
@@ -120,90 +197,56 @@ export async function* runTurn({
         return;
       }
 
-      const speaker = queue[0]; // single-step: speak top, then re-classify
+      // First-turn fan-out: when nobody has spoken yet this turn (i.e. the
+      // user just sent a message), let EVERY persona who wants to speak
+      // respond — sequentially, in priority order — to seed a real
+      // multi-perspective discussion. Subsequent rounds revert to single-
+      // step (speak top, re-classify) so debate stays focused and the hard
+      // limit isn't blown in one user message.
+      const turnSpeakers =
+        agentSpoken === 0
+          ? queue.slice(0, channel.hardLimitPerTurn - agentSpoken)
+          : [queue[0]];
 
-      const messageId = crypto.randomUUID();
-      yield {
-        type: "agent_start",
-        turnId,
-        messageId,
-        personaId: speaker.persona.id,
-      };
-
-      // STREAM
-      let buffer = "";
-      let interrupted = false;
-      try {
-        const stream = streamPersonaResponse({
-          persona: speaker.persona,
-          history,
-          userId,
-          channelTopic: channel.topic,
-          abortSignal,
-        });
-        for await (const chunk of stream) {
-          if (abortSignal.aborted) {
-            interrupted = true;
-            break;
-          }
-          buffer += chunk;
-          yield { type: "agent_delta", messageId, delta: chunk };
+      let interruptedThisRound = false;
+      for (const speaker of turnSpeakers) {
+        if (agentSpoken >= channel.hardLimitPerTurn) break;
+        if (abortSignal.aborted) {
+          interruptedThisRound = true;
+          break;
         }
-      } catch (err) {
-        if (isAbort(err)) {
-          interrupted = true;
-        } else {
-          // Single-agent error: persist a system row UNDER THE SAME messageId
-          // so the SSE agent_end and the DB row reference the same identifier.
-          // Skip without incrementing agentSpoken so other personas can still
-          // get a turn.
-          await db.insert(councilChannelMessages).values({
-            id: messageId,
-            channelId: channel.id,
-            role: "system",
-            personaId: speaker.persona.id,
-            content: `agent error: ${(err as Error).message ?? "unknown"}`,
-            status: "error",
-            turnId,
-            metadata: null,
-            createdAt: Date.now(),
-          });
-          yield {
-            type: "agent_end",
-            messageId,
-            status: "interrupted",
-          };
+
+        // Reload history before each speaker so a persona sees what its
+        // peers JUST said this turn — this is what makes them disagree
+        // instead of independently riff on the user message.
+        const freshHistory =
+          turnSpeakers.length === 1
+            ? history
+            : await loadRecentHistory(channel.id, personaIndex);
+
+        const result = yield* runOneSpeaker(speaker, freshHistory);
+
+        if (result.interrupted) {
+          interruptedThisRound = true;
+          break;
+        }
+        if (result.buffer.length === 0) {
+          // Error row was already persisted; do not count toward agentSpoken
+          // so peers still get a turn this round.
           continue;
         }
+
+        agentSpoken += 1;
+        lastAgentMessage = {
+          personaId: speaker.persona.id,
+          content: result.buffer,
+        };
       }
 
-      await db.insert(councilChannelMessages).values({
-        id: messageId,
-        channelId: channel.id,
-        role: "agent",
-        personaId: speaker.persona.id,
-        content: buffer,
-        status: interrupted ? "interrupted" : "complete",
-        turnId,
-        metadata: JSON.stringify({ priority: speaker.decision.priority }),
-        createdAt: Date.now(),
-      });
-      yield {
-        type: "agent_end",
-        messageId,
-        status: interrupted ? "interrupted" : "complete",
-      };
-
-      if (interrupted) {
+      if (interruptedThisRound) {
         yield { type: "stopped", reason: "user_interrupt" };
         return;
       }
-
-      agentSpoken += 1;
-      lastAgentMessage = {
-        personaId: speaker.persona.id,
-        content: buffer,
-      };
     }
   } finally {
     clearTimeout(wallTimer);

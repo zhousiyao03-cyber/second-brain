@@ -1,7 +1,5 @@
-import {
-  retrieveAgenticContext,
-  type AgenticRetrievalResult,
-} from "@/server/ai/agentic-rag";
+import { retrieveWithFallback } from "@/server/ai/retriever";
+import type { RetrievedKnowledgeItem } from "@/server/ai/chat-system-prompt";
 import type { Persona } from "./types";
 import { db } from "@/server/db";
 import { notes, bookmarks } from "@/server/db/schema/notes";
@@ -11,8 +9,16 @@ import type { AskAiSourceScope } from "@/lib/ask-ai";
 /**
  * Augmented hit with source-level tags attached, for in-memory tag filtering.
  * Tag-on-chunks would be a Phase 2/3 optimization (spec §13).
+ *
+ * Note: this used to wrap AgenticRetrievalResult directly. After unifying
+ * council with the Ask AI retrieval pipeline (`retrieveWithFallback`), hits
+ * carry the same shape Ask AI consumes — chunkId / chunkIndex /
+ * sectionPath are present for agentic results, absent for keyword-fallback.
  */
-export type PersonaRagHit = AgenticRetrievalResult & {
+export type PersonaRagHit = RetrievedKnowledgeItem & {
+  sourceType: "note" | "bookmark";
+  sourceTitle: string;
+  sourceId: string;
   sourceTags: string[];
 };
 
@@ -33,19 +39,19 @@ export function applyTagFilter(
 
 /**
  * Reads notes.tags / bookmarks.tags for the source ids referenced by hits
- * and attaches them as `sourceTags`.
+ * and attaches them as `sourceTags`. Also lifts source-level identifiers
+ * (sourceType / sourceTitle / sourceId) onto the hit so downstream code
+ * has a single shape to render regardless of which retriever produced it.
  */
 export async function enrichWithTags(
-  hits: AgenticRetrievalResult[]
+  hits: RetrievedKnowledgeItem[]
 ): Promise<PersonaRagHit[]> {
   if (hits.length === 0) return [];
 
-  const noteIds = hits
-    .filter((h) => h.sourceType === "note")
-    .map((h) => h.sourceId);
+  const noteIds = hits.filter((h) => h.type === "note").map((h) => h.id);
   const bookmarkIds = hits
-    .filter((h) => h.sourceType === "bookmark")
-    .map((h) => h.sourceId);
+    .filter((h) => h.type === "bookmark")
+    .map((h) => h.id);
 
   const tagsByNoteId = new Map<string, string[]>();
   if (noteIds.length > 0) {
@@ -67,10 +73,13 @@ export async function enrichWithTags(
 
   return hits.map((hit) => ({
     ...hit,
+    sourceType: hit.type,
+    sourceTitle: hit.title,
+    sourceId: hit.id,
     sourceTags:
-      hit.sourceType === "note"
-        ? tagsByNoteId.get(hit.sourceId) ?? []
-        : tagsByBookmarkId.get(hit.sourceId) ?? [],
+      hit.type === "note"
+        ? tagsByNoteId.get(hit.id) ?? []
+        : tagsByBookmarkId.get(hit.id) ?? [],
   }));
 }
 
@@ -88,14 +97,14 @@ export async function searchKnowledgeForPersona({
   query: string;
   userId: string;
 }): Promise<PersonaRagHit[]> {
-  let raw: AgenticRetrievalResult[];
+  let raw: RetrievedKnowledgeItem[];
   try {
-    raw = await retrieveAgenticContext(query, {
+    raw = await retrieveWithFallback(query, {
       scope: persona.scopeKind as AskAiSourceScope, // 'all' | 'notes' | 'bookmarks'
       userId,
     });
   } catch (err) {
-    console.warn("[council] retrieveAgenticContext failed", err);
+    console.warn("[council] retrieveWithFallback failed", err);
     return [];
   }
 

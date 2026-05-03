@@ -200,14 +200,14 @@ function applyEvent(
 function stoppedReasonToText(reason: string): string {
   switch (reason) {
     case "hard_limit":
-      return "⏱ 讨论达到本轮上限";
+      return "⏱ Turn limit reached";
     case "consecutive_no":
-      return "💤 暂时没人想接话了";
+      return "💤 No one picked it up. Try a more specific question?";
     case "user_interrupt":
-      return "⏸ 你打断了讨论";
+      return "⏸ You interrupted the discussion";
     case "user_stop":
-      return "⏹ 讨论已停止";
+      return "⏹ Discussion stopped";
     default:
-      return `⚠ 出错了 (${reason})`;
+      return `⚠ Something went wrong (${reason})`;
   }
 }
