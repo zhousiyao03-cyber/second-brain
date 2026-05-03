@@ -76,7 +76,11 @@ const SEMANTIC_LIMIT = 25;
 const RERANK_POOL = 30;
 const SEED_LIMIT = 8;
 const FINAL_LIMIT = 16;
-const RECENT_QUERY_REGEX = /最近|最新|近期|刚刚|这几天|最近的/;
+// Recency intent triggers a third RRF signal (chunks ranked by source_updated_at).
+// Keep the regex broad — false positives only mildly bias toward newer chunks,
+// while false negatives leave the dominant user pain ("我最近干了啥") unfixed.
+const RECENT_QUERY_REGEX =
+  /最近|最新|近期|刚刚|刚才|这几天|前几天|几天前|过去几天|今天|昨天|当下|现在|recent|latest|newest|today|yesterday/i;
 const SUMMARY_QUERY_REGEX = /总结|概括|汇总|回顾|梳理|整理|盘点|归纳/;
 const NOTES_QUERY_REGEX = /笔记|note/;
 const BOOKMARKS_QUERY_REGEX = /收藏|书签|链接|网址|bookmark/;
@@ -388,6 +392,25 @@ export async function retrieveAgenticContext(
     1.3
   );
 
+  // Recency intent: add chunks ranked by source_updated_at (newest first) as
+  // a third RRF signal. Only activates when the query expresses recency
+  // intent (RECENT_QUERY_REGEX), so topic-deep queries are unaffected. Limit
+  // to the top RECENCY_POOL chunks so the signal is concentrated on actually-
+  // recent material; older chunks fall back to BM25/semantic ranking only.
+  if (profile.prefersRecent) {
+    const RECENCY_POOL = 20;
+    const recencyRanked = scopedChunks
+      .filter((chunk) => chunk.sourceUpdatedAt)
+      .sort(
+        (a, b) =>
+          (b.sourceUpdatedAt?.getTime() ?? 0) -
+          (a.sourceUpdatedAt?.getTime() ?? 0)
+      )
+      .slice(0, RECENCY_POOL)
+      .map((chunk) => chunk.id);
+    addRrfScore(fusedScores, recencyRanked, 1.5);
+  }
+
   // Pool of top RRF candidates that we hand to the cross-encoder. We then
   // pick SEED_LIMIT from the rerank-sorted pool (or fall back to RRF order
   // when reranker disabled / errored).
@@ -409,7 +432,12 @@ export async function retrieveAgenticContext(
 
   let seedChunks = rrfRanked.slice(0, SEED_LIMIT);
 
-  if (isRerankerEnabled() && rrfRanked.length > 0) {
+  // For recency-intent queries, skip the cross-encoder reranker. The
+  // ms-marco reranker scores semantic relevance but knows nothing about
+  // time, so it tends to demote actually-recent diary chunks (which are
+  // short and topically diverse) below older topical notes that "look more
+  // relevant". Trust the RRF ordering when recency is the dominant signal.
+  if (isRerankerEnabled() && rrfRanked.length > 0 && !profile.prefersRecent) {
     try {
       const rerankInputs = rrfRanked.map((entry) => ({
         id: entry.chunk.id,

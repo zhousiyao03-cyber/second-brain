@@ -1,0 +1,442 @@
+{
+  "aggregate": {
+    "n": 15,
+    "recall5": 0.15,
+    "recall10": 0.21666666666666667,
+    "mrr": 0.2887789987789987,
+    "p50LatencyMs": 1082,
+    "p95LatencyMs": 7906
+  },
+  "perQuery": [
+    {
+      "id": "q-001",
+      "query": "我最近干了啥",
+      "recall5": 0.2,
+      "recall10": 0.2,
+      "mrr": 0.5,
+      "latencyMs": 7906,
+      "rankedTopK": [
+        "82bed2d5-61a9-4380-bcbc-3aa5cc404094",
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "0a825faf-d183-4041-b831-881ff32c2e16",
+        "675b84e4-6e05-45c0-8d38-a279f85c81db",
+        "1497dd45-b7c5-4026-830f-f8785d115427",
+        "f96203b0-ada4-40ee-bba3-59057a65a7ee",
+        "3be12490-3b3b-4035-8703-f741935a6874"
+      ],
+      "relevant": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "d60bb102-0a64-44d1-ba15-701f837d3442",
+        "6cf9bc1a-9708-4582-b1d1-e2bbba23a976"
+      ]
+    },
+    {
+      "id": "q-004",
+      "query": "看看我是什么样的人",
+      "recall5": 0,
+      "recall10": 0,
+      "mrr": 0,
+      "latencyMs": 3173,
+      "rankedTopK": [
+        "b8c398ed-1a3f-4c3c-8461-55e25c6ef8e1",
+        "f3872f0f-49bb-4600-b56e-a395402d92e6",
+        "3d6a7e5f-0494-45f6-8315-de3f62c8d1ac",
+        "00457aad-8c91-4aa4-bdd3-196ab0dd4792",
+        "395455fe-0531-4474-bd5c-085390a11e63",
+        "03589f00-da5d-4901-887a-250057f59510",
+        "30999de4-2704-4900-985f-0dd1be8e245d",
+        "981471f5-5a1e-490c-85d1-c03624ff95c1",
+        "a89a061a-92f0-4b64-b726-852b11719fb2",
+        "87daa9a0-e948-4130-a972-e998663f2c99",
+        "0c71628a-449f-421c-ac59-979e0c5f057d",
+        "78a280cc-17ca-4f01-8765-bdf3a21a0773",
+        "dffa0ced-b132-4614-8094-6b0e1904d406",
+        "cde8eab5-83ce-453f-a802-fd80e7a4e00f",
+        "28e8860e-0cd6-4f16-8005-9e76c2d07e26",
+        "eb29e86c-eeb8-4b9b-b1b4-e6123475eda8"
+      ],
+      "relevant": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "6cf9bc1a-9708-4582-b1d1-e2bbba23a976",
+        "052270c0-9b04-40ed-97dc-20bf6a2aeaf1",
+        "3a334bfe-d452-4d32-941b-3bf0794001f7"
+      ]
+    },
+    {
+      "id": "q-005",
+      "query": "评价一下我",
+      "recall5": 0,
+      "recall10": 0,
+      "mrr": 0,
+      "latencyMs": 1413,
+      "rankedTopK": [
+        "c4cd45e1-c7b3-4e28-8c57-d8a69e9cf831",
+        "3d3e5036-4729-4c87-a2ed-9dd1939c40b1",
+        "2d6aedac-3877-4dfd-af05-839b2a4be9fd",
+        "3c8388e0-85e4-47cc-a96f-d90159945393",
+        "5fee7d1f-b407-4bb2-9c21-d7abaa38ac6f",
+        "921d1cff-b30b-498e-b038-91a0a053a5a1",
+        "6a354537-c6c3-47e9-956a-829c78c55a5f",
+        "67a119d7-3410-4ae7-96b2-255731bf0e43",
+        "f305fa52-5a33-48a2-a58c-4c2bda69dd1a",
+        "d4185b7a-6de8-415e-8a88-3018d7a11c97",
+        "9711b487-f32c-4d92-8f32-e3d1b9ee832e",
+        "efb27e9e-c383-4b51-b750-2f1dcf82ced4",
+        "49381f2f-b79f-4dbd-837e-743200b71f79",
+        "2e1d313c-5223-4258-96f5-0a65eda47d9f",
+        "6adf00d2-5921-402a-a5f8-4bd5f96576d0",
+        "b3101af2-4c51-4045-8682-36b5c26748dd"
+      ],
+      "relevant": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "6cf9bc1a-9708-4582-b1d1-e2bbba23a976",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "052270c0-9b04-40ed-97dc-20bf6a2aeaf1"
+      ]
+    },
+    {
+      "id": "q-006",
+      "query": "我最近在干啥",
+      "recall5": 0.2,
+      "recall10": 0.2,
+      "mrr": 0.3333333333333333,
+      "latencyMs": 679,
+      "rankedTopK": [
+        "1497dd45-b7c5-4026-830f-f8785d115427",
+        "82bed2d5-61a9-4380-bcbc-3aa5cc404094",
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "0a825faf-d183-4041-b831-881ff32c2e16",
+        "675b84e4-6e05-45c0-8d38-a279f85c81db",
+        "f96203b0-ada4-40ee-bba3-59057a65a7ee",
+        "3be12490-3b3b-4035-8703-f741935a6874"
+      ],
+      "relevant": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "66745404-6abd-422c-9cd9-4702c01f9a4a",
+        "79446568-e755-443e-a98e-6c8324aab2c2"
+      ]
+    },
+    {
+      "id": "q-007",
+      "query": "看到我最近的日子",
+      "recall5": 0.2,
+      "recall10": 0.2,
+      "mrr": 1,
+      "latencyMs": 676,
+      "rankedTopK": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "0a825faf-d183-4041-b831-881ff32c2e16",
+        "675b84e4-6e05-45c0-8d38-a279f85c81db",
+        "1497dd45-b7c5-4026-830f-f8785d115427",
+        "f96203b0-ada4-40ee-bba3-59057a65a7ee",
+        "3be12490-3b3b-4035-8703-f741935a6874",
+        "82bed2d5-61a9-4380-bcbc-3aa5cc404094"
+      ],
+      "relevant": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "d60bb102-0a64-44d1-ba15-701f837d3442",
+        "ddebda23-f4ce-4127-a1a7-d82a36434bbc"
+      ]
+    },
+    {
+      "id": "q-008",
+      "query": "最新的笔记",
+      "recall5": 0.4,
+      "recall10": 0.4,
+      "mrr": 1,
+      "latencyMs": 680,
+      "rankedTopK": [
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "0a825faf-d183-4041-b831-881ff32c2e16",
+        "675b84e4-6e05-45c0-8d38-a279f85c81db",
+        "1497dd45-b7c5-4026-830f-f8785d115427",
+        "f96203b0-ada4-40ee-bba3-59057a65a7ee",
+        "3be12490-3b3b-4035-8703-f741935a6874",
+        "82bed2d5-61a9-4380-bcbc-3aa5cc404094"
+      ],
+      "relevant": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "aefec373-18fd-4118-a0c4-7589a96357e7",
+        "444ce7da-ff41-433d-9121-f8d64b4a8841",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f"
+      ]
+    },
+    {
+      "id": "q-009",
+      "query": "我最近写过什么关于 RAG 的笔记",
+      "recall5": 0,
+      "recall10": 0,
+      "mrr": 0,
+      "latencyMs": 682,
+      "rankedTopK": [
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "0a825faf-d183-4041-b831-881ff32c2e16",
+        "675b84e4-6e05-45c0-8d38-a279f85c81db",
+        "1497dd45-b7c5-4026-830f-f8785d115427",
+        "f96203b0-ada4-40ee-bba3-59057a65a7ee",
+        "3be12490-3b3b-4035-8703-f741935a6874",
+        "82bed2d5-61a9-4380-bcbc-3aa5cc404094"
+      ],
+      "relevant": [
+        "aefec373-18fd-4118-a0c4-7589a96357e7",
+        "444ce7da-ff41-433d-9121-f8d64b4a8841",
+        "539073f0-235e-425a-83fc-2466cdf1dbec",
+        "66090575-09d4-40ef-aad2-5650a7a405d1",
+        "126dfc40-2e3b-41be-906b-34b782e1c4e8"
+      ]
+    },
+    {
+      "id": "q-010",
+      "query": "规划一下我的职业发展",
+      "recall5": 0.75,
+      "recall10": 0.75,
+      "mrr": 1,
+      "latencyMs": 1112,
+      "rankedTopK": [
+        "d40dd03a-17a9-47a4-b890-548f465e6179",
+        "052270c0-9b04-40ed-97dc-20bf6a2aeaf1",
+        "df3848ec-5257-40b5-80f6-7c284084f598",
+        "5a0ee544-208a-4192-87e2-1c43266a0628",
+        "cb72703e-7c61-41a2-98e9-2cfd1c4626fc",
+        "06e5e63f-4050-4588-8e2d-279cc6389b66",
+        "1b00b175-3eff-4341-9bb9-7950a4910b50",
+        "18831292-3d92-499b-82d9-9252cc846e7c",
+        "1345a82c-d3d6-4a0c-b203-cb0ff535dd42",
+        "2eb1d5ea-797d-4c41-af01-4154901bb2d6",
+        "f42fe8cf-0da7-44fd-842c-633702766560",
+        "6335201d-d11f-4a62-b1b8-b0faedbba62c",
+        "146cf433-6dcf-4321-b29d-1d2126df4212",
+        "2f185f17-14fd-4c52-8078-602390bdc97f",
+        "65906581-7e48-44a2-a0aa-7d6c706dca3e",
+        "1a988119-9772-487c-b88d-afa759029210"
+      ],
+      "relevant": [
+        "052270c0-9b04-40ed-97dc-20bf6a2aeaf1",
+        "d40dd03a-17a9-47a4-b890-548f465e6179",
+        "df3848ec-5257-40b5-80f6-7c284084f598",
+        "4c6b5464-3316-415e-89c0-212181efcda1"
+      ]
+    },
+    {
+      "id": "q-011",
+      "query": "对比一下主流编程语言",
+      "recall5": 0,
+      "recall10": 0,
+      "mrr": 0,
+      "latencyMs": 1193,
+      "rankedTopK": [
+        "225caba3-e2c0-4381-a82d-07c6b0f04085",
+        "6968e9dd-9dd3-4106-a1c1-fb470a27508f",
+        "0cf431f1-a14f-4156-bcd7-72669f31b540",
+        "fa836971-905a-4237-83df-fe82d244ec7b",
+        "1958083d-adf8-4868-b562-52acacf47e3c",
+        "497cf256-4083-4648-994e-6943174971fd",
+        "c9161fd1-3d2a-434d-8300-ec101b25fd0d",
+        "9c90bb96-8778-4e66-a7b2-43579d8e679f",
+        "0c0ac192-ad4d-4bb6-a999-b9d129e24cbb",
+        "0afc039c-495e-4fdf-95f9-7e7b61f75168",
+        "20dfbcc3-ee36-407b-a08a-98ea2aa7bdda",
+        "5d0e6a07-50fe-41f5-ac8a-6a2363128db6",
+        "fcbbf3b6-20f8-4c45-a09c-0b5809329a2b",
+        "66e3ed80-f725-421d-ba7e-228a7b24c16d",
+        "006d7edb-8088-4ed5-aabf-84f196fc7927",
+        "a6560da5-ffce-48dc-9054-2dfdb29099b6"
+      ],
+      "relevant": [
+        "adb343f2-3345-4e42-b9ba-fcceddd43b6d",
+        "fcc638ae-f2b2-421a-8feb-6ee30593cfa3",
+        "71a36cae-b3fe-465b-ac55-585524d8fa6d",
+        "e02c8e23-648d-490a-a266-fe668de4ec14"
+      ]
+    },
+    {
+      "id": "q-012",
+      "query": "openclaw 和 hermes agent 的架构区别",
+      "recall5": 0.5,
+      "recall10": 1,
+      "mrr": 0.25,
+      "latencyMs": 1185,
+      "rankedTopK": [
+        "46ff8f31-d4fb-4a7b-8db2-a59fb62ceaec",
+        "7ad77e80-11fa-4477-b12f-10bd2b4f31dd",
+        "cb253340-cae2-4992-a846-08c990d048b6",
+        "f522d7ff-50f2-4a09-af07-b3e3c45c3e4f",
+        "653ddadb-ce15-425e-a1e6-503301ffc2db",
+        "ed15a0b7-d6af-4f64-8637-008b765f3ed0",
+        "82331e97-80f8-44d7-a584-de552f4c032a",
+        "908a33c1-b295-410f-a80c-04161359c8d6",
+        "f4dbfc58-4e00-4db0-a35d-fa9bcfcbf3e2",
+        "667d7b5c-6837-46ad-b7e8-fec85b8ff502",
+        "eadd1680-1069-4b40-96ab-af2dccf1f41d",
+        "4cfb1f0e-a43d-45e0-bd69-53fc14b211cf",
+        "98981ef5-7e0e-4508-a3a4-1360166092e1",
+        "7f72760e-96a3-4135-80ac-8829e83534e9",
+        "2d70c11a-0696-417c-a500-1dfbb97d0c8b",
+        "7307b8bf-a103-4396-866e-f69cb2096856"
+      ],
+      "relevant": [
+        "653ddadb-ce15-425e-a1e6-503301ffc2db",
+        "f522d7ff-50f2-4a09-af07-b3e3c45c3e4f",
+        "ed15a0b7-d6af-4f64-8637-008b765f3ed0",
+        "667d7b5c-6837-46ad-b7e8-fec85b8ff502"
+      ]
+    },
+    {
+      "id": "q-013",
+      "query": "Knosi 项目的整体架构",
+      "recall5": 0,
+      "recall10": 0,
+      "mrr": 0,
+      "latencyMs": 1061,
+      "rankedTopK": [
+        "4aba949e-a685-42a7-bbd0-1a9837d85c6f",
+        "1961402e-0c79-421d-81d9-da9c82016edb",
+        "6496b69b-4328-4a78-909e-c14c9a27569d",
+        "66d95343-9ca2-4352-bd0b-41eb5c147cb0",
+        "dcd0c8ae-5fdb-42bc-a5f7-ad24c3d0da7f",
+        "bc9bd993-1e89-471c-bbd4-bb0d998c6114",
+        "428630c2-c06c-45ce-9228-75e9efc9a2c9",
+        "09c91be7-887c-46f9-88a0-a67d42084b01",
+        "9179fa98-4fa8-4dd8-8618-c39c4212ee21",
+        "531ae3ab-3532-4f93-90b8-2c335ff1fcbb",
+        "aafbb391-7980-403b-beec-5f8b6a53bad5",
+        "ff6c636e-cc70-4e3c-8bfe-8ff516aee70e",
+        "2c155127-b0fc-46e4-9d4d-16b94f6f700e",
+        "037e4252-6abd-4b74-96cb-868dfc8cd8ff",
+        "0b9bb3bf-9358-44e3-bc67-c1e5989dc5a4",
+        "08899d55-1c35-4dce-bdcc-2ddbea07aa1c"
+      ],
+      "relevant": [
+        "47850b93-74f7-4f81-9851-5e74dc6cb489"
+      ]
+    },
+    {
+      "id": "q-014",
+      "query": "Redis ZSet 为什么用跳表",
+      "recall5": 0,
+      "recall10": 0,
+      "mrr": 0.07692307692307693,
+      "latencyMs": 1096,
+      "rankedTopK": [
+        "31c86f43-8582-4bb7-bd19-46aac1026e4a",
+        "762a8fa3-c5a5-4164-8827-bbe28a22a307",
+        "a57384c7-3dbd-4b2d-b4c7-cf0f163414f8",
+        "8d300fe0-3ef4-4ac6-b4da-b49ba8fe019d",
+        "e640f082-5698-4fd5-804a-5d0f6f0705b6",
+        "8359a7ec-980a-4da9-a13d-d58b0c7bebd0",
+        "cdd0c4c7-bcec-4b87-a7a0-c965841d09c4",
+        "c08434fb-9742-4967-b447-a695f0017411",
+        "97535a17-88a1-4832-af3f-5d370c2a63cc",
+        "9123bbf7-f0d9-46ed-a04d-da8301e0557f",
+        "1797df78-46d5-47e7-bbb0-feea87c1ca9c",
+        "2b00d338-a23f-403a-ac9d-54d1c74c969d",
+        "0596a9aa-f99d-4640-bf90-d7e06cc36f01",
+        "413f155d-383d-4109-9fe2-c603e4014e16",
+        "7a5fe239-90fb-4b3c-a01d-3d6f6015ba38",
+        "8af49820-759c-4d0d-866e-b52d3ce30d61"
+      ],
+      "relevant": [
+        "0596a9aa-f99d-4640-bf90-d7e06cc36f01"
+      ]
+    },
+    {
+      "id": "q-015",
+      "query": "布隆过滤器误判率怎么算",
+      "recall5": 0,
+      "recall10": 0.5,
+      "mrr": 0.1,
+      "latencyMs": 1056,
+      "rankedTopK": [
+        "ca427f94-0f40-4dd9-9a6e-05241a95e69f",
+        "3e054be2-7df9-4302-92d1-cecc5f12c8e6",
+        "fb266bd1-9e69-4925-b373-198edf8b4102",
+        "88e6c49c-44b7-42db-b4a8-45a5b5639eba",
+        "612704ad-0ecd-45ec-8e17-9f83d70455d8",
+        "59ad08b0-13f0-45a5-bd0e-0aa158ea4eba",
+        "79342033-036f-401d-939f-39ddd09e291f",
+        "d6b3b3b7-d303-4ca5-9bb0-1f1c7e7e4228",
+        "b6ad0fec-0b2b-49e9-b17d-95af62ba9e99",
+        "9e4a2c06-fefd-4b82-affe-900c4cb9702f",
+        "7093e900-fc5a-4640-b72e-e29e82106115",
+        "a3ba7fd9-1f1e-4a17-9e89-cfb1d4792f55",
+        "45045e1e-add8-4eb1-8df3-f60888158935",
+        "878dd188-fc5a-4597-baa8-412fd6f2d6b3",
+        "6ce713af-29df-4a7f-97de-0a3680edc076",
+        "f6a79809-1dc0-42fb-a754-97bf29a5a934"
+      ],
+      "relevant": [
+        "7093e900-fc5a-4640-b72e-e29e82106115",
+        "9e4a2c06-fefd-4b82-affe-900c4cb9702f"
+      ]
+    },
+    {
+      "id": "q-016",
+      "query": "GitHub 5月1日的热门项目",
+      "recall5": 0,
+      "recall10": 0,
+      "mrr": 0.07142857142857142,
+      "latencyMs": 1082,
+      "rankedTopK": [
+        "75d5bbf7-e106-4849-a3f5-79e59a1e8570",
+        "67f9fcfb-fae0-49a2-883a-6ebe984f9187",
+        "84abad26-a723-425f-9e00-91adefbb33c4",
+        "5629dcd9-4c25-4e48-a3db-fb0cbb9ff839",
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "0a825faf-d183-4041-b831-881ff32c2e16",
+        "c5f2782c-bffe-4899-a9e3-12b967404c09",
+        "3d9eed53-e1f0-40d3-bc99-6f03601ade9b",
+        "0615a29b-4c80-496a-802e-2c3934ec1b7d",
+        "b7ee0c2e-1461-466c-8cdd-a4ccb70adf38",
+        "10032e65-a18c-4a7e-be76-029e6d894784",
+        "9842aaba-3410-4acf-8cfc-e3c77a37c497",
+        "4e35dd0a-07b4-4871-b0a1-c84f756f7a95",
+        "26a12409-cbb0-43a3-9c0e-41852037d843",
+        "e4ef225b-364b-4fff-93d0-1a82d42fc22e"
+      ],
+      "relevant": [
+        "26a12409-cbb0-43a3-9c0e-41852037d843"
+      ]
+    },
+    {
+      "id": "q-017",
+      "query": "5月有哪些 TODO",
+      "recall5": 0,
+      "recall10": 0,
+      "mrr": 0,
+      "latencyMs": 1011,
+      "rankedTopK": [
+        "ef7d7a73-4de3-4467-a0f9-68448b4c913f",
+        "d7f6c940-37b3-4c99-b9da-00fd4aa1cd96",
+        "52cc793c-97bb-4384-bce3-03e456a5e34e",
+        "01f21aae-b826-45f5-a95c-190d78d880d6",
+        "8ed14f40-ac5e-4d4f-a713-dc1ea7037caa",
+        "287c263f-7487-4337-bb52-5114c35c9752",
+        "088ae682-d154-499c-8a2b-cf5bdc16a8d4",
+        "a2fa31aa-79f3-497c-8728-1580a48317a9",
+        "eed87c67-9852-4880-95fd-e0bd396e7a4f",
+        "066b7cd7-e216-4e5a-8f5f-dd2c4277486e",
+        "0e4acf97-8337-460d-875c-9ed406aac7e2",
+        "d7ba8bdb-955b-49fd-b342-5b97c1bfe043",
+        "b1b6aabc-c685-4958-ad7c-ad2d7ddbd0d7",
+        "67e993db-cde2-4e68-a199-8b12606a0a35",
+        "f4ae5b5f-9bd1-4b15-aa8f-a8bec8249234"
+      ],
+      "relevant": [
+        "d2a48a84-754c-4ae6-aa0f-00403be57f41"
+      ]
+    }
+  ]
+}

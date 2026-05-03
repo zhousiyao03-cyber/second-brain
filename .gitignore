@@ -73,11 +73,15 @@ HANDOFF.md
 # git worktrees (isolated workspaces)
 .worktrees/
 
-# RAG eval — ad-hoc runs may contain chunk content; baseline.json is committed
-# (it only stores chunk UUIDs and aggregate scores, no content)
-/eval/results/
+# RAG eval — ad-hoc runs may contain chunk content; baseline.json + named
+# milestone runs are committed (only store chunk UUIDs / answers, no chunk
+# bodies — review JSON before committing if unsure).
+/eval/results/run-*.json
+/eval/results/agent/run-*.json
 !/eval/results/baseline.json
 !/eval/results/agent/baseline.json
+!/eval/results/run-recency-v2.json
+!/eval/results/agent/run-recency-v2.json
 /.backfill-milvus-failed.json
 
 # learning migration: local config (per-user) and prod dumps stay local

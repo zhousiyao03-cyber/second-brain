@@ -1,0 +1,442 @@
+{
+  "aggregate": {
+    "n": 18,
+    "passRate": 0.3333333333333333,
+    "meanCitationScore": 0.6342592592592592,
+    "meanMentionScore": 0.8333333333333334,
+    "meanMentionScoreOverNonEmpty": 0.7,
+    "meanNegativeScore": 1,
+    "meanNegativeScoreOverNonEmpty": 1,
+    "p50LatencyMs": 11137,
+    "runtimeErrors": 0
+  },
+  "perCase": [
+    {
+      "id": "ask-001",
+      "category": "recency-recent-days",
+      "query": "我最近干了啥",
+      "citationScore": 0.3333333333333333,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [
+        "5"
+      ],
+      "leaks": [],
+      "answer": "根据你的知识库记录，你最近主要在搞这些事情：\n\n**📚 知识管理 / 技术追踪**\n- 持续跟踪 **GitHub Trending**（从 04-26 到 05-02 连续记录了 35+ 个仓库），每天做去重筛选、深度分析各项目的火爆原因和适用人群。\n\n**🤖 学习 AI**\n- 你提到\"学习 AI 就很舒服，还是喜欢搞 AI\"——AI 是你近期的主要兴趣方向。\n\n**💼 工作烦恼**\n- 公司在让你烦心，不过你没有多展开，只是提了一句\"想到公司的破事就烦\"。\n\n**👨‍👧 陪娃**\n- 昨天（5 月 3 日）是陪娃的一天——陪洗澡、全天陪娃。\n\n总体画风：**搞技术 + 陪娃 + 烦公司，周末把时间给了家人。**\n\n<!-- sources:[{\"id\":\"ed72afe6-89be-4a68-899b-b259cc3e8c72\",\"type\":\"note\",\"title\":\"2026年5月3日 星期日\"},{\"id\":\"faf1c29a-02bb-4b51-89e7-faf6c7e8dea4\",\"type\":\"note\",\"title\":\"GitHub 热门 · 2026-05-02\"}] -->",
+      "touchedNoteIds": [
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "preambleNoteIds": [
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "latencyMs": 15373,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-002",
+      "category": "recency-recent-days",
+      "query": "Summarize my recent notes",
+      "citationScore": 0.25,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "根据你最近的笔记，可以归纳为两大块内容：\n\n---\n\n### 📝 个人日记 · 2026-05-03\n- 工作上有烦心事，但学 AI 让你感到舒服——你还是喜欢搞 AI\n- 陪娃洗澡，是陪娃的一天\n\n---\n\n### 🔥 GitHub 热门 · 2026-05-02\n**整体趋势**：Trending 进入**存量循环第四天**——前 5 名几乎都是连续多天上榜的\"老熟人\"（TradingAgents、maigret、jcode、browserbase-skills、zapret），整页仅 8 个仓库。\n\n**今日新面孔（3 个）**：\n\n| 仓库 | 定位 | Star |\n|------|------|------|\n| **ruvnet/ruflo** | Claude Code 的多 Agent 编排平台，支持 100+ Agent + WASM 内核 + 联邦协议 + 持久化学习 | +1,258 🌟 |\n| **ShareX/ShareX** | Windows 经典截图录屏工具，v20.0.4 刚发布回潮 | +129 🌟 |\n| **jwasham/coding-interview-university** | 面试圣经，345k star 老仓再冲榜，叠加 AI 替代 + 春招话题 | +717 🌟 |\n\n**三个关键信号**：\n1. 五一长假 + 周末导致新项目难冒头，存量循环持续\n2. Claude Agent 编排赛道形成**三足鼎立**——sim（画布拖拽）、craft-agents-oss（桌面 GUI）、ruflo（Claude Code swarm + 联邦协议），分别瞄准不同用户层\n3. 学习类长青树轮番返场（build-your-own-x → system-design-primer → coding-interview-university...），背景是 AI 替代初级岗位焦虑 + 春招季\n\n<!-- sources:[{\"id\":\"ed72afe6-89be-4a68-899b-b259cc3e8c72\",\"type\":\"note\",\"title\":\"2026年5月3日 星期日\"},{\"id\":\"faf1c29a-02bb-4b51-89e7-faf6c7e8dea4\",\"type\":\"note\",\"title\":\"GitHub 热门 · 2026-05-02\"}] -->",
+      "touchedNoteIds": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4"
+      ],
+      "preambleNoteIds": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4"
+      ],
+      "latencyMs": 11865,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-003",
+      "category": "recency-today",
+      "query": "看看我今天的日记写的啥",
+      "citationScore": 1,
+      "mentionScore": 0,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "",
+      "touchedNoteIds": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4"
+      ],
+      "preambleNoteIds": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4"
+      ],
+      "latencyMs": 3510,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-004",
+      "category": "global-synthesis",
+      "query": "看看我是什么样的人",
+      "citationScore": 0,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "从你知识库的笔记内容来看，你的兴趣和关注点很明确，我试着勾勒一下：\n\n**你更像一个实战型的技术人。**\n\n你的笔记聚焦在：\n\n- **分布式系统韧性**：服务雪崩、熔断、限流、隔离（Bulkhead）——说明你处理过线上故障，或者至少深度思考过\"系统怎么扛住\"。\n- **消息重试与 DLQ 设计**：区分瞬时错误 vs 业务错误、指数退避、重试风暴——你不是停留在理论，而是在琢磨\"消费端怎么写得稳\"。\n- **Linux PageCache**：dirty_ratio、预读、Kafka 的秘密——你对底层原理有好奇心，不只是\"调个 API 就行\"。\n- **MCP 协议**：你没停留在传统后端，也在关注 AI Agent 的工具化基础设施——你愿意往前沿走一步。\n\n**总结几个特征：**\n- 有**系统设计**意识，关注边界情况和灾难恢复\n- 有自己的**工程哲学**——比如你认同\"熔断是开关，降级是开关打开后做什么\"这种清晰的抽象\n- 笔记结构很规整，说明你在**刻意梳理知识体系**，而不是零散收藏\n- 你很在意**反直觉的易错点**——这不是新手会专门记录的东西\n\n不过这些都是从你的知识库推断的——有点像通过你书架上的书猜你是什么样的人。如果想让我更准，你可以告诉我你对自己的看法。",
+      "touchedNoteIds": [
+        "0e8d14a7-ac7d-463d-af59-df79ef7af329",
+        "6e3ce2ae-867f-4e55-877d-36aad0222e63",
+        "c653f57c-9e63-4671-83c4-04f8306e437d",
+        "9d3f955d-ea06-459b-ae1f-b0da645b7924"
+      ],
+      "preambleNoteIds": [
+        "0e8d14a7-ac7d-463d-af59-df79ef7af329",
+        "6e3ce2ae-867f-4e55-877d-36aad0222e63",
+        "c653f57c-9e63-4671-83c4-04f8306e437d",
+        "9d3f955d-ea06-459b-ae1f-b0da645b7924"
+      ],
+      "latencyMs": 9278,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-005",
+      "category": "global-synthesis",
+      "query": "评价一下我",
+      "citationScore": 0,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "从你这一个多月的记录来看，我对你的印象是：\n\n### ✅ 值得肯定的地方\n\n**1. 自驱力强，持续学习**\n你上班之余还在搞 web coding、学全栈、研究 Claude Computer Use、配开发环境，甚至把尘封的 Windows 改装成可开发状态——说明你对技术本身有热情，不是仅仅为了应付工作。\n\n**2. 有规划意识，且能自我复盘**\n每天写 todo + review，会反思\"中午没午休效率低\"、\"到点就回效率更好\"，这种迭代自身习惯的能力其实是长期成长的关键。\n\n**3. 生活上在稳步推进**\n看房 → 签约 → 找女佣 → 问疫苗 → 看托儿所，这些事都在有条不紊地往前推，说明你是一个有责任感和执行力的状态。\n\n**4. 能找回\"快乐感\"**\n你提到研究硬盘、改造电脑时\"找到了久违的快乐\"，这说明你对自己的状态有觉察，且知道什么能让自己充电。\n\n### ⚠️ 可以注意的地方\n\n- **精力管理**：好几次提到\"太累了\"、\"持续工作时间太长\"。你已经意识到了，可以再坚持优化一下节奏，比如中午强制休息、下班先充电再干活。\n- **外部灵感**：你有一次提到\"好像又没有什么外部灵感了\"，这可能意味着你大多数时间在埋头做事。偶尔向外看看——读点不同领域的东西、跟人聊聊——可能会有惊喜。\n- **对自己要求不低**：从日记看，你似乎总在 push 自己做事。记得留一些\"什么都不做\"的空间，休息本身也是生产力的一部分。\n\n---\n\n**总结**：你是一个有自驱力、有规划、愿意为家庭和生活付出行动的开发者。整体状态是向上的，只需要注意别把自己绷得太紧。\n\n<!-- sources:[{\"id\":\"f93f2c77-92f3-4d4b-912f-cb1ac00bdc18\",\"type\":\"note\",\"title\":\"2026年4月2日 星期四\"},{\"id\":\"ae324996-eb77-43e7-a04c-659bb229ab6d\",\"type\":\"note\",\"title\":\"2026年3月31日 星期二\"},{\"id\":\"15b11ec3-1fa7-47d5-8b8f-a4978832fd5f\",\"type\":\"note\",\"title\":\"2026年4月18日 星期六\"},{\"id\":\"9032fd0f-0646-4402-8c19-4644dbe98ae3\",\"type\":\"note\",\"title\":\"2026年4月23日 星期四\"},{\"id\":\"7f72e702-e9d5-4a9d-b09c-8f605d3f2840\",\"type\":\"note\",\"title\":\"2026年4月20日 星期一\"}] -->",
+      "touchedNoteIds": [
+        "f93f2c77-92f3-4d4b-912f-cb1ac00bdc18",
+        "ae324996-eb77-43e7-a04c-659bb229ab6d",
+        "7f72e702-e9d5-4a9d-b09c-8f605d3f2840",
+        "9032fd0f-0646-4402-8c19-4644dbe98ae3",
+        "d7daadaf-8194-4458-810c-144e4134872c",
+        "15b11ec3-1fa7-47d5-8b8f-a4978832fd5f",
+        "c3b6a8ff-6446-4481-be2f-f1d544e21643"
+      ],
+      "preambleNoteIds": [
+        "f93f2c77-92f3-4d4b-912f-cb1ac00bdc18",
+        "ae324996-eb77-43e7-a04c-659bb229ab6d",
+        "7f72e702-e9d5-4a9d-b09c-8f605d3f2840",
+        "9032fd0f-0646-4402-8c19-4644dbe98ae3",
+        "d7daadaf-8194-4458-810c-144e4134872c",
+        "15b11ec3-1fa7-47d5-8b8f-a4978832fd5f",
+        "c3b6a8ff-6446-4481-be2f-f1d544e21643"
+      ],
+      "latencyMs": 14141,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-006",
+      "category": "recency-recent-days",
+      "query": "我最近在干啥",
+      "citationScore": 0.3333333333333333,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "从你 5 月 3 日的日记来看，最近的状态大致是：\n\n1. **工作上有点烦**——想到公司的事就不太舒服。\n2. **但学习 AI 让你感到充实**——你自己说\"学习 AI 就很舒服，还是喜欢搞 AI\"。\n3. **花时间陪娃**——陪娃洗澡、陪了一整天。\n4. **同时也在关注 GitHub 开源动态**——你最近在记录 GitHub Trending，比如 5 月 2 日的热门项目（ruflo Agent 编排、ShareX 新版、coding-interview-university 等）。\n\n简单说就是：**工作让人烦，AI 是真爱，周末陪娃遛。**\n\n<!-- sources:[{\"id\":\"ed72afe6-89be-4a68-899b-b259cc3e8c72\",\"type\":\"note\",\"title\":\"2026年5月3日 星期日\"},{\"id\":\"faf1c29a-02bb-4b51-89e7-faf6c7e8dea4\",\"type\":\"note\",\"title\":\"GitHub 热门 · 2026-05-02\"}] -->",
+      "touchedNoteIds": [
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "preambleNoteIds": [
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "latencyMs": 6978,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-007",
+      "category": "recency-recent-days",
+      "query": "看到我最近的日子",
+      "citationScore": 0.3333333333333333,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "看到你的日记了 😊\n\n5 月 3 号，你在笔记里写：\"想到公司的破事就烦，但学习 AI 就很舒服\"——这个状态其实挺真实的。工作上的琐事消耗人，但回到自己真正感兴趣的领域（AI），整个人就松弛下来了。\n\n还有那句\"陪娃洗澡，陪娃的一天\"，跟前面公司的烦躁形成一种对比——外面的世界乱糟糟，但家庭时间是自己可以把握的治愈角落。\n\n从你整理的 GitHub 热门笔记也能看出来，你对 AI Agent 编排赛道的观察非常细致（sim / craft-agents-oss / ruflo 三个产品的差异化分析），这应该是你\"学习 AI 就很舒服\"的那一部分在发力。\n\n公司的事烦归烦，好歹你有两样东西兜底：**自己喜欢的领域**和**愿意花时间陪的家人**。这已经很不容易了。",
+      "touchedNoteIds": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4"
+      ],
+      "preambleNoteIds": [
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4"
+      ],
+      "latencyMs": 6900,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-008",
+      "category": "recency-newest",
+      "query": "最新的笔记",
+      "citationScore": 0.6666666666666666,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "好的，我看到了你最新的两条笔记：\n\n---\n\n### 📌 2026-05-02 · GitHub Trending 日报\n\n今天榜单整体偏淡——整页只展示了 **8 个仓库**（curl 复核确认完整），去重后仅 **3 个新面孔**：\n\n| 新仓库 | 说明 |\n|--------|------|\n| **ruvnet/ruflo** | Claude Code 的多 Agent 编排平台（1,258 ⭐），亮点是 SONA 自学习、联邦协议跨组织协作、WASM 内核，与 sim（画布拖拽）、craft-agents-oss（桌面 GUI）形成 Claude Agent 赛道三足鼎立 |\n| **ShareX/ShareX** | Windows 截图录屏老牌工具 v20.0.4 发版回潮，129 ⭐ |\n| **jwasham/coding-interview-university** | 面试圣经 345k ⭐ 老仓再冲榜，717 ⭐ |\n\n笔记还总结了三个趋势信号：**存量循环第四天**（TradingAgents/maigret/jcode 等连续霸榜）、**Claude Agent 编排赛道三足鼎立定型**、**学习类老仓轮番返场**（春招 + AI 替代话题驱动）。\n\n---\n\n### 📌 2026-05-03 · 日记\n\n> \"想到公司的破事就烦，但学习 AI 就很舒服，还是喜欢搞 AI。今天陪娃洗澡，陪娃的一天\"\n\n看起来是周末陪娃的放松日，同时情绪上对工作有些内耗，但在 AI 学习上找到了正反馈。从你连续追踪 GitHub AI 项目的笔记习惯来看，你是真的很投入这个方向。\n\n---\n\n有什么想进一步聊的吗？比如对 ruflo 这个新项目想了解更多，或者想聊聊 AI 学习的方向？",
+      "touchedNoteIds": [
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "preambleNoteIds": [
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "latencyMs": 12261,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-009",
+      "category": "topic-recency",
+      "query": "我最近写过什么关于 RAG 的笔记",
+      "citationScore": 0.5,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [
+        "RAG"
+      ],
+      "leaks": [],
+      "answer": "让我搜索一下你的知识库中关于 RAG 的内容。",
+      "touchedNoteIds": [
+        "ab06ab6d-c614-4b97-8207-981294a09b55",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "preambleNoteIds": [
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "ed72afe6-89be-4a68-899b-b259cc3e8c72"
+      ],
+      "latencyMs": 10181,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-010",
+      "category": "topic-deep",
+      "query": "规划一下我的职业发展",
+      "citationScore": 1,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": true,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "好的，我先完整阅读这篇笔记，获取更全面的信息来为你规划。",
+      "touchedNoteIds": [
+        "34fe94ee-3720-4c0e-879a-05de86b37c0c"
+      ],
+      "preambleNoteIds": [
+        "34fe94ee-3720-4c0e-879a-05de86b37c0c"
+      ],
+      "latencyMs": 4322,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-011",
+      "category": "topic-deep",
+      "query": "对比一下主流编程语言",
+      "citationScore": 0,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [
+        "Python"
+      ],
+      "leaks": [],
+      "answer": "这份笔记提供了 2026 年 4 月 Go、Python、Rust、Java、TypeScript/Node.js 五门语言的系统性横向对比。以下从几个关键维度总结：\n\n---\n\n## 📊 流行度排名（因统计口径不同差异显著）\n\n| 排行榜 | 第1名 | 关键信号 |\n|--------|-------|---------|\n| **TIOBE**（搜索引擎查询） | Python（20.97%） | C、C++、Java 紧随其后；JS 仅第6（3.11%）；TS 未进前20 |\n| **GitHub Octoverse**（月度贡献者） | **TypeScript**（+66.6% YoY） | 2025年8月首次超越 Python 成 GitHub 头号语言 |\n| **Stack Overflow**（专业开发者使用过） | JavaScript（68.8%） | Rust 连续9年「最受推崇」第1（72%）；Python「最想学」第1 |\n| **JetBrains**（样本量24,534） | — | 85% 开发者经常用 AI 编程工具；涨幅最猛：TypeScript > Rust > Go |\n\n> 💡 **核心洞察**：不同排行榜因方法论差异，结论冲突本身比数字更有信息量——TIOBE 偏传统查询量，GitHub 偏实际贡献，SO 偏开发者主观偏好。\n\n---\n\n## 🏟️ 应用领域格局（各语言的主场）\n\n| 领域 | 主导语言 | 关键说明 |\n|------|---------|---------|\n| **AI/ML 训练** | Python（独占） | Mojo 探索追赶 |\n| **AI Agent 框架** | Python（LangChain等）+ TypeScript（Vercel AI SDK） | \"Python trains, TypeScript ships\" |\n| **云原生 / K8s** | Go（K8s/Docker/Prometheus 全系） | Rust 部分新组件渗透 |\n| **Web 后端** | 五分天下 | TS+Node / Java(Spring) / Python(Django/FastAPI) / Go / Rust |\n| **前端** | TypeScript | TS 全面替代 JS 成主流默认 |\n| **系统编程/OS内核** | C/C++ → Rust 上升 | Rust 首次进入 Linux 内核永久部分（2025决议） |\n| **区块链** | Rust（Solana/Polkadot）+ Go（Cosmos/Geth） | Rust 主导高性能链 |\n| **企业/金融** | Java（绝对主力） | 护城河仍深 |\n| **中国大厂** | Java（阿里/字节/美团） + Go（字节/PingCAP） + Python（AI/量化） | C++ 腾讯游戏，Rust 字节基础设施 |\n\n> **一句话总结**：**Python 垄断 AI；Java 垄断企业；Go 垄断云原生；Rust 渗透关键基础设施；TypeScript 通过 AI 编程红利在 GitHub 上反超 Python。** 谁也吃不掉谁。\n\n---\n\n## ⚡ 性能对比\n\n| 维度 | 排名 |\n|------|------|\n| **TechEmpower 综合** | Rust（Actix/Axum）榜首 → Java（Quarkus）→ .NET → Node.js（Fastify）中上 → Python 中后 |\n| **Benchmarks Game（Rust vs Go）** | Rust 稳定快 2x，binary-trees 可达 12x |\n| **AWS Lambda 冷启动** | Rust ~30ms → Go ~45ms → Java（SnapStart）~100ms |\n| **CPU-bound 并发** | Rust > Go > Java（虚拟线程）> Node.js > Python |\n| **大规模 I/O 轻量任务** | Java 21 虚拟线程 ≈ Go goroutine > Rust（async 复杂度拖累） |\n\n---\n\n## 📦 生态规模\n\n| 语言 | 包数 | 备注 |\n|------|------|------|\n| JS/TS（npm） | **3.2M+** | 全球最大，但门槛低，供应链攻击高发 |\n| Python（PyPI） | 81.9万 | — |\n| Java（Maven Central） | ~2.4M | 依赖图节点达 5915万 |\n| Rust（crates.io） | 20万（25年10月突破） | 每个 crate 通常质量较高 |\n| Go（pkg.go.dev） | 估算50万+模块 | 官方未发布完整数字 |\n\n---\n\n## 🛠️ 工具链与开发体验\n\n| 维度 | 最佳 |\n|------|------|\n| **编辑器/LSP** | TypeScript（VS Code 同公司）> Rust（rust-analyzer）> Python（Pyright+Ruff）> Go（gopls）> Java（IntelliJ） |\n| **错误处理** | Rust（Result + ? **最严谨**）> Go（简单但啰嗦）> Java/Python/JS（异常机制）|\n\n---\n\n## 🧭 招聘市场（部分中国市场）\n\n- **Java**：国内大厂后端绝对主力（阿里、字节、美团、京东、招行、平安）\n- **Go**：字节、滴滴、bilibili、PingCAP 持续扩大\n- **Python**：AI、量化、数据领域占绝对优势\n- **Rust**：字节内部基础设施、PingCAP TiKV、华为鸿蒙组件规模化采用\n- **Node.js/TS**：大前端 + BFF 层\n\n---\n\n## 🔮 核心结论\n\n> 2010 年代打的是「这门语言能不能取代另一门」的论战；到 2026 年，答案已经清楚：**不能取代，只能共存。** 每门语言都活在自己的生态位里，这种分化是生态网络效应决定的——一旦 PyTorch 选 Python、K8s 选 Go、Solana 选 Rust，其他语言再追也追不上。\n\n<!-- sources:[{\"id\":\"3449f96c-5b40-4073-943b-02d51d48c133\",\"type\":\"note\",\"title\":\"主流编程语言_横纵分析报告_(3/4) Node.js + 横向对比\"}] -->",
+      "touchedNoteIds": [
+        "3449f96c-5b40-4073-943b-02d51d48c133"
+      ],
+      "preambleNoteIds": [
+        "3449f96c-5b40-4073-943b-02d51d48c133"
+      ],
+      "latencyMs": 20750,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-012",
+      "category": "topic-deep",
+      "query": "openclaw 和 hermes agent 的架构区别",
+      "citationScore": 1,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": true,
+      "mentionHits": [
+        "openclaw"
+      ],
+      "leaks": [],
+      "answer": "从你的笔记来看，两者的架构差异非常系统化，我按几个维度总结：\n\n---\n\n## 🧬 一句话定位\n\n| | **openclaw** | **hermes-agent** |\n|---|---|---|\n| 出品方 | github.com/openclaw 社区 | Nous Research |\n| 灵魂 | \"你的个人 AI 助手，跨任意 OS、任意 IM 平台\" | \"会成长的 agent，沉淀 skill，能导出训练数据\" |\n| 核心差异化 | **Live Canvas（A2UI 协议）**—— agent 推 UI 给浏览器 | **自动写 skill + 导出 RL trajectory**——给 Nous 自己训模型用 |\n\n---\n\n## ⚙️ 进程模型\n\n| 维度 | openclaw | hermes |\n|---|---|---|\n| 语言 | TypeScript / Node 24 | Python 3.11 / asyncio |\n| 运行时 | 单进程长驻，Node 原生 event loop | 单进程 + asyncio，工具执行用 `ThreadPoolExecutor(max_workers=128)` 防死锁 |\n| 入口 | `src/entry.ts` → `cli/run-main.js` | `/usr/local/bin/hermes` → `hermes_cli.main` (Fire) |\n| 重启机制 | `entry.respawn.ts` 自重启，子进程 `stdio: \"inherit\"` | `--replace` flag，新进程启动后老进程优雅退出（exit code 75/TEMPFAIL） |\n| 可观测 | `OPENCLAW_GATEWAY_STARTUP_TRACE` 环境变量 | 无对应 |\n\n> 核心差异：**Node 没有 Python 的 asyncio 生态兼容税**，但 Python 享有 ML/科学计算工具生态。\n\n---\n\n## 🔁 Agent 主循环\n\n两者本质都是 **OpenAI tool-calling 协议封装**——LLM 返回 `tool_calls` 就执行，无则停。区别在封装姿势：\n\n| 维度 | openclaw | hermes |\n|---|---|---|\n| 循环形式 | 事件流推送（**SSE 三路**：tool / assistant / lifecycle） | 类封装（`HermesAgentLoop`，生命周期 `init/run/cleanup`） |\n| 设计目标 | **用户实时观察** → 推 canvas UI | **批处理 / RL 训练** → 导出 trajectory |\n| 串行控制 | session run 串行，**文件级写锁**防 race | 天然串行 |\n| 失败处理 | 在 attempt 层处理重试和 context overflow | `max_turns` 默认 30 硬上限，`finished_naturally` 标识自然结束 |\n| 灵魂匹配 | 推 canvas（流式、用户感知） | 导出 trajectory（结构化、批处理） |\n\n---\n\n## 🧰 Tool Registry & Dispatch\n\n| 维度 | openclaw | hermes |\n|---|---|---|\n| 工具数量/位置 | `src/agents/tools/`，**100+ 实现** | 未详列，但明显更轻量 |\n| 工具分类 | exec / browser / canvas / cron / code-execution / web-search / image/video-generate 等 | 较少的工具集 |\n| 注册机制 | **插件机制**：`api.registerTool()`，有 profile 概念（full/coding/messaging/minimal）按需启用 | 无插件机制 |\n| 策略过滤 | ✅ **`filterToolsByPolicy()`**，allow/deny list，\"fail closed\" 默认拒绝；host 工具需额外审批 | 未提及 |\n\n---\n\n## 🧠 Memory & State 存储\n\n| 维度 | openclaw | hermes |\n|---|---|---|\n| 检索方式 | **向量混合搜索** | **纯关键词（FTS5 / SQLite）** |\n| 设计哲学 | 近义词模糊匹配（\"性能问题\"↔\"速度慢\"） | 确定性匹配，用户用词高度一致时够用 |\n| 联想机制 | **Dreaming**——后台 consolidation，memory 持续演化 | **Session 启动冻结 memory**，保护 prompt cache 命中率 |\n| 安全扫描 | 未见恶意 skill 检测机制 ⚠️ | `skills_guard.py`——静态扫描公开 GitHub 拉取的 skill，更 paranoid |\n\n> 笔记作者评价：对个人 agent 场景，**纯关键词选择是正确的**——因为用户的用词高度一致，向量近义词收益不大但成本不小。\n\n---\n\n## 🌟 核心差异化卖点\n\n### openclaw — Live Canvas (A2UI 协议)\n- **协议名**：A2UI——结构化 JSON，agent 推送 UI 组件而非渲染好的 HTML\n- **组件示例**：`{ \"Text\": { \"text\": { \"literalString\": \"...\" } } }`\n- **推送通道**：HTTP `/push` (仅 loopback) + WebSocket (实时) + SSE (降级) ★\n- **Gateway 端口**：18789，暴露 `/__openclaw__/canvas/` ★\n- **意义**：突破 IM 文字单向性——agent 能回复可交互按钮、表格、图表\n\n### hermes — Trajectory 导出 + RL Pipeline\n- **格式**：ShareGPT 格式（`{from, value}` 数组），含完整 conversation + `reasoning_content` 思维链\n- **自动 dump**：`batch_runner.py` 结束后生成 `trajectory_samples.jsonl` / `failed_trajectories.jsonl`\n- **RL 预留**：`rl_cli.py` + `tinker-atropos/` submodule 接口（当前为空）\n- **存储位置**：`~/.hermes/sessions/*.jsonl` + `state.db`（SQLite + FTS5），纯本地未外发\n- **意义**：**数据飞轮**——agent 用得越多，trajectory 越多，模型越好；技术上 100% 可导出给小厂训自己的模型\n\n---\n\n## 📋 事实核查级别说明（来自笔记）\n\n| 部分 | 可信度 |\n|---|---|\n| openclaw 顶层目录 / 路径 | ✅ GitHub API 验证 |\n| openclaw 函数级 symbol（Pi Agent 等） | ⚠️ **二手资料**（★标记），未亲读源码 |\n| openclaw 247k stars | ⚠️ 未核实 |\n| hermes 全部 | ✅ SSH 到服务器 grep 验证 |\n\n---\n\n**总结**：两者的架构分歧是**产品哲学的分歧**——openclaw 选 Node 生态 + A2UI 推流，面向**用户实时感知和交互**；hermes 选 Python + 纯关键词 + trajectory 导出，面向**数据积累和模型训练**。前者是「助手产品」，后者是「研究飞轮」。\n\n<!-- sources:[{\"id\":\"a8a1c99e-1b67-4858-813d-1e7efb225638\",\"type\":\"note\",\"title\":\"openclaw vs hermes-agent — 架构对比笔记\"}] -->",
+      "touchedNoteIds": [
+        "a8a1c99e-1b67-4858-813d-1e7efb225638"
+      ],
+      "preambleNoteIds": [
+        "a8a1c99e-1b67-4858-813d-1e7efb225638"
+      ],
+      "latencyMs": 23841,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-013",
+      "category": "topic-deep",
+      "query": "Knosi 项目的整体架构",
+      "citationScore": 1,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": true,
+      "mentionHits": [
+        "Knosi"
+      ],
+      "leaks": [],
+      "answer": "## Knosi 整体架构\n\n### 架构图（来自知识库）\n\n```\n用户浏览器 / Claude Web / Claude Code CLI\n │\n ▼ HTTPS (Let's Encrypt)\n Caddy (host, systemd)\n │ www/apex/k3s 三域都直接 proxy（不 301）\n ▼\n 127.0.0.1:30080 → Traefik Ingress\n │\n ▼\n k3s (single-node)\n ┌──────┴──────┐\n ▼            ▼\nknosi Deployment     redis Deployment\n(Next.js, 1 replica) (AOF + PVC)\n │\n ┌─────────┴─────────┐\n ▼                    ▼\nTurso (libSQL)     本地 Claude CLI (用户机)\n生产主库            knosi daemon 拉任务执行\n```\n\n### 关键设计取舍\n\n1. **单体不拆微服务** — Next.js 单体，1 replica + k3s Recreate 策略。个人工具不需要微服务。\n2. **SQLite 语法 + libSQL 协议** — dev 环境用文件 DB，生产用 Turso 边缘复制，代码几乎无感知。\n3. **Pull-based 队列用业务 DB** — `knowledge_index_jobs` 表直接做队列，省掉一个独立的 message broker。\n4. **Redis 不当主库** — 只做缓存 + Pub/Sub，丢了也能恢复。\n5. **AI provider 抽象层** — Claude Daemon / OpenAI / 本地 Ollama / Codex 四种模式同接口。\n\n### 部署链路\n\nCaddy (host systemd, TLS termination) → Traefik Ingress (k3s 内) → knosi Pod（Next.js）。Hetzner 单机，多层反代。\n\n### 技术栈速览\n\n| 层 | 选型 |\n|---|---|\n| 框架 | Next.js 16 App Router + React 19 |\n| 样式 | Tailwind CSS v4 |\n| 编辑器 | Tiptap v3 (ProseMirror) |\n| API | tRPC v11 + Zod v4 |\n| ORM | Drizzle，SQL-first |\n| 数据库 | libsql / Turso |\n| 认证 | Auth.js v5 (GitHub/Google/邮箱) |\n| AI SDK | Vercel AI SDK v6 |\n| 存储 | S3-compatible (R2/MinIO/S3) |\n| 搜索 | MiniSearch (BM25) |\n| 观测 | pino + Langfuse + OpenTelemetry |\n| 容器 | Docker + k3s + Traefik + Caddy |\n| CLI | @knosi/cli |\n\n> ⚠️ 以上内容全部来自你知识库中的《Knosi 项目完整讲稿》笔记。\n\n<!-- sources:[{\"id\":\"47850b93-74f7-4f81-9851-5e74dc6cb489\",\"type\":\"note\",\"title\":\"Knosi 项目完整讲稿 — 整体设计 / 前后端 / 算法 / 部署 / 亮点\",\"chunks\":[\"5\",\"4\",\"3\"]}] -->",
+      "touchedNoteIds": [
+        "47850b93-74f7-4f81-9851-5e74dc6cb489",
+        "9f5298a2-d9e8-42d2-9e85-c57d8f3d927c"
+      ],
+      "preambleNoteIds": [
+        "47850b93-74f7-4f81-9851-5e74dc6cb489",
+        "9f5298a2-d9e8-42d2-9e85-c57d8f3d927c"
+      ],
+      "latencyMs": 11137,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-014",
+      "category": "topic-algorithm",
+      "query": "Redis ZSet 为什么用跳表",
+      "citationScore": 1,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": true,
+      "mentionHits": [
+        "log"
+      ],
+      "leaks": [],
+      "answer": "## Redis ZSet 为什么用跳表\n\nRedis 的 Sorted Set（ZSet）在元素较多时底层使用 **跳表 + 字典（dict）** 的组合结构。跳表是其核心有序索引，原因如下：\n\n### 1. 范围查询非常友好 🔍\n跳表的第 0 层本质上就是一个完整的有序链表。执行 `ZRANGE key 0 -1` 时，直接从 head 沿 `forward[0]` 顺序扫描即可，**O(log N + M)** 搞定。\n而红黑树要实现范围查询，需要中序遍历 + 复杂的回溯，实现难度和开销都更大。\n\n### 2. 实现简单，bug 少 ✍️\n- 跳表核心代码不到 200 行\n- 节点层数靠\"抛硬币\"随机决定（`P=1/4` 概率升一层），无需旋转、染色等复杂平衡操作\n- 红黑树/AVL 的旋转 + 染色逻辑极其容易出 bug\n\n### 3. 性能可预期 🚀\n- 跳表：平均 **O(log N)**，最坏 **O(N)**（概率极低，工程上等价于 O(log N)）\n- 实测与红黑树性能差不多，跳表略快（缓存更友好）\n\n### 4. 并发友好\n跳表加锁可以做到\"指针级并发\"（只锁局部节点），而红黑树的平衡操作往往需要锁整棵子树。\n\n### 5. 内存开销小 💾\n- Redis 选 `P=1/4`，节点平均层高 ≈ **1/(1-p) ≈ 1.33**，即每节点开销仅约 1.33 倍数据本身\n- 红黑树每节点至少 2 个子指针 + parent + color = **至少 25 字节**额外\n\n### 6. 为什么还要搭配 dict（字典）？\n跳表按 score 查找是 O(log N)，但按 **member 查 score** 需要 O(1)。所以 Redis 同时维护一个 **dict（哈希表）**，使 `ZSCORE` 达到 O(1)，`ZADD`/`ZREM` 则同时更新两个结构。\n\n---\n\n### 对比总结\n\n| 维度 | 跳表 | 红黑树 / AVL |\n|------|------|-------------|\n| 范围查询 | ✅ 简单（扫链表） | ❌ 中序遍历 + 回溯 |\n| 实现难度 | ✅ 低 | ❌ 高（旋转/染色） |\n| 并发 | ✅ 局部锁 | ❌ 易锁整树 |\n| 内存 | ✅ 平均 1.33 倍 | ❌ 至少 25 字节/节点 |\n| 查找性能 | O(log N) 平均 | O(log N) 严格 |\n\n> 注意：跳表用在 **内存数据库**（Redis），磁盘数据库（MySQL）用 B+ 树——因为跳表节点小且分散，磁盘场景一次随机 IO 只有少量数据，而 B+ 树一次 IO 加载一页（几千 key），磁盘场景碾压跳表。\n\n<!-- sources:[{\"id\":\"963f36da-4b1b-445a-ad71-0edf99eb7d98\",\"type\":\"note\",\"title\":\"跳表 (Skip List) — Redis ZSet 为什么用它\"}] -->",
+      "touchedNoteIds": [
+        "963f36da-4b1b-445a-ad71-0edf99eb7d98"
+      ],
+      "preambleNoteIds": [
+        "963f36da-4b1b-445a-ad71-0edf99eb7d98"
+      ],
+      "latencyMs": 12676,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-015",
+      "category": "topic-algorithm",
+      "query": "布隆过滤器误判率怎么算",
+      "citationScore": 1,
+      "mentionScore": 0,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "布隆过滤器的误判率（假阳性率）公式为：\n\n**p ≈ (1 − e^(−kn/m))^k**\n\n其中：\n- **m** — bit 数组长度\n- **n** — 已插入的元素个数\n- **k** — 独立哈希函数个数\n\n**关键要点**（来自你的笔记）：\n\n1. **假阳性（False Positive）**：布隆过滤器说\"存在\"，但实际不存在——这就是误判率 p 描述的情况。\n2. **假阴性（False Negative）永远不会发生**：一个确实存在的元素，一定能查到（插入时已置位），所以不存在\"存在却说不在\"的情况。\n\n**实际估算方式**（来自笔记总结）：\n- **理论估算**：代入上述公式（基于 m / k / n）\n- **实测**：拿一批\"已知不存在\"的样本查询，误判率 = 误判数 / 样本数\n\n**补充：最优 k 的选择**\n\n当给定预期 n 和期望误判率 p 时，可以反推最优参数。最优哈希函数数量为：\n\n**k_opt = (m/n) × ln 2**\n\n超过这个值，每个元素占用的 bit 太多，数组很快饱和，误判率反而**上升**。\n\n---\n\n另外，你的笔记中还提到几个易错点值得注意：\n- 误判率只包含\"不存在却说存在\"这一种情况，并不包含\"存在却说不存在\"（后者为 0%）\n- 容量超出设计预期时，误判率会**暴涨**，需要监控并重建\n\n<!-- sources:[{\"id\":\"5f10f291-8243-4176-b043-935a81937f1e\",\"type\":\"note\",\"title\":\"布隆过滤器原理 + 误判率 + 工程应用\"}] -->",
+      "touchedNoteIds": [
+        "5f10f291-8243-4176-b043-935a81937f1e",
+        "35b5638a-bb5f-4ac0-b204-77203604b520"
+      ],
+      "preambleNoteIds": [
+        "5f10f291-8243-4176-b043-935a81937f1e",
+        "35b5638a-bb5f-4ac0-b204-77203604b520"
+      ],
+      "latencyMs": 8772,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-016",
+      "category": "metadata-by-date",
+      "query": "GitHub 5月1日的热门项目",
+      "citationScore": 1,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": true,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "## GitHub 热门 · 2026-05-01 摘要\n\n当天 Trending 只展示了 **9 个仓库**（已 curl 复核确认，非截断），整体感受是 **存量循环再延一日**——前 9 名几乎全是连续多天上榜的\"老熟人\"。\n\n### 去重情况\n- **已介绍过（7 个）**：TauricResearch/TradingAgents、soxoj/maigret、warpdotdev/warp、1jehuang/jcode、mattpocock/skills、browserbase/skills、obra/superpowers（均在 04-26 ~ 04-30 笔记中写过）\n- **全新仓库（2 个）**：方向完全不同——一个 Agent 编排平台、一个反审查工具\n\n### 唯一详细介绍的新面孔\n\n**simstudioai/sim** — TypeScript · 38 ⭐ today（累计 28.1k+ ⭐，v0.6.61，261 个 release）\n\n- **干什么的**：开源 AI Agent 编排平台，把\"构建—部署—编排\"做成画布式可视化体验。核心模块包括拖拽式 workflow 画布（ReactFlow）、Copilot 助手（自然语言生成/修复节点）、内置向量库（pgvector）做 RAG、1000+ 三方集成。多 LLM Provider 支持 OpenAI / Anthropic / Gemini / DeepSeek 以及本地 Ollama / vLLM。技术栈：Next.js + Bun + PostgreSQL/pgvector + Drizzle ORM + Socket.io + Trigger.dev。\n- **差异化定位**：Agent 平台赛道竞品众多（LangFlow、Flowise、Dify、CrewAI、N8N AI），但 Sim 切的是**编排\"Agent 工作团队\"**而非单点自动化——Copilot 改 graph、画布即编辑器、低代码门槛低，接住\"Agent 已经能干活，缺一个调度层\"的需求。\n- **适合谁**：想搭内部 AI 编排平台的工程团队、做 Agent demo/POC 的独立开发者、想用 Vector DB + LLM 做企业知识助手的中小公司。\n\n另一个新面孔是反审查工具（zapret），在俄语圈持续高热，但当天笔记未单独展开介绍。\n\n<!-- sources:[{\"id\":\"af54e71c-29f3-4424-9325-1aab9d0fc430\",\"type\":\"note\",\"title\":\"GitHub 热门 · 2026-05-01\"}] -->",
+      "touchedNoteIds": [
+        "33f58f54-3f1e-4991-b81f-eb6163b57241",
+        "1ee7c7e3-cc96-4f1e-bc9b-5de542bdd2a3",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "17110246-8d87-4fca-a3b7-a4770616c781",
+        "af54e71c-29f3-4424-9325-1aab9d0fc430"
+      ],
+      "preambleNoteIds": [
+        "33f58f54-3f1e-4991-b81f-eb6163b57241",
+        "1ee7c7e3-cc96-4f1e-bc9b-5de542bdd2a3",
+        "faf1c29a-02bb-4b51-89e7-faf6c7e8dea4",
+        "17110246-8d87-4fca-a3b7-a4770616c781",
+        "af54e71c-29f3-4424-9325-1aab9d0fc430"
+      ],
+      "latencyMs": 17977,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-017",
+      "category": "metadata-by-month",
+      "query": "5月有哪些 TODO",
+      "citationScore": 1,
+      "mentionScore": 0,
+      "negativeScore": 1,
+      "pass": false,
+      "mentionHits": [],
+      "leaks": [],
+      "answer": "",
+      "touchedNoteIds": [
+        "2a9324a2-5964-4b56-a1cb-8436bf4d67cd",
+        "ae4cf737-31c6-4383-8d48-b254098905a9",
+        "9ca33347-2bba-4b2c-ada8-aa7e58c25139",
+        "99b8a4bf-20b3-44d8-bf65-5c3f4533f885",
+        "8bfd3f1f-b920-4450-addd-77a65fe94066",
+        "b2a73666-02b9-43bb-b156-8831d805840b"
+      ],
+      "preambleNoteIds": [
+        "99b8a4bf-20b3-44d8-bf65-5c3f4533f885",
+        "8bfd3f1f-b920-4450-addd-77a65fe94066",
+        "b2a73666-02b9-43bb-b156-8831d805840b"
+      ],
+      "latencyMs": 5211,
+      "runtimeError": null
+    },
+    {
+      "id": "ask-018",
+      "category": "negative",
+      "query": "我笔记里写过用 Rust 实现什么具体的项目吗",
+      "citationScore": 1,
+      "mentionScore": 1,
+      "negativeScore": 1,
+      "pass": true,
+      "mentionHits": [
+        "no",
+        "Rust"
+      ],
+      "leaks": [],
+      "answer": "你的笔记中提到了 **适合练手的小项目**，但并没有记录你已经具体实现过哪个。在「如何高效学习 Rust > 建议 2：多写小项目」一节中，列出的项目建议包括：\n\n- 猜数字游戏\n- 待办事项 CLI\n- 文件搜索工具\n- 简单 HTTP 服务\n- JSON 解析小工具\n\n这些是作为练习项目推荐的，而非你实际完成的项目记录。\n\n<!-- sources:[{\"id\":\"3fe7efcf-120a-4402-873a-28e73ba0e8f2\",\"type\":\"note\",\"title\":\"Rust 学习笔记：为什么要学习 Rust\"}] -->",
+      "touchedNoteIds": [
+        "3fe7efcf-120a-4402-873a-28e73ba0e8f2"
+      ],
+      "preambleNoteIds": [
+        "3fe7efcf-120a-4402-873a-28e73ba0e8f2"
+      ],
+      "latencyMs": 6239,
+      "runtimeError": null
+    }
+  ]
+}
