@@ -60,7 +60,7 @@ export async function streamChatAiSdk(
 
   const result = streamText({
     abortSignal: signal,
-    model: sdk(provider.modelId),
+    model: sdk.chat(provider.modelId),
     messages,
     system,
     // Tools are only meaningful with `stopWhen` — without it the SDK
@@ -92,7 +92,13 @@ export async function streamChatAiSdk(
   // step badges. Single-turn callers don't get tool parts so the
   // payload is functionally equivalent to a text stream.
   return {
-    response: result.toUIMessageStreamResponse(),
+    response: result.toUIMessageStreamResponse({
+      onError: (error) => {
+        console.error("[ai-sdk stream error]", error);
+        if (error instanceof Error) return error.message;
+        return typeof error === "string" ? error : JSON.stringify(error);
+      },
+    }),
     modelId: provider.modelId,
   };
 }
@@ -110,7 +116,7 @@ export async function streamPlainTextAiSdk(options: {
   const sdk = createAiSdkProvider(options.provider);
   const result = streamText({
     abortSignal: options.signal,
-    model: sdk(options.provider.modelId),
+    model: sdk.chat(options.provider.modelId),
     messages: options.messages,
     system: options.system,
     experimental_telemetry: {
@@ -137,7 +143,7 @@ export async function generateStructuredDataAiSdk<TSchema extends z.ZodType>(
   const sdk = createAiSdkProvider(provider);
   const recordContent = shouldRecordTelemetryContent();
   const { output } = await generateText({
-    model: sdk(provider.modelId),
+    model: sdk.chat(provider.modelId),
     output: Output.object({ description, name, schema }),
     prompt,
     abortSignal: signal,
