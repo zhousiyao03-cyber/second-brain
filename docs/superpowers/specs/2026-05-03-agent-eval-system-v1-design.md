@@ -142,11 +142,20 @@ The choice to keep three independent scores (rather than a weighted sum) is deli
 
 **Entry point**: `scripts/eval-agent.mjs`
 
-**Pipeline reuse**: the harness mirrors what `src/app/api/chat/route.ts` does internally — call `buildChatContext` (from `src/server/ai/chat-prepare.ts`) to assemble system + messages, then call `streamChatResponse` (the same generation entry the production route uses around line 151 of `route.ts`) with `tools = buildAskAiTools(...)` so the agent has the real `searchKnowledge` / `readNote` / `fetchUrl` surface. The harness does **not** call the HTTP endpoint — that path is bound to SSE, daemon claim, and Redis fan-out, which is fragile to test against. By calling the server-side functions directly, the harness exercises the same retrieval + system prompt + tool wiring as production, with one fewer layer to flake.
+**Pipeline reuse**: the harness mirrors what `src/app/api/chat/route.ts` does internally — call `buildChatContext` (from `src/server/ai/chat-prepare.ts`) to assemble system + messages, then run the same `streamText(...)` call that `streamChatAiSdk` uses (`src/server/ai/provider/ai-sdk.ts:53-104`) with `tools = buildAskAiTools(...)` so the agent exercises the real `searchKnowledge` / `readNote` / `fetchUrl` surface.
+
+The harness does **not** call the HTTP endpoint (SSE / daemon claim / Redis fan-out is fragile to test against), and it does **not** consume the production `Response` produced by `result.toUIMessageStreamResponse()` — that response is the Vercel UI Message Stream protocol (text-delta + tool-call + tool-result + step parts) intended for the front-end renderer; reverse-parsing it inside the harness is brittle.
+
+To avoid drift between production and the harness, this milestone refactors the `streamText({...})` call inside `streamChatAiSdk` into a small reusable helper (e.g. `runChatStream(...)`) that returns the raw `streamText` result. Production `streamChatAiSdk` keeps wrapping it with `toUIMessageStreamResponse()` for the UI; the harness consumes `result.textStream` (final text) and `result.toolCalls` / `result.toolResults` (citation extraction inputs) directly. One source of truth, no SSE protocol parsing, no drift.
 
 **LLM call**: the harness uses whatever model the case config specifies (default: the user's currently-configured Ask AI model). It awaits the full response (no streaming consumption — collect the final text and citation list).
 
-**Citation extraction**: the harness must parse the citation list out of the model's response. The shape depends on `chat-prepare`'s tool / prompt contract; the implementer reads that file before writing the parser. If the contract is not stable enough to parse cleanly, that is a finding worth documenting — the citation contract may itself need a small refactor before eval can work, and that refactor belongs in this milestone, not as out-of-scope cleanup.
+**Citation extraction**: the harness needs to identify which note IDs the agent actually used. Two signals are available from the `streamText` result:
+
+1. `toolResults` — every `searchKnowledge` / `readNote` invocation logs the note IDs it touched. The set of note IDs returned by these tool results is a faithful proxy for "the agent saw these notes".
+2. The final text body — citations are emitted by the system prompt as a structured trailing block (the prompt is in `src/server/ai/chat-system-prompt.ts`); the harness must read that file to determine the exact format. If the format turns out to be unstable, a small change to `chat-system-prompt.ts` to enforce a parseable citation block is in scope for M2.
+
+V1 scoring uses signal #1 (tool-touched note IDs). Signal #2 is recorded in the per-case JSON for offline review but does not feed scoring. Reasoning: tool-touched IDs are robust to small phrasing changes in the answer; parsing the citation block is a separate cleanup task that should not block the first eval run.
 
 **Output**: `eval/results/agent/run-<ISO-timestamp>.json` containing aggregate + per-case detail, plus a stable `eval/results/agent/baseline.json` symlink or copy for the first run.
 
@@ -191,7 +200,7 @@ docs/changelog/
 └── <YYYY-MM-DD>-agent-eval-baseline.md
 ```
 
-No changes to `src/` are required for v1, with one exception: if the citation parser in M2 reveals that the production prompt does not emit a stable citation format, a minimal change to `src/server/ai/chat-system-prompt.ts` to make citations parseable is in scope for M2.
+M1 requires no `src/` changes. M2 makes a single, surgical refactor to `src/server/ai/provider/ai-sdk.ts`: extract the `streamText({...})` call body inside `streamChatAiSdk` into a small helper so production and the harness share a single source of truth for model invocation. Production behavior must be byte-identical after the refactor — verified by running `pnpm build`, `pnpm lint`, and the existing `src/server/ai/provider/ai-sdk.test.ts` plus an end-to-end `pnpm test:e2e` chat flow.
 
 ## Verification plan
 
