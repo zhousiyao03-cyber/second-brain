@@ -1,7 +1,15 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText, Output, stepCountIs, streamText } from "ai";
+import {
+  defaultSettingsMiddleware,
+  extractJsonMiddleware,
+  generateText,
+  Output,
+  stepCountIs,
+  streamText,
+  wrapLanguageModel,
+} from "ai";
 import type { ModelMessage } from "ai";
-import type { z } from "zod/v4";
+import { z } from "zod/v4";
 import type {
   GenerateStructuredDataOptions,
   ResolvedProvider,
@@ -148,6 +156,30 @@ export async function streamPlainTextAiSdk(options: {
   return result.textStream;
 }
 
+/**
+ * Some OpenAI-compatible backends (notably DeepSeek) reject the
+ * `response_format: { type: "json_schema", ... }` shape that Vercel AI SDK's
+ * `Output.object()` produces, returning:
+ *   "This response_format type is unavailable now."
+ * They DO support `response_format: { type: "json_object" }` (no schema),
+ * which the OpenAI provider emits when given `responseFormat: { type: "json" }`
+ * with no schema attached. We force that shape via middleware and validate
+ * the parsed text against the caller's zod schema ourselves.
+ *
+ * Detection is based on baseURL (the most reliable signal — label is
+ * user-supplied) and matches `*deepseek.com*`. New providers that share the
+ * same limitation should be added to `needsJsonObjectFallback`.
+ */
+function needsJsonObjectFallback(p: AiSdkResolvable): boolean {
+  if (p.kind !== "openai-compatible") return false;
+  try {
+    const host = new URL(p.baseURL).hostname.toLowerCase();
+    return host.includes("deepseek.com");
+  } catch {
+    return false;
+  }
+}
+
 export async function generateStructuredDataAiSdk<TSchema extends z.ZodType>(
   options: GenerateStructuredDataOptions<TSchema> & {
     provider: AiSdkResolvable;
@@ -156,6 +188,20 @@ export async function generateStructuredDataAiSdk<TSchema extends z.ZodType>(
   const { provider, description, name, prompt, schema, signal } = options;
   const sdk = createAiSdkProvider(provider);
   const recordContent = shouldRecordTelemetryContent();
+
+  if (needsJsonObjectFallback(provider)) {
+    return generateStructuredDataJsonObject({
+      provider,
+      sdk,
+      description,
+      name,
+      prompt,
+      schema,
+      signal,
+      recordContent,
+    });
+  }
+
   const { output } = await generateText({
     model: sdk.chat(provider.modelId),
     output: Output.object({ description, name, schema }),
@@ -175,4 +221,87 @@ export async function generateStructuredDataAiSdk<TSchema extends z.ZodType>(
     },
   });
   return output as z.infer<TSchema>;
+}
+
+async function generateStructuredDataJsonObject<TSchema extends z.ZodType>(args: {
+  provider: AiSdkResolvable;
+  sdk: ReturnType<typeof createAiSdkProvider>;
+  description: string;
+  name: string;
+  prompt: string;
+  schema: TSchema;
+  signal?: AbortSignal;
+  recordContent: boolean;
+}): Promise<z.infer<TSchema>> {
+  const {
+    provider,
+    sdk,
+    description,
+    name,
+    prompt,
+    schema,
+    signal,
+    recordContent,
+  } = args;
+
+  // zod v4 → JSON Schema text. We embed it in the prompt so the model knows
+  // the exact shape; DeepSeek's json_object mode does not enforce a schema
+  // server-side, so this is our only schema signal.
+  const jsonSchema = z.toJSONSchema(schema, { target: "draft-7" });
+  const schemaText = JSON.stringify(jsonSchema);
+
+  const promptWithJsonInstruction =
+    `${prompt}\n\n` +
+    `---\n` +
+    `Reply with a single JSON object named "${name}" — ${description}.\n` +
+    `It MUST validate against this JSON Schema:\n` +
+    `${schemaText}\n\n` +
+    `Output rules:\n` +
+    `- Return ONLY the JSON object. No prose, no markdown fences, no commentary.\n` +
+    `- Use double quotes for all keys and string values.\n` +
+    `- Do not include trailing commas.\n` +
+    `- The word "json" appears here so the API accepts json_object mode.`;
+
+  const wrapped = wrapLanguageModel({
+    model: sdk.chat(provider.modelId),
+    middleware: [
+      // Force `response_format: { type: "json_object" }` on the wire.
+      // The OpenAI provider only emits json_object (not json_schema) when
+      // `responseFormat.type === "json"` AND no schema is attached.
+      defaultSettingsMiddleware({
+        settings: { responseFormat: { type: "json" } },
+      }),
+      // Strip ```json fences if the model adds them anyway.
+      extractJsonMiddleware(),
+    ],
+  });
+
+  const { text } = await generateText({
+    model: wrapped,
+    prompt: promptWithJsonInstruction,
+    abortSignal: signal,
+    experimental_telemetry: {
+      isEnabled: true,
+      recordInputs: recordContent,
+      recordOutputs: recordContent,
+      functionId: "task",
+      metadata: {
+        kind: provider.kind,
+        providerLabel: provider.label,
+        model: provider.modelId,
+        name,
+        jsonObjectFallback: true,
+      },
+    },
+  });
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    throw new Error(
+      `Provider returned non-JSON in json_object mode (${provider.label}, ${provider.modelId}): ${(err as Error).message}. Raw text: ${text.slice(0, 200)}`,
+    );
+  }
+  return schema.parse(parsed) as z.infer<TSchema>;
 }
