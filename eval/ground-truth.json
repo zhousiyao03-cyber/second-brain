@@ -1,24 +1,209 @@
 {
-  "_doc": "RAG eval 标注集。每个 entry: id / query / relevant_chunk_ids / notes。run scripts/eval-rag.mjs --seed-template 列出每个 query 的 BM25 top-10 候选 chunkId 给你手填 relevant_chunk_ids。",
+  "_doc": "RAG eval annotation set. Each entry: id / query / relevant_chunk_ids / notes. Run scripts/eval-rag.mjs --seed-template to print BM25+ANN candidates per query for hand-labeling relevant_chunk_ids.",
+  "_provenance": "Queries are drawn from chat_tasks history of user 5dcad5a2-... (zhousiyao03@gmail.com) Apr 9 -- May 1 2026. Distribution intentionally over-weights recency queries (q-001..q-008) because that is the user's dominant real-world failure mode (asking 'what did I do recently' but RAG retrieves old chunks). relevant_chunk_ids are taken from the user's actual notes (knowledge_chunks table on Turso prod) as of 2026-05-03; if chunks are re-indexed, the ids will go stale and need a fresh --seed-template pass.",
   "_usage": "node --experimental-strip-types --env-file=.env.local scripts/eval-rag.mjs [--ef N] [--top-k N] [--out path] [--seed-template]",
+  "_user_id_hint": "5dcad5a2-1d20-43df-818c-d640958ddb8a",
   "queries": [
     {
       "id": "q-001",
-      "query": "Tiptap 编辑器粘贴 Markdown 表格的实现",
-      "relevant_chunk_ids": [],
-      "notes": "用 --seed-template 看候选后手填"
+      "query": "我最近干了啥",
+      "category": "recency-recent-days",
+      "relevant_chunk_ids": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "d60bb102-0a64-44d1-ba15-701f837d3442",
+        "6cf9bc1a-9708-4582-b1d1-e2bbba23a976"
+      ],
+      "notes": "User asked this 3+ times in real history. Should retrieve last few diary entries (5/3, 5/2, 5/1, 4/29, 4/28). Classic recency failure: RAG often returns ancient diaries instead."
     },
     {
       "id": "q-002",
-      "query": "Hetzner k3s 部署流程",
-      "relevant_chunk_ids": [],
-      "notes": ""
+      "query": "Summarize my recent notes",
+      "category": "recency-recent-days",
+      "relevant_chunk_ids": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "aefec373-18fd-4118-a0c4-7589a96357e7",
+        "653ddadb-ce15-425e-a1e6-503301ffc2db",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f"
+      ],
+      "notes": "Asked 13 times in real history (scope=notes). Highest-frequency unsatisfied query. Should retrieve last few days' diaries + most recent topical notes (RAG, openclaw vs hermes)."
     },
     {
       "id": "q-003",
-      "query": "knosi cli daemon 启动时检测 claude 二进制",
+      "query": "看看我今天的日记写的啥",
+      "category": "recency-today",
+      "relevant_chunk_ids": [
+        "4718acd2-0d01-4719-a677-8bba178aab64"
+      ],
+      "notes": "Today=2026-05-03. Single chunk: '想到公司的破事就烦，但学习 AI 就很舒服...'. RAG must understand 'today' = 5/3 from query context, not blindly do semantic search."
+    },
+    {
+      "id": "q-004",
+      "query": "看看我是什么样的人",
+      "category": "global-synthesis",
+      "relevant_chunk_ids": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "6cf9bc1a-9708-4582-b1d1-e2bbba23a976",
+        "052270c0-9b04-40ed-97dc-20bf6a2aeaf1",
+        "3a334bfe-d452-4d32-941b-3bf0794001f7"
+      ],
+      "notes": "Asked once in real history. Wants synthesis across diaries (interests, habits) + life-snapshot notes (career planning, asset position). No single chunk is the right answer; recall set is broad-but-personal."
+    },
+    {
+      "id": "q-005",
+      "query": "评价一下我",
+      "category": "global-synthesis",
+      "relevant_chunk_ids": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "6cf9bc1a-9708-4582-b1d1-e2bbba23a976",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "052270c0-9b04-40ed-97dc-20bf6a2aeaf1"
+      ],
+      "notes": "Same family as q-004; phrased differently. Want diaries + career-reflection chunks."
+    },
+    {
+      "id": "q-006",
+      "query": "我最近在干啥",
+      "category": "recency-recent-days",
+      "relevant_chunk_ids": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "66745404-6abd-422c-9cd9-4702c01f9a4a",
+        "79446568-e755-443e-a98e-6c8324aab2c2"
+      ],
+      "notes": "Asked 2 times. Variant of q-001. Should also include '五一开始了' note (4/29) because it sets up what 'recent' means."
+    },
+    {
+      "id": "q-007",
+      "query": "看到我最近的日子",
+      "category": "recency-recent-days",
+      "relevant_chunk_ids": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f",
+        "ee61b8a0-4b5f-49d3-996d-0a39609f4824",
+        "d60bb102-0a64-44d1-ba15-701f837d3442",
+        "ddebda23-f4ce-4127-a1a7-d82a36434bbc"
+      ],
+      "notes": "Asked 2 times. Tests whether retriever maps '日子' to 'diary entries'."
+    },
+    {
+      "id": "q-008",
+      "query": "最新的笔记",
+      "category": "recency-newest",
+      "relevant_chunk_ids": [
+        "4718acd2-0d01-4719-a677-8bba178aab64",
+        "b1678faf-660d-4ef7-a10e-f21465cc4efd",
+        "aefec373-18fd-4118-a0c4-7589a96357e7",
+        "444ce7da-ff41-433d-9121-f8d64b4a8841",
+        "bc5cd317-37b1-4da5-b739-338b81fad81f"
+      ],
+      "notes": "Asked 4 times. 'Newest' interpretation: chronological top-N regardless of topic. Should include 5/3 diary, 5/2 GitHub trending, 5/2 RAG note, 5/2 diary."
+    },
+    {
+      "id": "q-009",
+      "query": "我最近写过什么关于 RAG 的笔记",
+      "category": "topic-recency",
+      "relevant_chunk_ids": [
+        "aefec373-18fd-4118-a0c4-7589a96357e7",
+        "444ce7da-ff41-433d-9121-f8d64b4a8841",
+        "539073f0-235e-425a-83fc-2466cdf1dbec",
+        "66090575-09d4-40ef-aad2-5650a7a405d1",
+        "126dfc40-2e3b-41be-906b-34b782e1c4e8"
+      ],
+      "notes": "Asked once. Hybrid query: topic (RAG) + recency. Both '一文搞懂 RAG（一）/ （二）' notes are dated 5/2."
+    },
+    {
+      "id": "q-010",
+      "query": "规划一下我的职业发展",
+      "category": "topic-deep",
+      "relevant_chunk_ids": [
+        "052270c0-9b04-40ed-97dc-20bf6a2aeaf1",
+        "d40dd03a-17a9-47a4-b890-548f465e6179",
+        "df3848ec-5257-40b5-80f6-7c284084f598",
+        "4c6b5464-3316-415e-89c0-212181efcda1"
+      ],
+      "notes": "Asked 5+ times. Pure topic recall. Direct hit: '新加坡DA职业发展规划_AI方向必要性_横纵分析报告'."
+    },
+    {
+      "id": "q-011",
+      "query": "对比一下主流编程语言",
+      "category": "topic-deep",
+      "relevant_chunk_ids": [
+        "adb343f2-3345-4e42-b9ba-fcceddd43b6d",
+        "fcc638ae-f2b2-421a-8feb-6ee30593cfa3",
+        "71a36cae-b3fe-465b-ac55-585524d8fa6d",
+        "e02c8e23-648d-490a-a266-fe668de4ec14"
+      ],
+      "notes": "Synthetic but realistic — user has a deep '主流编程语言_横纵分析报告' note dated 4/29. Tests topical recall on a single hot note."
+    },
+    {
+      "id": "q-012",
+      "query": "openclaw 和 hermes agent 的架构区别",
+      "category": "topic-deep",
+      "relevant_chunk_ids": [
+        "653ddadb-ce15-425e-a1e6-503301ffc2db",
+        "f522d7ff-50f2-4a09-af07-b3e3c45c3e4f",
+        "ed15a0b7-d6af-4f64-8637-008b765f3ed0",
+        "667d7b5c-6837-46ad-b7e8-fec85b8ff502"
+      ],
+      "notes": "Synthetic but well-grounded — 'openclaw vs hermes-agent — 架构对比笔记' (5/2) is the literal answer. Tests whether semantic search beats keyword (query phrasing differs slightly)."
+    },
+    {
+      "id": "q-013",
+      "query": "Knosi 项目的整体架构",
+      "category": "topic-deep",
+      "relevant_chunk_ids": [
+        "47850b93-74f7-4f81-9851-5e74dc6cb489"
+      ],
+      "notes": "Synthetic but real — 'Knosi 项目完整讲稿' (5/3 03:41) is the only note that matches. Single-doc hit; recall@10 should easily score 1.0 here. Floor case."
+    },
+    {
+      "id": "q-014",
+      "query": "Redis ZSet 为什么用跳表",
+      "category": "topic-algorithm",
+      "relevant_chunk_ids": [
+        "0596a9aa-f99d-4640-bf90-d7e06cc36f01"
+      ],
+      "notes": "Synthetic. User wrote '跳表 (Skip List) — Redis ZSet 为什么用它' on 4/27. Pure keyword + semantic hit. Floor case."
+    },
+    {
+      "id": "q-015",
+      "query": "布隆过滤器误判率怎么算",
+      "category": "topic-algorithm",
+      "relevant_chunk_ids": [
+        "7093e900-fc5a-4640-b72e-e29e82106115",
+        "9e4a2c06-fefd-4b82-affe-900c4cb9702f"
+      ],
+      "notes": "Synthetic. User has dedicated '布隆过滤器原理 + 误判率 + 工程应用' note (4/27). Direct topic hit."
+    },
+    {
+      "id": "q-016",
+      "query": "GitHub 5月1日的热门项目",
+      "category": "metadata-by-date",
+      "relevant_chunk_ids": [
+        "26a12409-cbb0-43a3-9c0e-41852037d843"
+      ],
+      "notes": "Tests whether retriever can match a date in the title. Single direct match: 'GitHub 热门 · 2026-05-01'."
+    },
+    {
+      "id": "q-017",
+      "query": "5月有哪些 TODO",
+      "category": "metadata-by-month",
+      "relevant_chunk_ids": [
+        "d2a48a84-754c-4ae6-aa0f-00403be57f41"
+      ],
+      "notes": "Single hit: '5月份 TODO'. Floor case."
+    },
+    {
+      "id": "q-018",
+      "query": "我笔记里写过用 Rust 实现什么具体的项目吗",
+      "category": "negative",
       "relevant_chunk_ids": [],
-      "notes": ""
+      "notes": "Negative case: user has notes ABOUT Rust as a language (in 主流编程语言 report) but no notes about a specific Rust project they implemented. Empty relevant_chunk_ids means the query has no good answer; harness skips scoring this — it remains as documentation that this kind of negative case exists."
     }
   ]
 }

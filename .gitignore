@@ -73,8 +73,11 @@ HANDOFF.md
 # git worktrees (isolated workspaces)
 .worktrees/
 
-# RAG eval — keep ground-truth.json，忽略具体跑分结果（可能含 chunk 内容）
+# RAG eval — ad-hoc runs may contain chunk content; baseline.json is committed
+# (it only stores chunk UUIDs and aggregate scores, no content)
 /eval/results/
+!/eval/results/baseline.json
+!/eval/results/agent/baseline.json
 /.backfill-milvus-failed.json
 
 # learning migration: local config (per-user) and prod dumps stay local
